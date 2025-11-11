@@ -1,0 +1,69 @@
+{
+  "common": {
+    "hello": "Bonjour",
+    "welcome": "Bienvenue",
+    "loading": "Chargement...",
+    "close": "Fermer",
+    "select_language": "Choisir la langue",
+    "language_changed_to": "Langue changée en",
+    "error_changing_language": "Erreur lors du changement de langue",
+    "delivery_app": "Application de livraison"
+  },
+  "home_page": {
+    "home": "Accueil",
+    "search": "Recherche",
+    "cart": "Panier",
+    "profile": "Profil"
+  },
+  "profile_page": {
+    "my_account": "Mon compte",
+    "my_orders": "Mes commandes",
+    "view_your_order_history": "Voir l'historique de vos commandes",
+    "settings": "Paramètres",
+    "language": "Langue",
+    "change_app_language": "Changer la langue de l'application",
+    "notifications": "Notifications",
+    "manage_your_notifications": "Gérer vos notifications",
+    "privacy_security": "Confidentialité et sécurité",
+    "manage_your_account_security": "Gérer la sécurité de votre compte",
+    "support": "Support",
+    "help_center": "Centre d'aide",
+    "get_help_and_faqs": "Obtenez de l'aide et des FAQ",
+    "contact_support": "Contacter le support",
+    "customer_support": "Support client 24h/24 et 7j/7",
+    "logout": "Déconnexion",
+    "find_answers_faqs": "Trouvez des réponses aux questions fréquemment posées et obtenez de l'aide pour les problèmes courants.",
+    "support_team_available": "Notre équipe d'assistance est disponible 24h/24 et 7j/7 pour vous aider avec tout problème ou question."
+  },
+  "home_app_bar": {
+  "getting_location": "Obtention de la localisation...",
+  "tap_to_set_location": "Appuyez pour définir l'emplacement",
+  "enable_location_services": "Veuillez activer les services de localisation pour une livraison précise",
+  "location_permission_required": "Autorisation de localisation requise pour les services de livraison",
+  "unknown_city": "Ville inconnue",
+  "unknown_street": "Rue inconnue",
+  "location_updated": "Localisation mise à jour vers {}, {}",
+  "failed_to_get_location": "Échec de l'obtention de la localisation : {}",
+  "current_location": "Localisation actuelle",
+  "updating_location": "Mise à jour de la localisation...",
+  "automatically_updated": "Mis à jour automatiquement",
+  "updating": "Mise à jour...",
+  "refresh_location": "Actualiser la localisation",
+  "location_info": "Votre localisation est automatiquement mise à jour lorsque vous ouvrez l'application",
+  "delivery_to": "Livraison à",
+  "getting_your_location": "Obtention de votre localisation..."
+},
+"location_service": {
+  "unknown_city": "مدينة غير معروفة",
+  "unknown_street": "شارع غير معروف",
+  "enable_location_title": "تمكين خدمات الموقع",
+  "enable_location_description": "نحتاج إلى موقعك لتقديم خدمات توصيل الطعام المخصصة والعثور على المطاعم القريبة.",
+  "not_now": "ليس الآن",
+  "enable_location": "تمكين الموقع",
+  "location_access_title": "الوصول إلى الموقع",
+  "location_access_description": "هذا التطبيق يحتاج إلى الوصول إلى الموقع لعرض المطاعم القريبة، وتتبع عمليات التسليم، وتقديم أوقات تسليم دقيقة.",
+  "deny": "رفض",
+  "allow": "السماح",
+  "location_required": "الوصول إلى الموقع مطلوب للوظائف الكاملة للتطبيق"
+}
+}

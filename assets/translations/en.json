@@ -1,0 +1,69 @@
+{
+  "common": {
+    "hello": "Hello",
+    "welcome": "Welcome",
+    "loading": "Loading...",
+    "close": "Close",
+    "select_language": "Select Language",
+    "language_changed_to": "Language changed to",
+    "error_changing_language": "Error changing language",
+    "delivery_app": "Delivery App"
+  },
+  "home_page": {
+    "home": "Home",
+    "search": "Search",
+    "cart": "Cart",
+    "profile": "Profile"
+  },
+  "profile_page": {
+    "my_account": "My Account",
+    "my_orders": "My Orders",
+    "view_your_order_history": "View your order history",
+    "settings": "Settings",
+    "language": "Language",
+    "change_app_language": "Change app language",
+    "notifications": "Notifications",
+    "manage_your_notifications": "Manage your notifications",
+    "privacy_security": "Privacy & Security",
+    "manage_your_account_security": "Manage your account security",
+    "support": "Support",
+    "help_center": "Help Center",
+    "get_help_and_faqs": "Get help and FAQs",
+    "contact_support": "Contact Support",
+    "customer_support": "24/7 customer support",
+    "logout": "Logout",
+    "find_answers_faqs": "Find answers to frequently asked questions and get help with common issues.",
+    "support_team_available": "Our support team is available 24/7 to help you with any issues or questions."
+  },
+  "home_app_bar": {
+  "getting_location": "Getting Location...",
+  "tap_to_set_location": "Tap to set location",
+  "enable_location_services": "Please enable location services for accurate delivery",
+  "location_permission_required": "Location permission required for delivery services",
+  "unknown_city": "Unknown City",
+  "unknown_street": "Unknown Street",
+  "location_updated": "Location updated to {}, {}",
+  "failed_to_get_location": "Failed to get location: {}",
+  "current_location": "Current Location",
+  "updating_location": "Updating location...",
+  "automatically_updated": "Automatically updated",
+  "updating": "Updating...",
+  "refresh_location": "Refresh Location",
+  "location_info": "Your location is automatically updated when you open the app",
+  "delivery_to": "Delivery to",
+  "getting_your_location": "Getting your location..."
+},
+"location_service": {
+  "unknown_city": "Unknown City",
+  "unknown_street": "Unknown Street",
+  "enable_location_title": "Enable Location Services",
+  "enable_location_description": "We need your location to provide personalized food delivery services and find nearby restaurants.",
+  "not_now": "Not Now",
+  "enable_location": "Enable Location",
+  "location_access_title": "Location Access",
+  "location_access_description": "This app needs location access to show nearby restaurants, track deliveries, and provide accurate delivery times.",
+  "deny": "Deny",
+  "allow": "Allow",
+  "location_required": "Location access is required for full app functionality"
+}
+}
