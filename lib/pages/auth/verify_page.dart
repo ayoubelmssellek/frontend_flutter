@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/pages/delivery/delivery_home_page.dart';
 import 'package:food_app/pages/delivery_admin_pages/admin_home_page.dart';
@@ -90,19 +91,17 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   void _onCodeChanged(String value, int index) {
     setState(() => _errorMessage = null);
     
-    // Handle paste operation - if user pastes 4 digits
-    if (value.length == 4 && RegExp(r'^[0-9]{4}$').hasMatch(value)) {
-      _handlePasteOperation(value);
-      return;
-    }
-    
     // Handle single digit input
     if (value.isNotEmpty) {
-      // Take only the last character (handles manual input)
+      // Take only the last character (handles manual input and some paste cases)
       if (value.length > 1) {
-        _codeControllers[index].text = value[value.length - 1];
-        _codeControllers[index].selection = TextSelection.collapsed(offset: 1);
+        // This might be a paste operation - try to handle it
+        _handlePossiblePaste(value, index);
+        return;
       }
+      
+      _codeControllers[index].text = value;
+      _codeControllers[index].selection = TextSelection.collapsed(offset: 1);
       
       // Auto-focus next field (left to right)
       if (index < 3) {
@@ -120,15 +119,46 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
     }
   }
 
-  void _handlePasteOperation(String pastedCode) {
-    // Clear all fields first
+  void _handlePossiblePaste(String pastedText, int currentIndex) {
+    // Clean the pasted text - remove any non-digit characters
+    final cleanText = pastedText.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    // If we have exactly 4 digits, treat it as a paste operation
+    if (cleanText.length == 4) {
+      _fillAllFieldsWithPaste(cleanText);
+    } else {
+      // Otherwise, just take the first character as before
+      _codeControllers[currentIndex].text = pastedText[pastedText.length - 1];
+      _codeControllers[currentIndex].selection = TextSelection.collapsed(offset: 1);
+      
+      if (currentIndex < 3) {
+        _focusNodes[currentIndex + 1].requestFocus();
+      }
+    }
+  }
+
+  void _fillAllFieldsWithPaste(String code) {
     for (int i = 0; i < 4; i++) {
-      _codeControllers[i].text = pastedCode[i];
+      _codeControllers[i].text = code[i];
     }
     
-    // Focus the last field and verify
+    // Focus the last field and verify automatically
     _focusNodes[3].requestFocus();
-    _verifyCode();
+    
+    // Small delay to ensure all fields are updated before verification
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _verifyCode();
+    });
+  }
+
+  // Alternative approach: Use onTap to handle paste in the first field
+  void _handlePasteInFirstField() async {
+    final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+    final pastedText = clipboardData?.text?.trim() ?? '';
+    
+    if (pastedText.length == 4 && RegExp(r'^[0-9]{4}$').hasMatch(pastedText)) {
+      _fillAllFieldsWithPaste(pastedText);
+    }
   }
 
   Future<void> _verifyCode() async {
@@ -502,6 +532,11 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                               _codeControllers[index].selection = TextSelection.collapsed(
                                 offset: _codeControllers[index].text.length,
                               );
+                              
+                              // Handle paste in the first field
+                              if (index == 0) {
+                                _handlePasteInFirstField();
+                              }
                             },
                           ),
                         );
