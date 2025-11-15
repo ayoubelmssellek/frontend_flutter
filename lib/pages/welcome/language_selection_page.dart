@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:food_app/services/location_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/pages/home/client_home_page.dart';
 

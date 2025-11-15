@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/pages/home/profile_page/widgets/feature_item.dart';
 import 'package:food_app/pages/home/profile_page/widgets/section_widget.dart';
+import 'package:food_app/services/language_selector.dart';
 
 class ClientProfile extends ConsumerWidget {
   final Map<String, dynamic> userData;
@@ -14,7 +15,6 @@ class ClientProfile extends ConsumerWidget {
     required this.onLogout,
   });
 
-  // Safe translation method with fallback
   String _tr(String key, String fallback) {
     try {
       final translation = key.tr();
@@ -27,13 +27,12 @@ class ClientProfile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocale = context.locale;
-    
     return SingleChildScrollView(
       child: Column(
         children: [
           _buildUserHeader(),
           _buildAccountSection(),
-          _buildSettingsSection(context, currentLocale),
+          _buildSettingsSection(context),
           _buildSupportSection(context),
           _buildLogoutButton(context),
           const SizedBox(height: 20),
@@ -98,39 +97,33 @@ class ClientProfile extends ConsumerWidget {
           icon: Icons.shopping_bag_rounded,
           title: _tr('profile_page.my_orders', 'My Orders'),
           subtitle: _tr('profile_page.view_your_order_history', 'View your order history'),
-          onTap: () {
-            // Navigate to orders page
-          },
+          onTap: () {},
         ),
       ],
     );
   }
 
-  Widget _buildSettingsSection(BuildContext context, Locale currentLocale) {
-    return SectionWidget(
-      title: _tr('profile_page.settings', 'Settings'),
-      features: [
-        FeatureItem(
-          icon: Icons.language_rounded,
-          title: _tr('profile_page.language', 'Language'),
-          subtitle: _getCurrentLanguageText(currentLocale),
-          onTap: () => _showLanguageDialog(context),
-        ),
-        FeatureItem(
-          icon: Icons.notifications_rounded,
-          title: _tr('profile_page.notifications', 'Notifications'),
-          subtitle: _tr('profile_page.manage_your_notifications', 'Manage your notifications'),
-          onTap: () {},
-        ),
-        FeatureItem(
-          icon: Icons.security_rounded,
-          title: _tr('profile_page.privacy_security', 'Privacy & Security'),
-          subtitle: _tr('profile_page.manage_your_account_security', 'Manage your account security'),
-          onTap: () {},
-        ),
-      ],
-    );
-  }
+ Widget _buildSettingsSection(BuildContext context) {
+  return SectionWidget(
+    title: _tr('profile_page.settings', 'Settings'),
+    features: [
+      LanguageSelector.build(context), // <<== الآن صحيح
+      FeatureItem(
+        icon: Icons.notifications_rounded,
+        title: 'Notifications',
+        subtitle: 'Manage your notifications',
+        onTap: () {},
+      ),
+      FeatureItem(
+        icon: Icons.security_rounded,
+        title: 'Privacy & Security',
+        subtitle: 'Manage your account security',
+        onTap: () {},
+      ),
+    ],
+  );
+}
+
 
   Widget _buildSupportSection(BuildContext context) {
     return SectionWidget(
@@ -177,142 +170,6 @@ class ClientProfile extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _getCurrentLanguageText(Locale locale) {
-    switch (locale.languageCode) {
-      case 'ar':
-        return 'العربية';
-      case 'en':
-        return 'English';
-      case 'fr':
-        return 'Français';
-      default:
-        return 'English';
-    }
-  }
-
-  void _showLanguageDialog(BuildContext context) {
-    final currentLocale = context.locale;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_tr('common.select_language', 'Select Language')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildLanguageOption(
-              'العربية', 
-              'Arabic', 
-              const Locale('ar'), 
-              currentLocale, 
-              context,
-            ),
-            _buildLanguageOption(
-              'English', 
-              'English', 
-              const Locale('en'), 
-              currentLocale, 
-              context,
-            ),
-            _buildLanguageOption(
-              'Français', 
-              'French', 
-              const Locale('fr'), 
-              currentLocale, 
-              context,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageOption(
-    String languageName,
-    String englishName,
-    Locale locale,
-    Locale currentLocale,
-    BuildContext context,
-  ) {
-    final isSelected = currentLocale.languageCode == locale.languageCode;
-    
-    return ListTile(
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            languageName,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          Text(
-            englishName,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-      trailing: isSelected 
-          ? const Icon(Icons.check, color: Colors.deepOrange)
-          : null,
-      onTap: () {
-        _changeLanguage(context, locale);
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  void _changeLanguage(BuildContext context, Locale newLocale) async {
-    try {
-      final supportedLocales = context.supportedLocales;
-      
-      if (!supportedLocales.contains(newLocale)) {
-        throw Exception('Locale $newLocale is not supported. Supported locales: $supportedLocales');
-      }
-      
-      await context.setLocale(newLocale);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${_tr('common.language_changed_to', 'Language changed to')} ${_getLanguageName(newLocale)}',
-            textAlign: TextAlign.center,
-          ),
-          backgroundColor: Colors.deepOrange,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${_tr('common.error_changing_language', 'Error changing language')}: ${e.toString()}',
-            textAlign: TextAlign.center,
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-  String _getLanguageName(Locale locale) {
-    switch (locale.languageCode) {
-      case 'ar':
-        return 'Arabic';
-      case 'en':
-        return 'English';
-      case 'fr':
-        return 'French';
-      default:
-        return 'English';
-    }
   }
 
   void _showHelpCenter(BuildContext context) {

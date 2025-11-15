@@ -15,7 +15,7 @@
     "cart": "عربة التسوق",
     "profile": "الملف الشخصي"
   },
-  "profile_page": {
+  "client_profile_page": {
     "my_account": "حسابي",
     "my_orders": "طلباتي",
     "view_your_order_history": "عرض سجل طلباتك",
@@ -34,6 +34,9 @@
     "logout": "تسجيل الخروج",
     "find_answers_faqs": "ابحث عن إجابات للأسئلة الشائعة واحصل على المساعدة في المشكلات الشائعة.",
     "support_team_available": "فريق الدعم لدينا متاح على مدار 24/7 لمساعدتك في أي مشكلات أو استفسارات."
+  },
+  "guest_profile_page":{
+    "You_are_Guest":"أنت ضيف"
   },
   "home_app_bar": {
   "getting_location": "جاري الحصول على الموقع...",
@@ -65,5 +68,58 @@
   "deny": "رفض",
   "allow": "السماح",
   "location_required": "الوصول إلى الموقع مطلوب للوظائف الكاملة للتطبيق"
-}
+},
+"businesses_section":{
+  "Top_Rated_Businesses":"أفضل المتاجر تقييمًا"
+},
+"delivery_profile_page": {
+    "my_account": "حسابي",
+    "my_orders": "طلباتي",
+    "view_your_order_history": "عرض سجل طلباتك",
+    "settings": "الإعدادات",
+    "language": "اللغة",
+    "change_app_language": "تغيير لغة التطبيق",
+    "notifications": "الإشعارات",
+    "manage_your_notifications": "إدارة الإشعارات",
+    "privacy_security": "الخصوصية والأمان",
+    "manage_your_account_security": "إدارة أمان حسابك",
+    "support": "الدعم",
+    "help_center": "مركز المساعدة",
+    "get_help_and_faqs": "الحصول على المساعدة والأسئلة الشائعة",
+    "contact_support": "اتصل بالدعم",
+    "customer_support": "دعم العملاء على مدار 24/7",
+    "logout": "تسجيل الخروج",
+    "find_answers_faqs": "ابحث عن إجابات للأسئلة الشائعة واحصل على المساعدة في المشكلات الشائعة.",
+    "support_team_available": "فريق الدعم لدينا متاح على مدار 24/7 لمساعدتك في أي مشكلات أو استفسارات.",
+    "logout_confirmation": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+    "logging_out": "جاري تسجيل الخروج...",
+    "session_expired": "انتهت الجلسة",
+    "session_expired_message": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى للمتابعة.",
+    "go_to_login": "الذهاب لتسجيل الدخول",
+    "driver": "سائق",
+    "not_provided": "غير متوفر",
+    "not_verified": "غير مفعل",
+    "personal_information": "المعلومات الشخصية",
+    "phone": "الهاتف",
+    "phone_verified": "تم التحقق من الهاتف",
+    "account_status": "حالة الحساب",
+    "delivery_information": "معلومات التوصيل",
+    "vehicle_type": "نوع المركبة",
+    "vehicle_number": "رقم المركبة",
+    "active_status": "حالة النشاط",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "rating": "التقييم",
+    "send_feedback": "إرسال ملاحظات",
+    "feedback_hint": "أدخل ملاحظاتك هنا...",
+    "feedback_sent": "تم إرسال الملاحظات بنجاح!",
+    "send": "إرسال",
+    "privacy_policy": "سياسة الخصوصية",
+    "privacy_policy_content": "نحن نقدر خصوصيتك وملتزمون بحماية بياناتك الشخصية...",
+    "error_loading_profile": "خطأ في تحميل الملف الشخصي",
+    "retry": "إعادة المحاولة",
+    "yes": "نعم",
+    "no": "لا"
+  }
+
 }

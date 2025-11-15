@@ -18,7 +18,7 @@ class Order {
   final List<OrderItem> items;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  final int itemCount; // ADD THIS: To match Laravel response
+  final int itemCount;
 
   const Order({
     required this.id,
@@ -30,8 +30,21 @@ class Order {
     required this.items,
     this.createdAt,
     this.updatedAt,
-    required this.itemCount, // ADD THIS
+    required this.itemCount,
   });
+
+  // ✅ ADD THIS: Factory constructor for empty order
+  factory Order.empty() {
+    return Order(
+      id: 0,
+      clientId: 0,
+      status: OrderStatus.pending,
+      totalPrice: 0.0,
+      address: '',
+      items: [],
+      itemCount: 0,
+    );
+  }
 
   // Factory constructor to create Order from JSON (Laravel response)
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -46,7 +59,7 @@ class Order {
         items: _parseOrderItems(json['items'] ?? []),
         createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
         updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
-        itemCount: _parseInt(json['item_count'] ?? (json['items'] != null ? (json['items'] as List).length : 0)), // ADD THIS
+        itemCount: _parseInt(json['item_count'] ?? (json['items'] != null ? (json['items'] as List).length : 0)),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -69,7 +82,7 @@ class Order {
       'items': items.map((item) => item.toJson()).toList(),
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
-      'item_count': itemCount, // ADD THIS
+      'item_count': itemCount,
     };
   }
 
@@ -84,7 +97,7 @@ class Order {
     List<OrderItem>? items,
     DateTime? createdAt,
     DateTime? updatedAt,
-    int? itemCount, // ADD THIS
+    int? itemCount,
   }) {
     return Order(
       id: id ?? this.id,
@@ -96,7 +109,7 @@ class Order {
       items: items ?? this.items,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      itemCount: itemCount ?? this.itemCount, // ADD THIS
+      itemCount: itemCount ?? this.itemCount,
     );
   }
 
@@ -119,6 +132,9 @@ class Order {
 
   // Get restaurant address (you might get this from API in future)
   String? get restaurantAddress => 'Unknown';
+
+  // ✅ ADD THIS: Check if order is empty (id = 0)
+  bool get isEmpty => id == 0;
 
   @override
   String toString() {
@@ -223,7 +239,7 @@ class OrderItem {
   final double price;
   final int? productId;
   final int? businessOwnerId;
-  final double totalPrice; // ADD THIS: To match Laravel response
+  final double totalPrice;
 
   const OrderItem({
     required this.productName,
@@ -233,8 +249,20 @@ class OrderItem {
     required this.price,
     this.productId,
     this.businessOwnerId,
-    required this.totalPrice, // ADD THIS
+    required this.totalPrice,
   });
+
+  // ✅ ADD THIS: Factory constructor for empty order item
+  factory OrderItem.empty() {
+    return OrderItem(
+      productName: '',
+      productImage: '',
+      businessName: '',
+      quantity: 0,
+      price: 0.0,
+      totalPrice: 0.0,
+    );
+  }
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     try {
@@ -246,7 +274,7 @@ class OrderItem {
         price: Order._parseDouble(json['price']),
         productId: Order._parseNullableInt(json['product_id']),
         businessOwnerId: Order._parseNullableInt(json['business_owner_id']),
-        totalPrice: Order._parseDouble(json['total_price'] ?? (json['price'] * json['quantity'])), // ADD THIS
+        totalPrice: Order._parseDouble(json['total_price'] ?? (json['price'] * json['quantity'])),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -266,12 +294,15 @@ class OrderItem {
       'price': price.toStringAsFixed(2),
       'product_id': productId,
       'business_owner_id': businessOwnerId,
-      'total_price': totalPrice.toStringAsFixed(2), // ADD THIS
+      'total_price': totalPrice.toStringAsFixed(2),
     };
   }
 
   // Keep the computed total for backward compatibility
   double get total => quantity * price;
+
+  // ✅ ADD THIS: Check if order item is empty
+  bool get isEmpty => productName.isEmpty && quantity == 0;
 
   @override
   String toString() {

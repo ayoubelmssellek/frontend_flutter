@@ -1,9 +1,10 @@
-// pages/delivery/my_orders_page.dart (Updated for API structure)
+// pages/delivery/my_orders_page.dart (Updated for API structure and token error handling)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:food_app/providers/delivery_repository.dart';
 import '../../models/order_model.dart';
 import '../../providers/delivery_providers.dart';
+import '../../services/error_handler_service.dart';
+import '../../pages/auth/token_expired_page.dart';
 import 'order_details_page.dart';
 
 class MyOrdersPage extends ConsumerStatefulWidget {
@@ -15,11 +16,38 @@ class MyOrdersPage extends ConsumerStatefulWidget {
 
 class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   bool _isLoading = false;
+  bool _hasHandledTokenNavigation = false;
 
   @override
   void initState() {
     super.initState();
     _loadMyOrders();
+  }
+
+  // ✅ ADDED: Token error navigation
+  void _navigateToTokenExpiredPage([String? customMessage]) {
+    if (_hasHandledTokenNavigation || !mounted) return;
+    
+    _hasHandledTokenNavigation = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => TokenExpiredPage(
+            message: customMessage ?? 'Your session has expired. Please login again to continue.',
+            allowGuestMode: false, // Delivery partners can't continue as guest
+          ),
+        ),
+        (route) => false,
+      );
+    });
+  }
+
+  // ✅ ADDED: Handle token errors
+  void _handleTokenError(dynamic error) {
+    if (ErrorHandlerService.isTokenError(error)) {
+      print('🔐 Token error detected in MyOrdersPage');
+      _navigateToTokenExpiredPage('Your session has expired while loading orders.');
+    }
   }
 
   Future<void> _loadMyOrders() async {
@@ -31,25 +59,19 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
       final deliveryManId = ref.read(currentDeliveryManIdProvider);
       
-      if (deliveryManId == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Delivery man ID not set'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-      
       final orders = await deliveryRepo.getMyOrders(deliveryManId);
       ref.read(myOrdersProvider.notifier).state = orders;
     } catch (e) {
-      if (mounted) {
+      print('❌ Error loading my orders: $e');
+      
+      // ✅ HANDLE TOKEN ERRORS
+      _handleTokenError(e);
+      
+      // Only show snackbar for non-token errors
+      if (mounted && !ErrorHandlerService.isTokenError(e)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load orders: $e'),
+            content: Text('Failed to load orders: ${ErrorHandlerService.getErrorMessage(e)}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -71,8 +93,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         return Colors.green;
       case OrderStatus.cancelled:
         return Colors.red;
-      default:
-        return Colors.grey;
     }
   }
 
@@ -86,8 +106,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         return 'Delivered';
       case OrderStatus.cancelled:
         return 'Cancelled';
-      default:
-        return 'Unknown';
     }
   }
 
@@ -101,8 +119,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         return Icons.verified;
       case OrderStatus.cancelled:
         return Icons.cancel;
-      default:
-        return Icons.pending;
     }
   }
 
@@ -111,13 +127,13 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
-      final success = await deliveryRepo.updateOrderStatus(order.id, newStatus); // FIXED: order.id
+      final success = await deliveryRepo.updateOrderStatus(order.id, newStatus);
       
       if (success && mounted) {
         // Update local state
         final myOrders = ref.read(myOrdersProvider);
         final updatedOrders = myOrders.map((o) {
-          if (o.id == order.id) { // FIXED: o.id == order.id
+          if (o.id == order.id) {
             return o.copyWith(status: newStatus);
           }
           return o;
@@ -133,10 +149,18 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         );
       }
     } catch (e) {
+      print('❌ Error updating order status: $e');
+      
+      // ✅ HANDLE TOKEN ERRORS
+      if (ErrorHandlerService.isTokenError(e)) {
+        _navigateToTokenExpiredPage('Your session has expired while updating order status.');
+        return;
+      }
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update order status: $e'),
+            content: Text('Failed to update order status: ${ErrorHandlerService.getErrorMessage(e)}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -206,7 +230,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Order #${order.id}', // FIXED: order.id
+                          'Order #${order.id}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -214,7 +238,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _formatOrderTime(order.createdAt), // FIXED: order.createdAt instead of order.orderTime
+                          _formatOrderTime(order.createdAt),
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
@@ -563,5 +587,11 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _hasHandledTokenNavigation = false;
+    super.dispose();
   }
 }

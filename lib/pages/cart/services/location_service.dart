@@ -1,19 +1,21 @@
-// services/location_service.dart
+// location_service_using_it_in_checkoutpage.dart
 import 'package:flutter/foundation.dart';
 import 'package:food_app/services/location_manager.dart';
+import 'package:food_app/services/location_service.dart' as core_service;
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 
 class LocationService extends ChangeNotifier {
   String _deliveryAddress = 'Getting your location...';
   bool _isLoadingLocation = false;
   double? _latitude;
   double? _longitude;
+  core_service.LocationError? _currentError;
 
   String get deliveryAddress => _deliveryAddress;
   bool get isLoadingLocation => _isLoadingLocation;
   double? get latitude => _latitude;
   double? get longitude => _longitude;
+  core_service.LocationError? get currentError => _currentError;
 
   bool get hasValidLocation {
     return _deliveryAddress.isNotEmpty &&
@@ -21,7 +23,27 @@ class LocationService extends ChangeNotifier {
            !_deliveryAddress.contains('Location services disabled') &&
            !_deliveryAddress.contains('Location permission required') &&
            !_deliveryAddress.contains('Address not found') &&
-           !_deliveryAddress.contains('Failed to get location');
+           !_deliveryAddress.contains('Failed to get location') &&
+           _currentError == null;
+  }
+
+  bool get hasPermanentError => _currentError == core_service.LocationError.permissionPermanentlyDenied;
+
+  // Listen to location updates from LocationManager
+  LocationService() {
+    _initializeLocationStream();
+  }
+
+  void _initializeLocationStream() {
+    LocationManager().locationStream.listen((location) {
+      _updateFromLocationData(location);
+    });
+  }
+
+  void _updateFromLocationData(LocationData location) {
+    _deliveryAddress = '${location.street}, ${location.city}';
+    _currentError = null;
+    notifyListeners();
   }
 
   Future<void> getCurrentLocation({bool isRefresh = false}) async {
@@ -34,87 +56,24 @@ class LocationService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Check location service status
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _deliveryAddress = 'Location services disabled';
-        _isLoadingLocation = false;
-        notifyListeners();
-        return;
-      }
-
-      // Check location permission
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _deliveryAddress = 'Location permission denied';
-          _isLoadingLocation = false;
-          notifyListeners();
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        _deliveryAddress = 'Location permission permanently denied';
-        _isLoadingLocation = false;
-        notifyListeners();
-        return;
-      }
-
-      // Get current position
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
-        timeLimit: const Duration(seconds: 15),
-      );
-
-      _latitude = position.latitude;
-      _longitude = position.longitude;
-
-      // Convert to address
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude, 
-        position.longitude,
-      ).timeout(const Duration(seconds: 10));
+      // Use the core location service to handle permissions and errors properly
+      final coreLocationService = core_service.LocationService();
+      final result = await coreLocationService.getCurrentLocation();
       
-      if (placemarks.isEmpty) {
-        _deliveryAddress = 'Address not found';
-        _isLoadingLocation = false;
-        notifyListeners();
-        return;
+      if (result.isSuccess) {
+        // Store the location using LocationManager (which will trigger stream update)
+        await coreLocationService.refreshAndStoreLocation();
+        
+        // Update coordinates
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+        );
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _currentError = null;
+      } else {
+        _handleLocationError(result.error!);
       }
-
-      Placemark place = placemarks.first;
-
-      String city = place.locality ?? 'Unknown City';
-      String street = place.street ?? '';
-      String thoroughfare = place.thoroughfare ?? '';
-      String subLocality = place.subLocality ?? '';
-      String administrativeArea = place.administrativeArea ?? '';
-
-      // Build address string
-      String displayStreet = street.isNotEmpty ? street : thoroughfare;
-      if (displayStreet.isEmpty) {
-        displayStreet = subLocality;
-      }
-
-      List<String> addressParts = [];
-      if (displayStreet.isNotEmpty) addressParts.add(displayStreet);
-      if (city.isNotEmpty) addressParts.add(city);
-      if (administrativeArea.isNotEmpty && administrativeArea != city) {
-        addressParts.add(administrativeArea);
-      }
-
-      _deliveryAddress = addressParts.join(', ');
-      if (_deliveryAddress.isEmpty) {
-        _deliveryAddress = 'Location: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
-      }
-
-      // ✅ FIXED: Use the new LocationData class
-      final locationData = LocationData(city: city, street: displayStreet);
-      await LocationManager().updateLocation(locationData);
-
-      notifyListeners();
 
     } catch (e) {
       if (kDebugMode) {
@@ -128,9 +87,46 @@ class LocationService extends ChangeNotifier {
     }
   }
 
+  void _handleLocationError(core_service.LocationError error) {
+    _currentError = error;
+    
+    switch (error) {
+      case core_service.LocationError.serviceDisabled:
+        _deliveryAddress = 'Location services disabled';
+        break;
+      case core_service.LocationError.permissionDenied:
+        _deliveryAddress = 'Location permission required';
+        break;
+      case core_service.LocationError.permissionPermanentlyDenied:
+        _deliveryAddress = 'Location permission permanently denied';
+        break;
+      case core_service.LocationError.unknown:
+        _deliveryAddress = 'Failed to get location';
+        break;
+    }
+    notifyListeners();
+  }
+
+  // Load stored location on startup
+  Future<void> loadStoredLocation() async {
+    try {
+      final location = await LocationManager().getStoredLocation();
+      if (location != null) {
+        _updateFromLocationData(location);
+      } else {
+        // If no stored location, try to get current location
+        await getCurrentLocation();
+      }
+    } catch (e) {
+      _deliveryAddress = 'Failed to load location';
+      notifyListeners();
+    }
+  }
+
   // Method to manually set address (if needed)
   void setDeliveryAddress(String address) {
     _deliveryAddress = address;
+    _currentError = null;
     notifyListeners();
   }
 
@@ -140,13 +136,14 @@ class LocationService extends ChangeNotifier {
     _isLoadingLocation = false;
     _latitude = null;
     _longitude = null;
+    _currentError = null;
     notifyListeners();
   }
 
   // Check if we have coordinates
   bool get hasCoordinates => _latitude != null && _longitude != null;
 
-  // ✅ FIXED: Get stored location from LocationManager using new API
+  // Get stored location from LocationManager
   Future<String> getStoredAddress() async {
     final location = await LocationManager().getStoredLocation();
     if (location != null) {
@@ -155,13 +152,13 @@ class LocationService extends ChangeNotifier {
     return 'Unknown Location';
   }
 
-  // ✅ FIXED: Check if we have stored location using new API
+  // Check if we have stored location
   Future<bool> hasStoredLocation() async {
     final location = await LocationManager().getStoredLocation();
     return location != null && location.isValid;
   }
 
-  // ✅ NEW: Get LocationData object for more detailed access
+  // Get LocationData object for more detailed access
   Future<LocationData?> getStoredLocationData() async {
     return await LocationManager().getStoredLocation();
   }

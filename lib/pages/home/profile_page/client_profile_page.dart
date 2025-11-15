@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:food_app/core/secure_storage.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/home/profile_page/widgets/client_profile.dart';
 import 'package:food_app/pages/home/profile_page/widgets/guest_profile.dart';
 import 'package:food_app/providers/auth_providers.dart';
+import 'package:food_app/services/error_handler_service.dart';
 
 // Profile state provider to manage profile data
 final profileStateProvider = StateNotifierProvider<ProfileStateNotifier, ProfileState>((ref) {
@@ -16,12 +16,14 @@ class ProfileState {
   final bool isLoggedIn;
   final Map<String, dynamic>? userData;
   final String? errorMessage;
+  final bool hasTokenError; // ✅ NEW: Track if there's a token error
 
   const ProfileState({
     this.isLoading = true,
     this.isLoggedIn = false,
     this.userData,
     this.errorMessage,
+    this.hasTokenError = false, // ✅ NEW
   });
 
   ProfileState copyWith({
@@ -29,12 +31,14 @@ class ProfileState {
     bool? isLoggedIn,
     Map<String, dynamic>? userData,
     String? errorMessage,
+    bool? hasTokenError, // ✅ NEW
   }) {
     return ProfileState(
       isLoading: isLoading ?? this.isLoading,
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
       userData: userData ?? this.userData,
       errorMessage: errorMessage ?? this.errorMessage,
+      hasTokenError: hasTokenError ?? this.hasTokenError, // ✅ NEW
     );
   }
 }
@@ -43,22 +47,19 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
   final Ref ref;
 
   ProfileStateNotifier(this.ref) : super(const ProfileState()) {
-    // Listen to auth state changes
     ref.listen<bool>(authStateProvider, (previous, next) {
       if (next == true) {
-        // When auth state becomes true, load user data
         _loadUserData();
       } else {
-        // When auth state becomes false, clear user data
         state = state.copyWith(
           isLoggedIn: false,
           userData: null,
           isLoading: false,
+          hasTokenError: false, // ✅ RESET token error flag
         );
       }
     });
 
-    // Initialize
     _initialize();
   }
 
@@ -68,12 +69,12 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
 
   Future<void> _checkAuthStatus() async {
     try {
-      // Use authStateProvider as the source of truth
       final isLogged = ref.read(authStateProvider);
       
       state = state.copyWith(
         isLoading: true,
         isLoggedIn: isLogged,
+        hasTokenError: false, // ✅ RESET token error flag
       );
 
       if (isLogged) {
@@ -85,13 +86,17 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to check authentication status',
+        hasTokenError: false,
       );
     }
   }
 
   Future<void> _loadUserData() async {
     try {
-      state = state.copyWith(isLoading: true);
+      state = state.copyWith(
+        isLoading: true,
+        hasTokenError: false, // ✅ RESET token error flag
+      );
       
       final result = await ref.read(authRepositoryProvider).getCurrentUser();
       
@@ -101,34 +106,50 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
           isLoading: false,
           errorMessage: null,
           isLoggedIn: true,
+          hasTokenError: false,
         );
       } else {
-        // Handle API errors
-        state = state.copyWith(
-          isLoading: false,
-          isLoggedIn: false,
-          errorMessage: result['message'] ?? 'Failed to load user data',
-        );
-        await _handleTokenExpired();
+        // ✅ CHECK FOR TOKEN ERRORS IN THE RESPONSE
+        final message = result['message'] ?? '';
+        if (ErrorHandlerService.isTokenError(message)) {
+          // Token error - set flag but don't show error message
+          state = state.copyWith(
+            isLoading: false,
+            isLoggedIn: false,
+            errorMessage: null, // Don't show error message
+            hasTokenError: true, // ✅ SET token error flag
+          );
+        } else {
+          // Regular error - show error message
+          state = state.copyWith(
+            isLoading: false,
+            isLoggedIn: false,
+            errorMessage: result['message'] ?? 'Failed to load user data',
+            hasTokenError: false,
+          );
+        }
       }
     } catch (e) {
       print('❌ Error loading user data: $e');
-      state = state.copyWith(
-        isLoading: false,
-        isLoggedIn: false,
-        errorMessage: 'Network error: ${e.toString()}',
-      );
-      await _handleTokenExpired();
-    }
-  }
-
-  Future<void> _handleTokenExpired() async {
-    print('🔐 Token expired, clearing local data...');
-    try {
-      await SecureStorage.deleteToken();
-      ref.read(authStateProvider.notifier).state = false;
-    } catch (e) {
-      print('❌ Error clearing expired token: $e');
+      
+      // ✅ CHECK FOR TOKEN ERRORS IN THE EXCEPTION
+      if (ErrorHandlerService.isTokenError(e)) {
+        // Token error - set flag but don't show error message
+        state = state.copyWith(
+          isLoading: false,
+          isLoggedIn: false,
+          errorMessage: null, // Don't show error message
+          hasTokenError: true, // ✅ SET token error flag
+        );
+      } else {
+        // Regular error - show error message
+        state = state.copyWith(
+          isLoading: false,
+          isLoggedIn: false,
+          errorMessage: ErrorHandlerService.getErrorMessage(e),
+          hasTokenError: false,
+        );
+      }
     }
   }
 
@@ -141,7 +162,10 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
   }
 
   void clearError() {
-    state = state.copyWith(errorMessage: null);
+    state = state.copyWith(
+      errorMessage: null,
+      hasTokenError: false, // ✅ RESET token error flag
+    );
   }
 
   void setGuestMode() {
@@ -150,6 +174,7 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
       userData: null,
       errorMessage: null,
       isLoading: false,
+      hasTokenError: false, // ✅ RESET token error flag
     );
   }
 }
@@ -162,10 +187,11 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
+  bool _hasHandledTokenNavigation = false;
+
   @override
   void initState() {
     super.initState();
-    // Refresh profile when page loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(profileStateProvider.notifier).refreshProfile();
     });
@@ -175,12 +201,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileStateProvider);
 
+    // ✅ HANDLE TOKEN ERRORS IMMEDIATELY (without showing error state)
+    _handleTokenErrors(profileState, context);
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: profileState.isLoading
           ? _buildSkeletonLoading()
           : profileState.errorMessage != null
-              ? _buildErrorState(profileState, context)
+              ? _buildErrorState(profileState, context) // Show only non-token errors
               : profileState.isLoggedIn && profileState.userData != null
                   ? ClientProfile(
                       userData: profileState.userData!,
@@ -190,12 +219,34 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
+  void _handleTokenErrors(ProfileState state, BuildContext context) {
+    // Only handle token navigation once and when we have a valid context
+    if (_hasHandledTokenNavigation || !mounted) return;
+
+    // Check if there's a token error that needs navigation
+    if (state.hasTokenError) {
+      _hasHandledTokenNavigation = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ErrorHandlerService.handleApiError(
+          error: 'Your session has expired. Please login again.',
+          context: context,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _hasHandledTokenNavigation = false;
+    super.dispose();
+  }
+
+
   Widget _buildSkeletonLoading() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Header skeleton
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -205,7 +256,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
             child: Column(
               children: [
-                // Avatar skeleton
                 Container(
                   width: 80,
                   height: 80,
@@ -215,7 +265,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Name skeleton
                 Container(
                   width: 120,
                   height: 20,
@@ -225,7 +274,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Email skeleton
                 Container(
                   width: 180,
                   height: 16,
@@ -238,7 +286,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ),
           const SizedBox(height: 16),
-          // Menu items skeleton
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -263,7 +310,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ),
       child: Row(
         children: [
-          // Icon skeleton
           Container(
             width: 24,
             height: 24,
@@ -273,7 +319,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ),
           const SizedBox(width: 16),
-          // Text skeleton
           Expanded(
             child: Container(
               height: 16,
@@ -284,7 +329,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ),
           const SizedBox(width: 16),
-          // Trailing icon skeleton
           Container(
             width: 16,
             height: 16,
@@ -307,14 +351,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 64,
               color: Colors.red,
             ),
             const SizedBox(height: 16),
             Text(
-              'Authentication Error',
+              'Error',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -347,20 +391,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   child: const Text('Continue as Guest'),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false,
-                );
-              },
-              child: const Text(
-                'Go to Login',
-                style: TextStyle(color: Colors.deepOrange),
-              ),
             ),
           ],
         ),
@@ -402,12 +432,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           final authRepo = ref.read(authRepositoryProvider);
                           await authRepo.logout();
                           
-                          // Update auth state
                           ref.read(authStateProvider.notifier).state = false;
                           ref.read(profileStateProvider.notifier).setGuestMode();
                           
                           if (context.mounted) {
-                            Navigator.pop(context); // Close dialog
+                            Navigator.pop(context);
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -419,6 +448,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         } catch (e) {
                           if (context.mounted) {
                             Navigator.pop(context);
+                            // ✅ USE ERROR HANDLER SERVICE
+                            if (ErrorHandlerService.handleApiError(
+                              error: e,
+                              context: context,
+                              customMessage: 'Session expired during logout.',
+                            )) {
+                              return; // Token error handled, don't show snackbar
+                            }
+                            
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Logout error: $e'),

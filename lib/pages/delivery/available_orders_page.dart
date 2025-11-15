@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../models/order_model.dart';
 import '../../providers/delivery_providers.dart';
+import '../../services/error_handler_service.dart';
+import '../../pages/auth/token_expired_page.dart';
 
 class AvailableOrdersPage extends ConsumerStatefulWidget {
   const AvailableOrdersPage({super.key});
@@ -17,6 +19,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
   bool _isLoading = false;
   final Set<int> _acceptingOrderIds = {};
   final Set<int> _acceptedOrderIds = {};
+  bool _hasHandledTokenNavigation = false;
 
   @override
   void initState() {
@@ -28,70 +31,89 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
   void _setupFirebaseMessaging() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('📱 Received FCM message: ${message.data}');
-      
-      if (message.data.containsKey('order_id')) {
-        _handleFcmMessage(message);
-      }
+      _handleFcmOrderMessage(message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (message.data['type'] == 'order_accepted') {
-        _handleOrderAcceptedNotification(message);
+      print('📱 App opened from FCM notification: ${message.data}');
+      _handleFcmOrderMessage(message);
+    });
+
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        print('📱 App opened from terminated state: ${message.data}');
+        _handleFcmOrderMessage(message);
       }
     });
   }
 
-  void _handleFcmMessage(RemoteMessage message) {
+  void _handleFcmOrderMessage(RemoteMessage message) {
     try {
-      final orderId = int.tryParse(message.data['order_id'].toString());
-      if (orderId == null) return;
+      final data = message.data;
+      final orderId = int.tryParse(data['order_id']?.toString() ?? '');
+      final type = data['type'];
+      final action = data['action'];
 
-      if (message.data['type'] == 'order_accepted') {
-        _handleOrderAccepted(orderId);
+      print('🔄 Processing FCM: type=$type, action=$action, orderId=$orderId');
+
+      if (orderId == null) {
+        print('❌ Invalid order_id in FCM message');
         return;
       }
 
-      _handleNewOrderNotification(message, orderId);
+      if (type == 'order_accepted' || action == 'remove_order') {
+        _handleOrderAcceptedByOtherDriver(orderId);
+      } 
+      else if (type == 'new_order' || action == 'add_order') {
+        _handleNewOrderNotification(message, orderId);
+      }
     } catch (e) {
-      print('❌ Error parsing FCM message: $e');
+      print('❌ Error handling FCM order message: $e');
     }
   }
 
-  void _handleOrderAcceptedNotification(RemoteMessage message) {
-    final orderId = int.tryParse(message.data['order_id'].toString());
-    if (orderId != null) {
-      _handleOrderAccepted(orderId);
+  void _handleOrderAcceptedByOtherDriver(int orderId) {
+    print('🚨 Removing order #$orderId from available orders');
+    
+    if (mounted) {
+      setState(() {
+        _acceptedOrderIds.add(orderId);
+      });
+      
+      _removeOrderImmediately(orderId);
+      
+      _showOrderTakenNotification(orderId);
     }
-  }
-
-  void _handleOrderAccepted(int orderId) {
-    setState(() {
-      _acceptedOrderIds.add(orderId);
-    });
-    _removeOrderImmediately(orderId);
-    print('🚨 Order #$orderId was accepted by another driver');
   }
 
   void _handleNewOrderNotification(RemoteMessage message, int orderId) {
-    final order = Order.fromJson({
-      'id': orderId, // FIXED: changed from 'order_id' to 'id'
-      'client_id': int.tryParse(message.data['client_id']?.toString() ?? '0') ?? 0,
-      'delivery_driver_id': null,
-      'status': 'pending',
-      'address': message.data['address']?.toString() ?? 'Unknown Address',
-      'total_price': double.tryParse(message.data['total_price']?.toString() ?? '0') ?? 0.0,
-      'items': _parseItemsFromFCM(message.data['items']),
-    });
-
-    if (mounted) {
-      ref.read(availableOrdersProvider.notifier).update((state) {
-        final exists = state.any((o) => o.id == order.id); // FIXED: o.orderId to o.id
-        if (!exists) {
-          print('✅ Adding new order from FCM: #${order.id}'); // FIXED: order.id
-          return [order, ...state];
-        }
-        return state;
+    try {
+      final data = message.data;
+      
+      final order = Order.fromJson({
+        'id': orderId,
+        'client_id': int.tryParse(data['client_id']?.toString() ?? '0') ?? 0,
+        'delivery_driver_id': null,
+        'status': 'pending',
+        'address': data['address']?.toString() ?? 'Unknown Address',
+        'total_price': double.tryParse(data['total_price']?.toString() ?? '0') ?? 0.0,
+        'items': _parseItemsFromFCM(data['items']),
+        'item_count': _parseItemCountFromFCM(data['items']),
       });
+
+      if (mounted) {
+        ref.read(availableOrdersProvider.notifier).update((state) {
+          final exists = state.any((o) => o.id == order.id);
+          if (!exists) {
+            print('✅ Adding NEW order from FCM: #${order.id}');
+            _showNewOrderNotification(order.id);
+            return [order, ...state];
+          }
+          return state;
+        });
+      }
+    } catch (e) {
+      print('❌ Error handling new order notification: $e');
     }
   }
 
@@ -114,8 +136,52 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
       'product_image': '',
       'business_name': 'Restaurant',
       'quantity': 1,
-      'price': 0.0
+      'price': 0.0,
+      'total_price': 0.0,
     }];
+  }
+
+  int _parseItemCountFromFCM(dynamic itemsData) {
+    if (itemsData == null) return 0;
+    
+    try {
+      if (itemsData is String) {
+        final parsed = json.decode(itemsData);
+        if (parsed is List) return parsed.length;
+      } else if (itemsData is List) {
+        return itemsData.length;
+      }
+    } catch (e) {
+      print('❌ Error parsing item count from FCM: $e');
+    }
+    
+    return 1;
+  }
+
+  // ✅ ADDED: Token error navigation
+  void _navigateToTokenExpiredPage([String? customMessage]) {
+    if (_hasHandledTokenNavigation || !mounted) return;
+    
+    _hasHandledTokenNavigation = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => TokenExpiredPage(
+            message: customMessage ?? 'Your session has expired. Please login again to continue.',
+            allowGuestMode: false, // Delivery partners can't continue as guest
+          ),
+        ),
+        (route) => false,
+      );
+    });
+  }
+
+  // ✅ ADDED: Handle token errors
+  void _handleTokenError(dynamic error) {
+    if (ErrorHandlerService.isTokenError(error)) {
+      print('🔐 Token error detected in AvailableOrdersPage');
+      _navigateToTokenExpiredPage('Your session has expired while loading orders.');
+    }
   }
 
   Future<void> _loadAvailableOrders() async {
@@ -129,7 +195,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
       final acceptedOrders = <int>{};
       for (final order in orders) {
         if (order.status == OrderStatus.accepted || order.deliveryDriverId != null) {
-          acceptedOrders.add(order.id); // FIXED: order.id instead of order.orderId
+          acceptedOrders.add(order.id);
         }
       }
       
@@ -142,41 +208,96 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
       print('✅ Loaded ${orders.length} available orders, ${acceptedOrders.length} already accepted');
     } catch (e) {
       print('❌ Error loading orders: $e');
-      if (mounted) {
-        _showErrorSnackBar('Failed to load orders: $e');
+      
+      // ✅ HANDLE TOKEN ERRORS
+      _handleTokenError(e);
+      
+      // Only show snackbar for non-token errors
+      if (mounted && !ErrorHandlerService.isTokenError(e)) {
+        _showErrorSnackBar('Failed to load orders: ${ErrorHandlerService.getErrorMessage(e)}');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  Future<bool> _checkOrderStatus(int orderId) async {
+    try {
+      if (_acceptedOrderIds.contains(orderId)) {
+        return false;
+      }
+
+      final currentOrders = ref.read(availableOrdersProvider);
+      final order = currentOrders.firstWhere(
+        (o) => o.id == orderId,
+        orElse: () => Order.empty(),
+      );
+      
+      if (order.isEmpty) {
+        return false;
+      }
+      
+      if (order.status == OrderStatus.accepted || order.deliveryDriverId != null) {
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error checking order status: $e');
+      return true;
+    }
+  }
+
   Future<void> _acceptOrder(Order order) async {
     final deliveryManId = ref.read(currentDeliveryManIdProvider);
 
-    setState(() => _acceptingOrderIds.add(order.id)); // FIXED: order.id
+    final isStillAvailable = await _checkOrderStatus(order.id);
+    if (!isStillAvailable) {
+      _showOrderTakenDialog(order.id);
+      return;
+    }
+
+    if (_acceptedOrderIds.contains(order.id)) {
+      _showOrderTakenDialog(order.id);
+      return;
+    }
+
+    setState(() => _acceptingOrderIds.add(order.id));
 
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
-      final success = await deliveryRepo.acceptOrder(order.id, deliveryManId); // FIXED: order.id
+      final success = await deliveryRepo.acceptOrder(order.id, deliveryManId);
 
       if (success && mounted) {
         _handleSuccessfulOrderAcceptance(order, deliveryManId);
+      } else {
+        _showErrorSnackBar('Failed to accept order');
       }
     } catch (e) {
+      print('❌ Error accepting order: $e');
+      
+      // ✅ HANDLE TOKEN ERRORS
+      if (ErrorHandlerService.isTokenError(e)) {
+        _navigateToTokenExpiredPage('Your session has expired while accepting the order.');
+        return;
+      }
+      
       if (mounted) {
         await _handleAcceptOrderError(e, order);
       }
     } finally {
-      if (mounted) setState(() => _acceptingOrderIds.remove(order.id)); // FIXED: order.id
+      if (mounted) setState(() => _acceptingOrderIds.remove(order.id));
     }
   }
 
   void _handleSuccessfulOrderAcceptance(Order order, int deliveryManId) {
+    print('✅ Order #${order.id} accepted successfully');
+    
     setState(() {
-      _acceptedOrderIds.add(order.id); // FIXED: order.id
+      _acceptedOrderIds.add(order.id);
     });
     
-    _removeOrderImmediately(order.id); // FIXED: order.id
+    _removeOrderImmediately(order.id);
     
     final updatedOrder = order.copyWith(
       status: OrderStatus.accepted,
@@ -185,18 +306,27 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
 
     ref.read(myOrdersProvider.notifier).update((state) => [...state, updatedOrder]);
 
-    _showSuccessSnackBar('Order #${order.id} accepted ✅'); // FIXED: order.id
+    _showSuccessSnackBar('Order #${order.id} accepted ✅');
   }
 
   Future<void> _handleAcceptOrderError(dynamic e, Order order) async {
-    if (e.toString().contains('already') || e.toString().contains('taken')) {
-      await _showOrderTakenDialog(order.id); // FIXED: order.id
+    final errorString = e.toString();
+    
+    print('❌ Order acceptance error: $errorString');
+    
+    if (errorString.contains('already') || 
+        errorString.contains('taken') || 
+        errorString.contains('مسبقاً') ||
+        errorString.contains('already_accepted') ||
+        errorString.contains('400')) {
+      
+      await _showOrderTakenDialog(order.id);
       setState(() {
-        _acceptedOrderIds.add(order.id); // FIXED: order.id
+        _acceptedOrderIds.add(order.id);
       });
-      _removeOrderImmediately(order.id); // FIXED: order.id
+      _removeOrderImmediately(order.id);
     } else {
-      _showErrorSnackBar('Failed: $e');
+      _showErrorSnackBar('Failed to accept order. Please try again.');
     }
   }
 
@@ -204,123 +334,90 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     await showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        child: Container(
-          padding: const EdgeInsets.all(25),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Order Already Taken'),
+        content: Text('Order #$orderId was already accepted by another driver.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red.shade100, width: 2),
-                ),
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 35,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 25),
-              const Text(
-                'عذراً! الطلب غير متاح',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 15),
-              Text(
-                'لقد سبقك سائق آخر وقبل الطلب رقم #$orderId',
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'موافق',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
-    );
+    ).then((_) {
+      _loadAvailableOrders();
+    });
   }
 
   void _removeOrderImmediately(int orderId) {
+    print('🗑️ Removing order #$orderId from UI');
+    
     final currentState = ref.read(availableOrdersProvider);
-    final newState = currentState.where((o) => o.id != orderId).toList(); // FIXED: o.id
+    final newState = currentState.where((o) => o.id != orderId).toList();
+    
     ref.read(availableOrdersProvider.notifier).state = newState;
-    print('✅ Removed order #$orderId from available orders. Remaining: ${newState.length}');
+    
+    print('✅ Removed order #$orderId. Remaining: ${newState.length}');
+    
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _showOrderTakenNotification(int orderId) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order #$orderId was accepted by another driver'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showNewOrderNotification(int orderId) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('New order available: #$orderId'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final availableOrders = ref.watch(availableOrdersProvider);
 
-    print('📊 Building with ${availableOrders.length} orders, ${_acceptedOrderIds.length} accepted, loading: $_isLoading');
+    print('📊 Building with ${availableOrders.length} orders, ${_acceptedOrderIds.length} accepted');
 
-    // Note: Offline state is handled by parent DeliveryHomePage
     if (_isLoading && availableOrders.isEmpty) return _buildLoadingState();
     if (availableOrders.isEmpty) return _buildEmptyState();
 
@@ -331,10 +428,10 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
         itemCount: availableOrders.length,
         itemBuilder: (context, index) {
           final order = availableOrders[index];
-          final isAccepted = _acceptedOrderIds.contains(order.id) || // FIXED: order.id
+          final isAccepted = _acceptedOrderIds.contains(order.id) ||
                             order.status == OrderStatus.accepted ||
                             order.deliveryDriverId != null;
-          final isAccepting = _acceptingOrderIds.contains(order.id); // FIXED: order.id
+          final isAccepting = _acceptingOrderIds.contains(order.id);
 
           return _buildOrderCard(order, isAccepted, isAccepting);
         },
@@ -356,7 +453,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Order #${order.id}', // FIXED: order.id
+                  'Order #${order.id}',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Container(
@@ -483,7 +580,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('تأكيد القبول'),
-        content: Text('هل ترغب في قبول الطلب رقم #${order.id}?'), // FIXED: order.id
+        content: Text('هل ترغب في قبول الطلب رقم #${order.id}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -563,5 +660,11 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _hasHandledTokenNavigation = false;
+    super.dispose();
   }
 }

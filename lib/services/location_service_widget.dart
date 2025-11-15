@@ -27,6 +27,7 @@ class _LocationServiceWidgetState extends State<LocationServiceWidget> {
   bool _isInitializing = false;
   int _denialCount = 0;
   bool _hasShownSettingsPrompt = false;
+  bool _isCheckingAfterSettings = false;
 
   @override
   void initState() {
@@ -119,7 +120,7 @@ class _LocationServiceWidgetState extends State<LocationServiceWidget> {
   }
 
   // Method to manually trigger location request from other widgets
-  Future<void> manuallyRequestLocation() async {
+  Future<LocationResult> manuallyRequestLocation() async {
     final result = await _locationService.getCurrentLocation();
     
     if (result.isSuccess) {
@@ -130,6 +131,7 @@ class _LocationServiceWidgetState extends State<LocationServiceWidget> {
     } else {
       _handleLocationError(result.error!);
     }
+    return result;
   }
 
   Widget _buildEnableLocationDialog() {
@@ -180,10 +182,17 @@ class _LocationServiceWidgetState extends State<LocationServiceWidget> {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(context);
+                      _isCheckingAfterSettings = true;
                       await Geolocator.openLocationSettings();
-                      // Retry after user returns from settings
-                      await Future.delayed(const Duration(seconds: 1));
-                      _requestInitialLocation();
+                      // Wait a bit and check if GPS is now enabled
+                      await Future.delayed(const Duration(seconds: 2));
+                      _isCheckingAfterSettings = false;
+                      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                      if (serviceEnabled && mounted) {
+                        // GPS is enabled, try to get location
+                        await _requestInitialLocation();
+                      }
+                      // If still not enabled, don't show dialog again
                     },
                     child: Text('location_service.enable_location'.tr()),
                   ),
@@ -305,10 +314,14 @@ class _LocationServiceWidgetState extends State<LocationServiceWidget> {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(context);
+                      _isCheckingAfterSettings = true;
                       await Geolocator.openAppSettings();
-                      // Retry after user returns from settings
-                      await Future.delayed(const Duration(seconds: 1));
-                      _requestInitialLocation();
+                      // Wait a bit and check permission again
+                      await Future.delayed(const Duration(seconds: 2));
+                      _isCheckingAfterSettings = false;
+                      if (mounted) {
+                        await _requestInitialLocation();
+                      }
                     },
                     child: Text('location_service.open_settings'.tr()),
                   ),

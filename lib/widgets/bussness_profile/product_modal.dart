@@ -26,8 +26,12 @@ class _ProductModalState extends ConsumerState<ProductModal> {
     
     final productWithRestaurant = Map<String, dynamic>.from(widget.product);
     productWithRestaurant['restaurantId'] = widget.shop['id'].toString();
-    productWithRestaurant['restaurantName'] = 
-        widget.shop['business_name'] ?? widget.shop['name'] ?? '';
+    productWithRestaurant['restaurantName'] = widget.shop['business_name'] ?? widget.shop['name'] ?? '';
+    
+    // ✅ ADD THIS: Include business_owner_id from the shop data
+    productWithRestaurant['business_owner_id'] = widget.shop['business_owner_id']?.toString() ?? 
+                                                 widget.shop['owner_id']?.toString() ?? 
+                                                 '1'; // Fallback to '1' if not available
     
     await cartService.addItem(productWithRestaurant, quantity: _quantity);
     

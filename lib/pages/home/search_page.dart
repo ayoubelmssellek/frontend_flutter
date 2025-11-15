@@ -60,20 +60,43 @@ class _SearchPageState extends State<SearchPage> {
     };
   }
 
-  // Helper method to check if business is currently open
+  // ✅ FIXED: Helper method to check if business is currently open (24-hour format)
   bool _isBusinessOpen(String? openingTime, String? closingTime, DateTime now) {
     if (openingTime == null || closingTime == null) return true;
     
     try {
+      // Parse opening time (assuming 24-hour format like "08:00:00" or "08:00")
       final openParts = openingTime.split(':');
+      final openHour = int.parse(openParts[0]);
+      final openMinute = int.parse(openParts[1]);
+      
+      // Parse closing time (assuming 24-hour format)
       final closeParts = closingTime.split(':');
-      final openTime = DateTime(now.year, now.month, now.day,
-          int.parse(openParts[0]), int.parse(openParts[1]));
-      final closeTime = DateTime(now.year, now.month, now.day,
-          int.parse(closeParts[0]), int.parse(closeParts[1]));
-      return now.isAfter(openTime) && now.isBefore(closeTime);
+      final closeHour = int.parse(closeParts[0]);
+      final closeMinute = int.parse(closeParts[1]);
+      
+      // Create DateTime objects for today with the business hours
+      final openToday = DateTime(now.year, now.month, now.day, openHour, openMinute);
+      DateTime closeToday = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
+      
+      // Handle businesses that close after midnight (e.g., 23:00 to 03:00)
+      if (closeToday.isBefore(openToday)) {
+        closeToday = closeToday.add(const Duration(days: 1));
+      }
+      
+      // Debug print to see what's happening
+      print('🕒 SearchPage - Business Hours Check:');
+      print('   Now: $now');
+      print('   Open: $openToday (${openHour.toString().padLeft(2, '0')}:${openMinute.toString().padLeft(2, '0')})');
+      print('   Close: $closeToday (${closeHour.toString().padLeft(2, '0')}:${closeMinute.toString().padLeft(2, '0')})');
+      print('   Is Open: ${now.isAfter(openToday) && now.isBefore(closeToday)}');
+      
+      return now.isAfter(openToday) && now.isBefore(closeToday);
     } catch (e) {
-      return true;
+      print('❌ SearchPage - Error parsing business hours: $e');
+      print('   Opening time: $openingTime');
+      print('   Closing time: $closingTime');
+      return true; // If there's an error parsing, assume open
     }
   }
 

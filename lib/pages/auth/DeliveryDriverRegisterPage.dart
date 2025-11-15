@@ -190,7 +190,8 @@ Future<void> _register() async {
       print('👤 DeliveryDriverRegisterPage - User Role: ${userData['role_name']}');
 
       // ✅ STEP 7: SEND FCM TOKEN AFTER SUCCESSFUL REGISTRATION
-      await _sendFcmTokenAfterRegistration();
+        await _sendFcmTokenForUser(userData);
+        
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -222,30 +223,34 @@ Future<void> _register() async {
 }
 
   // ✅ METHOD TO SEND FCM TOKEN FOR ALL USER TYPES
-  Future<void> _sendFcmTokenAfterRegistration() async {
+  Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
     try {
-      // Get FCM token
+      // ✅ Force refresh: delete old token first
+      await FirebaseMessaging.instance.deleteToken();
+
+      // ثم جلب token جديد
       final fcmToken = await FirebaseMessaging.instance.getToken();
-      
+
       if (fcmToken != null) {
-        print('🚀 Sending FCM token after delivery driver registration');
-        
-        // Use the provider to update FCM token
+        if (kDebugMode) {
+          print('🚀 Sending FCM token for user: ${userData['id']}');
+        }
+
         final result = await ref.read(updateFcmTokenProvider(fcmToken).future);
-        
+
         if (result['success'] == true) {
-          print("✅ FCM token sent to server successfully after registration!");
+          final role = userData['role_name']?.toString().toLowerCase();
+          print("✅ FCM token sent successfully for $role");
         } else {
-          print("❌ FCM token update failed after registration: ${result['message']}");
+          print("❌ FCM token update failed: ${result['message']}");
         }
       } else {
-        print("⚠️ FCM token is null after registration");
+        print("⚠️ FCM token is null after deleteToken");
       }
     } catch (e) {
-      print("❌ Error sending FCM token after registration: $e");
+      print("❌ Error sending FCM token: $e");
     }
   }
-
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,

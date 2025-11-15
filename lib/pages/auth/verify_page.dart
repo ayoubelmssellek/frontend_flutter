@@ -90,20 +90,45 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   void _onCodeChanged(String value, int index) {
     setState(() => _errorMessage = null);
     
-    // Auto-focus next field
-    if (value.isNotEmpty && index < 3) {
-      _focusNodes[index + 1].requestFocus();
+    // Handle paste operation - if user pastes 4 digits
+    if (value.length == 4 && RegExp(r'^[0-9]{4}$').hasMatch(value)) {
+      _handlePasteOperation(value);
+      return;
     }
     
-    // Auto-focus previous field on backspace
-    if (value.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
+    // Handle single digit input
+    if (value.isNotEmpty) {
+      // Take only the last character (handles manual input)
+      if (value.length > 1) {
+        _codeControllers[index].text = value[value.length - 1];
+        _codeControllers[index].selection = TextSelection.collapsed(offset: 1);
+      }
+      
+      // Auto-focus next field (left to right)
+      if (index < 3) {
+        _focusNodes[index + 1].requestFocus();
+      } else {
+        // Last field filled - verify automatically
+        _focusNodes[index].unfocus();
+        _verifyCode();
+      }
+    } else {
+      // Handle backspace - focus previous field
+      if (index > 0) {
+        _focusNodes[index - 1].requestFocus();
+      }
     }
+  }
 
-    // Auto-verify when all fields are filled
-    if (_getVerificationCode().length == 4) {
-      _verifyCode();
+  void _handlePasteOperation(String pastedCode) {
+    // Clear all fields first
+    for (int i = 0; i < 4; i++) {
+      _codeControllers[i].text = pastedCode[i];
     }
+    
+    // Focus the last field and verify
+    _focusNodes[3].requestFocus();
+    _verifyCode();
   }
 
   Future<void> _verifyCode() async {
@@ -353,13 +378,18 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.deepOrange),
+          icon: Icon(
+            isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
+            color: Colors.deepOrange,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -411,6 +441,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                         fontWeight: FontWeight.w800, 
                         color: Colors.grey.shade900,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     // Description
@@ -424,7 +455,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
-                    // Code Input Fields
+                    // Code Input Fields - ALWAYS LEFT TO RIGHT
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(4, (index) {
@@ -437,6 +468,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             maxLength: 1,
+                            textDirection: TextDirection.ltr, // Force LTR for numbers
                             style: const TextStyle(
                               fontSize: 24, 
                               fontWeight: FontWeight.w700, 
@@ -465,6 +497,12 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                                   : Colors.grey.shade50,
                             ),
                             onChanged: (value) => _onCodeChanged(value, index),
+                            onTap: () {
+                              // Ensure cursor is at the end when tapping
+                              _codeControllers[index].selection = TextSelection.collapsed(
+                                offset: _codeControllers[index].text.length,
+                              );
+                            },
                           ),
                         );
                       }),
@@ -526,6 +564,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                               color: Colors.grey.shade500, 
                               fontWeight: FontWeight.w500,
                             ),
+                            textAlign: TextAlign.center,
                           )
                         : _isResending
                             ? const CircularProgressIndicator(

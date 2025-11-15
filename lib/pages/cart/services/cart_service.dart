@@ -78,8 +78,12 @@ class CartService extends ChangeNotifier {
         'product_image': product['product_image'] ?? product['image'] ?? '',
         'restaurantId': product['restaurantId']?.toString() ?? '',
         'restaurantName': product['restaurantName'] ?? '',
+        'business_owner_id': product['business_owner_id'] ?? product['restaurantOwnerId'] ?? '', // ADD THIS LINE
+
+
       };
     }
+ 
     
     await _saveCart();
     notifyListeners();

@@ -7,19 +7,191 @@ import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/delivery_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_app/core/secure_storage.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:food_app/services/error_handler_service.dart';
 
-class DeliveryProfilePage extends ConsumerWidget {
+// ✅ NEW: Delivery Profile State Provider
+final deliveryProfileStateProvider = StateNotifierProvider<DeliveryProfileStateNotifier, DeliveryProfileState>((ref) {
+  return DeliveryProfileStateNotifier(ref);
+});
+
+class DeliveryProfileState {
+  final bool isLoading;
+  final bool isLoggedIn;
+  final Map<String, dynamic>? userData;
+  final String? errorMessage;
+  final bool hasTokenError;
+
+  const DeliveryProfileState({
+    this.isLoading = true,
+    this.isLoggedIn = false,
+    this.userData,
+    this.errorMessage,
+    this.hasTokenError = false,
+  });
+
+  DeliveryProfileState copyWith({
+    bool? isLoading,
+    bool? isLoggedIn,
+    Map<String, dynamic>? userData,
+    String? errorMessage,
+    bool? hasTokenError,
+  }) {
+    return DeliveryProfileState(
+      isLoading: isLoading ?? this.isLoading,
+      isLoggedIn: isLoggedIn ?? this.isLoggedIn,
+      userData: userData ?? this.userData,
+      errorMessage: errorMessage ?? this.errorMessage,
+      hasTokenError: hasTokenError ?? this.hasTokenError,
+    );
+  }
+}
+
+class DeliveryProfileStateNotifier extends StateNotifier<DeliveryProfileState> {
+  final Ref ref;
+
+  DeliveryProfileStateNotifier(this.ref) : super(const DeliveryProfileState()) {
+    ref.listen<bool>(authStateProvider, (previous, next) {
+      if (next == true) {
+        _loadUserData();
+      } else {
+        state = state.copyWith(
+          isLoggedIn: false,
+          userData: null,
+          isLoading: false,
+          hasTokenError: false,
+        );
+      }
+    });
+
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    try {
+      final isLogged = ref.read(authStateProvider);
+      
+      state = state.copyWith(
+        isLoading: true,
+        isLoggedIn: isLogged,
+        hasTokenError: false,
+      );
+
+      if (isLogged) {
+        await _loadUserData();
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to check authentication status',
+        hasTokenError: false,
+      );
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      state = state.copyWith(
+        isLoading: true,
+        hasTokenError: false,
+      );
+      
+      final result = await ref.read(authRepositoryProvider).getCurrentUser();
+      
+      if (result['success'] == true && result['data'] != null) {
+        state = state.copyWith(
+          userData: result,
+          isLoading: false,
+          errorMessage: null,
+          isLoggedIn: true,
+          hasTokenError: false,
+        );
+      } else {
+        final message = result['message'] ?? '';
+        if (ErrorHandlerService.isTokenError(message)) {
+          state = state.copyWith(
+            isLoading: false,
+            isLoggedIn: false,
+            errorMessage: null,
+            hasTokenError: true,
+          );
+        } else {
+          state = state.copyWith(
+            isLoading: false,
+            isLoggedIn: false,
+            errorMessage: result['message'] ?? 'Failed to load user data',
+            hasTokenError: false,
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading delivery user data: $e');
+      
+      if (ErrorHandlerService.isTokenError(e)) {
+        state = state.copyWith(
+          isLoading: false,
+          isLoggedIn: false,
+          errorMessage: null,
+          hasTokenError: true,
+        );
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          isLoggedIn: false,
+          errorMessage: ErrorHandlerService.getErrorMessage(e),
+          hasTokenError: false,
+        );
+      }
+    }
+  }
+
+  Future<void> refreshProfile() async {
+    if (state.isLoggedIn) {
+      await _loadUserData();
+    } else {
+      await _checkAuthStatus();
+    }
+  }
+
+  void clearError() {
+    state = state.copyWith(
+      errorMessage: null,
+      hasTokenError: false,
+    );
+  }
+}
+
+class DeliveryProfilePage extends ConsumerStatefulWidget {
   const DeliveryProfilePage({super.key});
+
+  @override
+  ConsumerState<DeliveryProfilePage> createState() => _DeliveryProfilePageState();
+}
+
+class _DeliveryProfilePageState extends ConsumerState<DeliveryProfilePage> {
+  bool _hasHandledTokenNavigation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(deliveryProfileStateProvider.notifier).refreshProfile();
+    });
+  }
 
   // ✅ Method to clear all user data using SecureStorage class
   Future<void> _clearAllUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // ✅ USE YOUR SECURE STORAGE CLASS
       await SecureStorage.deleteToken();
       
-      // Clear shared preferences
       await prefs.remove('current_user');
       await prefs.remove('cart_items');
       
@@ -33,7 +205,7 @@ class DeliveryProfilePage extends ConsumerWidget {
     }
   }
 
-  // ✅ UPDATED: Logout method that clears data first
+  // ✅ UPDATED: Logout method that waits for success before navigation
   void _logout(BuildContext context, WidgetRef ref) {
     bool isLoading = false;
 
@@ -42,43 +214,39 @@ class DeliveryProfilePage extends ConsumerWidget {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Logout'),
+            title: Text('delivery_profile_page.logout'.tr()),
             content: isLoading
-                ? const Column(
+                ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('Logging out...'),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text('delivery_profile_page.logging_out'.tr()),
                     ],
                   )
-                : const Text('Are you sure you want to logout?'),
+                : Text('delivery_profile_page.logout_confirmation'.tr()),
             actions: isLoading
                 ? []
                 : [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text('common.close'.tr()),
                     ),
                     TextButton(
                       onPressed: () async {
                         setState(() => isLoading = true);
 
                         try {
-                          // ✅ FIRST: Clear all local storage immediately
                           await _clearAllUserData();
 
-                          // ✅ THEN: Reset provider states
                           ref.read(authStateProvider.notifier).state = false;
                           ref.read(deliveryManStatusProvider.notifier).state =
                               DeliveryManStatus.offline;
                           ref.read(currentDeliveryManIdProvider.notifier).state = 0;
 
-                          // ✅ THEN: Invalidate providers to stop future calls
                           ref.invalidate(currentUserProvider);
                           ref.invalidate(authStateProvider);
 
-                          // ✅ FINALLY: Try server logout (optional)
                           try {
                             final authRepo = ref.read(authRepositoryProvider);
                             await authRepo.logout().timeout(
@@ -86,14 +254,15 @@ class DeliveryProfilePage extends ConsumerWidget {
                               onTimeout: () => {'success': true, 'message': 'Timeout'},
                             );
                           } catch (e) {
-                            // Server logout failed, but we continue with local logout
                             if (kDebugMode) {
                               print('⚠️ Server logout failed: $e');
                             }
                           }
 
+                          await Future.delayed(const Duration(milliseconds: 500));
+
                           if (context.mounted) {
-                            Navigator.pop(context); // Close dialog
+                            Navigator.pop(context);
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -105,7 +274,6 @@ class DeliveryProfilePage extends ConsumerWidget {
                             print('🎯 Logout completed successfully');
                           }
                         } catch (e) {
-                          // Even if something fails, try to navigate to login
                           if (context.mounted) {
                             Navigator.pop(context);
                             Navigator.pushAndRemoveUntil(
@@ -120,9 +288,9 @@ class DeliveryProfilePage extends ConsumerWidget {
                           }
                         }
                       },
-                      child: const Text(
-                        'Logout',
-                        style: TextStyle(color: Colors.red),
+                      child: Text(
+                        'delivery_profile_page.logout'.tr(),
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
                   ],
@@ -134,26 +302,42 @@ class DeliveryProfilePage extends ConsumerWidget {
 
   // Helper methods for dialogs
   void _showLanguageDialog(BuildContext context) {
+    final currentLocale = context.locale;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Language'),
-        content: const Text('Select your preferred language'),
+        title: Text('delivery_profile_page.language'.tr()),
+        content: Text('delivery_profile_page.change_app_language'.tr()),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('English'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Arabic'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('French'),
-          ),
+          _buildLanguageOption('العربية', const Locale('ar'), currentLocale, context),
+          _buildLanguageOption('English', const Locale('en'), currentLocale, context),
+          _buildLanguageOption('Français', const Locale('fr'), currentLocale, context),
         ],
       ),
+    );
+  }
+
+  Widget _buildLanguageOption(
+      String languageName, Locale locale, Locale currentLocale, BuildContext context) {
+    final isSelected = currentLocale.languageCode == locale.languageCode;
+
+    return ListTile(
+      title: Text(languageName),
+      trailing: isSelected ? const Icon(Icons.check, color: Colors.deepOrange) : null,
+      onTap: () async {
+        await context.setLocale(locale);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('locale', locale.languageCode);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${'common.language_changed_to'.tr()} $languageName'),
+            backgroundColor: Colors.deepOrange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
     );
   }
 
@@ -161,12 +345,12 @@ class DeliveryProfilePage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Contact Support'),
-        content: const Text('Email: support@foodapp.com\nPhone: +212 522 123 456'),
+        title: Text('delivery_profile_page.contact_support'.tr()),
+        content: Text('${'delivery_profile_page.customer_support'.tr()}\nEmail: support@foodapp.com\nPhone: +212 522 123 456'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text('common.close'.tr()),
           ),
         ],
       ),
@@ -177,27 +361,27 @@ class DeliveryProfilePage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Send Feedback'),
-        content: const TextField(
+        title: Text('delivery_profile_page.send_feedback'.tr()),
+        content: TextField(
           decoration: InputDecoration(
-            hintText: 'Enter your feedback here...',
-            border: OutlineInputBorder(),
+            hintText: 'delivery_profile_page.feedback_hint'.tr(),
+            border: const OutlineInputBorder(),
           ),
           maxLines: 5,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('common.cancel'.tr()),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Feedback sent successfully!')),
+                SnackBar(content: Text('delivery_profile_page.feedback_sent'.tr())),
               );
             },
-            child: const Text('Send'),
+            child: Text('delivery_profile_page.send'.tr()),
           ),
         ],
       ),
@@ -208,16 +392,14 @@ class DeliveryProfilePage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Privacy Policy'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'We value your privacy and are committed to protecting your personal data...',
-          ),
+        title: Text('delivery_profile_page.privacy_policy'.tr()),
+        content: SingleChildScrollView(
+          child: Text('delivery_profile_page.privacy_policy_content'.tr()),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text('common.close'.tr()),
           ),
         ],
       ),
@@ -240,15 +422,15 @@ class DeliveryProfilePage extends ConsumerWidget {
           children: [
             const Icon(Icons.login, size: 80, color: Colors.grey),
             const SizedBox(height: 24),
-            const Text(
-              'Session Expired',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              'delivery_profile_page.session_expired'.tr(),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Your session has expired. Please login again to continue.',
+            Text(
+              'delivery_profile_page.session_expired_message'.tr(),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -269,9 +451,9 @@ class DeliveryProfilePage extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Go to Login',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                child: Text(
+                  'delivery_profile_page.go_to_login'.tr(),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -283,24 +465,20 @@ class DeliveryProfilePage extends ConsumerWidget {
 
   // ✅ ADDED: Method to build profile content
   Widget _buildProfileContent(Map<String, dynamic> userData, BuildContext context, WidgetRef ref) {
-    // Extract user data from the exact API response structure
     final user = userData['data'] ?? {};
     final deliveryDriver = user['delivery_driver'] ?? {};
     
-    // Direct mapping from API response
-    final userName = user['name'] ?? 'Driver';
-    final userPhone = user['number_phone'] ?? 'Not provided';
+    final userName = user['name'] ?? 'delivery_profile_page.driver'.tr();
+    final userPhone = user['number_phone'] ?? 'delivery_profile_page.not_provided'.tr();
     final userStatus = user['status'] ?? 'unknown';
     final roleName = user['role_name'] ?? 'delivery_driver';
     
-    // Use the avatar from delivery_driver or fallback to default
     final avatarPath = deliveryDriver['avatar'];
     final avatarUrl = avatarPath != null 
         ? ImageHelper.getImageUrl(avatarPath)
         : _getDefaultAvatar(userName);
     
-    // Format dates
-    final phoneVerifiedAt = user['number_phone_verified_at'] ?? 'Not verified';
+    final phoneVerifiedAt = user['number_phone_verified_at'] ?? 'delivery_profile_page.not_verified'.tr();
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -403,14 +581,14 @@ class DeliveryProfilePage extends ConsumerWidget {
         Card(
           child: Column(
             children: [
-              const ListTile(
-                leading: Icon(Icons.person),
-                title: Text('Personal Information'),
+              ListTile(
+                leading: const Icon(Icons.person),
+                title: Text('delivery_profile_page.personal_information'.tr()),
               ),
               const Divider(height: 1),
-              _buildInfoItem('Phone', userPhone),
-              _buildInfoItem('Phone Verified', phoneVerifiedAt == 'Not verified' ? 'No' : 'Yes'),
-              _buildInfoItem('Account Status', userStatus),
+              _buildInfoItem('delivery_profile_page.phone'.tr(), userPhone),
+              _buildInfoItem('delivery_profile_page.phone_verified'.tr(), phoneVerifiedAt == 'delivery_profile_page.not_verified'.tr() ? 'delivery_profile_page.no'.tr() : 'delivery_profile_page.yes'.tr()),
+              _buildInfoItem('delivery_profile_page.account_status'.tr(), userStatus),
             ],
           ),
         ),
@@ -421,19 +599,19 @@ class DeliveryProfilePage extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                const ListTile(
-                  leading: Icon(Icons.delivery_dining),
-                  title: Text('Delivery Information'),
+                ListTile(
+                  leading: const Icon(Icons.delivery_dining),
+                  title: Text('delivery_profile_page.delivery_information'.tr()),
                 ),
                 const Divider(height: 1),
                 if (deliveryDriver['vehicle_type'] != null)
-                  _buildInfoItem('Vehicle Type', deliveryDriver['vehicle_type'].toString()),
+                  _buildInfoItem('delivery_profile_page.vehicle_type'.tr(), deliveryDriver['vehicle_type'].toString()),
                 if (deliveryDriver['vehicle_number'] != null)
-                  _buildInfoItem('Vehicle Number', deliveryDriver['vehicle_number'].toString()),
+                  _buildInfoItem('delivery_profile_page.vehicle_number'.tr(), deliveryDriver['vehicle_number'].toString()),
                 if (deliveryDriver['is_active'] != null)
-                  _buildInfoItem('Active Status', deliveryDriver['is_active'] == 1 ? 'Active' : 'Inactive'),
+                  _buildInfoItem('delivery_profile_page.active_status'.tr(), deliveryDriver['is_active'] == 1 ? 'delivery_profile_page.active'.tr() : 'delivery_profile_page.inactive'.tr()),
                 if (deliveryDriver['rating'] != null)
-                  _buildInfoItem('Rating', '${deliveryDriver['rating']} ⭐'),
+                  _buildInfoItem('delivery_profile_page.rating'.tr(), '${deliveryDriver['rating']} ⭐'),
               ],
             ),
           ),
@@ -444,28 +622,28 @@ class DeliveryProfilePage extends ConsumerWidget {
         Card(
           child: Column(
             children: [
-              const ListTile(
-                leading: Icon(Icons.settings),
-                title: Text('Settings'),
+              ListTile(
+                leading: const Icon(Icons.settings),
+                title: Text('delivery_profile_page.settings'.tr()),
               ),
               const Divider(height: 1),
               _buildMenuButton(
-                'Language',
+                'delivery_profile_page.language'.tr(),
                 Icons.language,
                 () => _showLanguageDialog(context),
               ),
               _buildMenuButton(
-                'Contact Support',
+                'delivery_profile_page.contact_support'.tr(),
                 Icons.support_agent,
                 () => _showContactSupport(context),
               ),
               _buildMenuButton(
-                'Send Feedback',
+                'delivery_profile_page.send_feedback'.tr(),
                 Icons.feedback,
                 () => _showFeedback(context),
               ),
               _buildMenuButton(
-                'Privacy Policy',
+                'delivery_profile_page.privacy_policy'.tr(),
                 Icons.privacy_tip,
                 () => _showPrivacyPolicy(context),
               ),
@@ -478,9 +656,9 @@ class DeliveryProfilePage extends ConsumerWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () => _logout(context, ref), // ✅ Use ref directly
+            onPressed: () => _logout(context, ref),
             icon: const Icon(Icons.logout),
-            label: const Text('Logout'),
+            label: Text('delivery_profile_page.logout'.tr()),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
@@ -521,55 +699,191 @@ class DeliveryProfilePage extends ConsumerWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(currentUserProvider);
+  // ✅ ADDED: Handle token errors
+  void _handleTokenErrors(DeliveryProfileState state, BuildContext context) {
+    if (_hasHandledTokenNavigation || !mounted) return;
 
-    return Scaffold(
-      body: userAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) {
-          final errorMessage = error.toString();
-          if (errorMessage.contains('not logged in') || 
-              errorMessage.contains('No authentication token')) {
-            return _buildLoggedOutState(context);
-          }
-          
-          return Center(
+    if (state.hasTokenError) {
+      _hasHandledTokenNavigation = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ErrorHandlerService.handleApiError(
+          error: 'Your session has expired. Please login again.',
+          context: context,
+        );
+      });
+    }
+  }
+
+  // ✅ ADDED: Build loading skeleton
+  Widget _buildSkeletonLoading() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading profile: $error',
-                  style: const TextStyle(color: Colors.red),
-                  textAlign: TextAlign.center,
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => ref.invalidate(currentUserProvider),
-                  child: const Text('Retry'),
+                const SizedBox(height: 16),
+                Container(
+                  width: 120,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 180,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
               ],
             ),
-          );
-        },
-        data: (userData) {
-          if (userData['success'] == false) {
-            final message = userData['message'] ?? '';
-            if (message.contains('not logged in') || 
-                message.contains('No authentication token') ||
-                userData['notLoggedIn'] == true) {
-              return _buildLoggedOutState(context);
-            }
-          }
-          
-          return _buildProfileContent(userData, context, ref);
-        },
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: List.generate(4, (index) => _buildMenuSkeletonItem()),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildMenuSkeletonItem() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Container(
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ ADDED: Build error state
+  Widget _buildErrorState(DeliveryProfileState state, BuildContext context) {
+    final profileNotifier = ref.read(deliveryProfileStateProvider.notifier);
+    
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.errorMessage ?? 'Unknown error occurred',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => profileNotifier.refreshProfile(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('delivery_profile_page.retry'.tr()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profileState = ref.watch(deliveryProfileStateProvider);
+
+    // ✅ HANDLE TOKEN ERRORS
+    _handleTokenErrors(profileState, context);
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      body: profileState.isLoading
+          ? _buildSkeletonLoading()
+          : profileState.errorMessage != null
+              ? _buildErrorState(profileState, context)
+              : profileState.isLoggedIn && profileState.userData != null
+                  ? _buildProfileContent(profileState.userData!, context, ref)
+                  : _buildLoggedOutState(context),
+    );
+  }
+
+  @override
+  void dispose() {
+    _hasHandledTokenNavigation = false;
+    super.dispose();
   }
 }

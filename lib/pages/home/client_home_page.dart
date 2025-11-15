@@ -16,12 +16,16 @@ class ClientHomePage extends ConsumerStatefulWidget {
   
   const ClientHomePage({super.key, this.initialTab = 0});
 
+
   @override
   ConsumerState<ClientHomePage> createState() => _ClientHomePageState();
 }
 
 class _ClientHomePageState extends ConsumerState<ClientHomePage>
+
     with SingleTickerProviderStateMixin {
+
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late int _currentIndex;
@@ -155,78 +159,77 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
         break;
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Column(
-          children: [
-            const HomeAppBar(),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    BusinessTypesSection(
-                      selectedBusinessType: _selectedBusinessType,
-                      onBusinessTypeSelected: (businessType) {
-                        setState(() => _selectedBusinessType = businessType);
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    ShopsList(selectedCategory: _selectedBusinessType),
-                    const SizedBox(height: 24),
-                    const DeliveryMenSection(),
-                  ],
-                ),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    key: ValueKey(context.locale), // 👈 هذا السطر يجعل الواجهة تعيد البناء عند تغيير اللغة
+    backgroundColor: Colors.grey.shade50,
+    body: FadeTransition(
+      opacity: _fadeAnimation,
+      child: Column(
+        children: [
+          const HomeAppBar(),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  BusinessTypesSection(
+                    selectedBusinessType: _selectedBusinessType,
+                    onBusinessTypeSelected: (businessType) {
+                      setState(() => _selectedBusinessType = businessType);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  ShopsList(selectedCategory: _selectedBusinessType),
+                  const SizedBox(height: 24),
+                  const DeliveryMenSection(),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade300,
-              blurRadius: 20,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            _handleTabNavigation(index);
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.deepOrange,
-          unselectedItemColor: Colors.grey.shade600,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          items: [
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.home), 
-              label: 'home_page.home'.tr()
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.search), 
-              label: 'home_page.search'.tr()
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.shopping_cart),
-              label: 'home_page.cart'.tr(),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.person), 
-              label: 'home_page.profile'.tr()
-            ),
-          ],
-        ),
+    ),
+    bottomNavigationBar: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 20,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
-    );
-  }
+      child: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => _handleTabNavigation(index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.deepOrange,
+        unselectedItemColor: Colors.grey.shade600,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home),
+            label: tr('home_page.home'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.search),
+            label: tr('home_page.search'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.shopping_cart),
+            label: tr('home_page.cart'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: tr('home_page.profile'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 }

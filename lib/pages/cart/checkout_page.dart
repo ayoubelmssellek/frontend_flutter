@@ -1,4 +1,5 @@
 // lib/pages/checkout_page.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/pages/auth/login_page.dart';
@@ -643,7 +644,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         // Handle error from API
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create order: ${orderResult['message']}'),
+            content: Text('${orderResult['message']}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -686,6 +687,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       "products": cartService.cartItems.values.map((item) => {
         "product_id": int.tryParse(item['id'].toString()) ?? 0,
         "quantity": item['quantity'],
+       "business_owner_id": item['business_owner_id'] ?? 1, // ADD THIS LINE - fallback to 1 if not available
+
         // Note: price is sent as single item price, Laravel will calculate total
       }).toList(),
     };
@@ -735,7 +738,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final items = orderData['items'] as List<dynamic>? ?? [];
     final realItemCount = orderData['item_count'] ?? items.length;
     
-    print('🎯 Extracted Order Data:');
+    if (kDebugMode) {
+      print('🎯 Extracted Order Data:');
+    }
     print('   - ID: $orderId');
     print('   - Total: $totalPrice');
     print('   - Address: $address');

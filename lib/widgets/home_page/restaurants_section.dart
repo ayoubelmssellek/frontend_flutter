@@ -4,6 +4,7 @@ import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/widgets/home_page/ShopCard.dart';
 import 'package:food_app/core/image_helper.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ShopsList extends ConsumerWidget {
   final String selectedCategory;
@@ -50,20 +51,43 @@ class ShopsList extends ConsumerWidget {
     }).toList();
   }
 
-  // Helper method to check if business is currently open
+  // Helper method to check if business is currently open (24-hour format)
   bool _isBusinessOpen(String? openingTime, String? closingTime, DateTime now) {
     if (openingTime == null || closingTime == null) return true;
     
     try {
+      // Parse opening time (assuming 24-hour format like "08:00:00" or "08:00")
       final openParts = openingTime.split(':');
+      final openHour = int.parse(openParts[0]);
+      final openMinute = int.parse(openParts[1]);
+      
+      // Parse closing time (assuming 24-hour format)
       final closeParts = closingTime.split(':');
-      final openTime = DateTime(now.year, now.month, now.day,
-          int.parse(openParts[0]), int.parse(openParts[1]));
-      final closeTime = DateTime(now.year, now.month, now.day,
-          int.parse(closeParts[0]), int.parse(closeParts[1]));
-      return now.isAfter(openTime) && now.isBefore(closeTime);
+      final closeHour = int.parse(closeParts[0]);
+      final closeMinute = int.parse(closeParts[1]);
+      
+      // Create DateTime objects for today with the business hours
+      final openToday = DateTime(now.year, now.month, now.day, openHour, openMinute);
+      DateTime closeToday = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
+      
+      // Handle businesses that close after midnight (e.g., 23:00 to 03:00)
+      if (closeToday.isBefore(openToday)) {
+        closeToday = closeToday.add(const Duration(days: 1));
+      }
+      
+      // Debug print to see what's happening
+      print('🕒 Business Hours Check:');
+      print('   Now: $now');
+      print('   Open: $openToday (${openHour.toString().padLeft(2, '0')}:${openMinute.toString().padLeft(2, '0')})');
+      print('   Close: $closeToday (${closeHour.toString().padLeft(2, '0')}:${closeMinute.toString().padLeft(2, '0')})');
+      print('   Is Open: ${now.isAfter(openToday) && now.isBefore(closeToday)}');
+      
+      return now.isAfter(openToday) && now.isBefore(closeToday);
     } catch (e) {
-      return true;
+      print('❌ Error parsing business hours: $e');
+      print('   Opening time: $openingTime');
+      print('   Closing time: $closingTime');
+      return true; // If there's an error parsing, assume open
     }
   }
 
@@ -121,6 +145,9 @@ class ShopsList extends ConsumerWidget {
       print('Raw Avatar Image: ${shop['image']}');
       print('Full Cover URL: ${ImageHelper.getImageUrl(shop['cover_image'])}');
       print('Full Avatar URL: ${ImageHelper.getImageUrl(shop['image'])}');
+      print('Opening Time: ${shop['opening_time']}');
+      print('Closing Time: ${shop['closing_time']}');
+      print('Is Open: ${shop['isOpen']}');
       print('---');
     }
     print('=== END DEBUG ===');
@@ -136,11 +163,11 @@ class ShopsList extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
+               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Top Rated Businesses',
+                    tr('businesses_section.Top_Rated_Businesses'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -149,7 +176,7 @@ class ShopsList extends ConsumerWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Highest rated businesses near you',
+                    tr('Highest rated businesses near you'),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,

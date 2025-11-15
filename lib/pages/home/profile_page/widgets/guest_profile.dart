@@ -1,24 +1,38 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:food_app/pages/auth/DeliveryDriverRegisterPage.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/auth/client_register_page.dart';
 import 'package:food_app/pages/home/profile_page/widgets/feature_item.dart';
 import 'package:food_app/pages/home/profile_page/widgets/section_widget.dart';
+import 'package:food_app/services/language_selector.dart';
 
 class GuestProfile extends StatelessWidget {
   const GuestProfile({super.key});
-
+  
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildGuestHeader(context),
-          _buildSettingsSection(context),
-          _buildEarnMoneySection(context),
-          _buildSupportSection(context),
-          _buildBenefitsSection(),
-        ],
+    return Scaffold( // ← ADD THIS Scaffold
+      backgroundColor: Colors.grey.shade50,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildGuestHeader(context),
+            _buildSettingsSection(context),
+            _buildEarnMoneySection(context),
+            _buildSupportSection(context),
+            _buildBenefitsSection(),
+          ],
+        ),
       ),
     );
   }
@@ -70,8 +84,8 @@ class GuestProfile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'You are Guest',
+          Text(
+            _tr('guest_profile_page.You_are_Guest','You are Guest'),
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -143,12 +157,7 @@ class GuestProfile extends StatelessWidget {
     return SectionWidget(
       title: 'Settings',
       features: [
-        FeatureItem(
-          icon: Icons.language_rounded,
-          title: 'Language',
-          subtitle: 'Change app language',
-          onTap: () => _showLanguageDialog(context),
-        ),
+        LanguageSelector.build(context),
         FeatureItem(
           icon: Icons.notifications_rounded,
           title: 'Notifications',
@@ -268,32 +277,6 @@ class GuestProfile extends StatelessWidget {
           ),
         ],
       )
-    );
-  }
-
-  void _showLanguageDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildLanguageOption('English', true, context),
-            _buildLanguageOption('Arabic', false, context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageOption(String language, bool isSelected, BuildContext context) {
-    return ListTile(
-      title: Text(language),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.deepOrange) : null,
-      onTap: () {
-        Navigator.pop(context);
-      },
     );
   }
 
