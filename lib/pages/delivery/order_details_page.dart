@@ -1,4 +1,4 @@
-// pages/delivery/order_details_page.dart (Updated - No order actions + Fixed maps)
+// pages/delivery/order_details_page.dart (Updated - Uses real phone number)
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/order_model.dart';
@@ -9,10 +9,26 @@ class OrderDetailsPage extends StatelessWidget {
   const OrderDetailsPage({super.key, required this.order});
 
   Future<void> _callCustomer(BuildContext context) async {
-    const String phoneNumber = '+212612345678';
-    final Uri phoneUri = Uri.parse('tel:$phoneNumber');
+    // ✅ UPDATED: Use the actual phone number from the order
+    final String phoneNumber = order.clientPhone;
     
-    print('🚀 DIRECT LAUNCH: $phoneNumber');
+    // Clean the phone number - remove any spaces, dashes, etc.
+    final String cleanPhoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // Ensure it has the country code if missing
+    String formattedPhoneNumber = cleanPhoneNumber;
+    if (!cleanPhoneNumber.startsWith('+')) {
+      // Assuming Moroccan numbers - add +212 prefix if missing
+      if (cleanPhoneNumber.startsWith('0')) {
+        formattedPhoneNumber = '+212${cleanPhoneNumber.substring(1)}';
+      } else {
+        formattedPhoneNumber = '+212$cleanPhoneNumber';
+      }
+    }
+    
+    final Uri phoneUri = Uri.parse('tel:$formattedPhoneNumber');
+    
+    print('🚀 CALLING: $formattedPhoneNumber (original: $phoneNumber)');
     
     try {
       // Direct launch without canLaunchUrl check
@@ -48,11 +64,26 @@ class OrderDetailsPage extends StatelessWidget {
   }
 
   Future<void> _showCallDialog(BuildContext context) async {
+    // ✅ UPDATED: Show the actual phone number in the dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Call Customer'),
-        content: const Text('Would you like to call the customer?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Would you like to call the customer?'),
+            const SizedBox(height: 8),
+            Text(
+              'Phone: ${order.clientPhone}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -211,8 +242,8 @@ class OrderDetailsPage extends StatelessWidget {
             // Restaurant Information
             if (order.restaurantName != null || order.restaurantAddress != null)
               _buildSection(
-                title: 'Restaurant Information',
-                icon: Icons.restaurant,
+                title: 'store Information',
+                icon: Icons.store,
                 children: [
                   if (order.restaurantName != null)
                     _buildInfoRow('Name', order.restaurantName!),
@@ -223,9 +254,9 @@ class OrderDetailsPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () => _showMapsDialog(context, order.restaurantAddress!, 'Restaurant'),
+                        onPressed: () => _showMapsDialog(context, order.restaurantAddress!, 'store'),
                         icon: const Icon(Icons.directions, size: 18),
-                        label: const Text('Directions to Restaurant'),
+                        label: const Text('Directions to store'),
                       ),
                     ),
                 ],
@@ -356,9 +387,8 @@ class OrderDetailsPage extends StatelessWidget {
               title: 'Customer Information',
               icon: Icons.person,
               children: [
-                _buildInfoRow('Name', order.customerName ?? 'Customer #${order.clientId}'),
-                _buildInfoRow('Phone', order.customerPhone ?? 'Not available'),
-                _buildInfoRow('Client ID', order.clientId.toString()),
+                _buildInfoRow('Name', order.customerName),
+                _buildInfoRow('Phone', order.clientPhone),
                 const SizedBox(height: 8),
                 Row(
                   children: [

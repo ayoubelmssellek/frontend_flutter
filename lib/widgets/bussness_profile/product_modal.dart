@@ -20,18 +20,75 @@ class ProductModal extends ConsumerStatefulWidget {
 
 class _ProductModalState extends ConsumerState<ProductModal> {
   int _quantity = 1;
+  bool _isBusinessOpen = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBusinessHours();
+  }
+
+  void _checkBusinessHours() {
+    final now = DateTime.now();
+    final openingTime = widget.shop['opening_time']?.toString();
+    final closingTime = widget.shop['closing_time']?.toString();
+    
+    setState(() {
+      _isBusinessOpen = _isBusinessCurrentlyOpen(openingTime, closingTime, now);
+    });
+  }
+
+  bool _isBusinessCurrentlyOpen(String? openingTime, String? closingTime, DateTime now) {
+    if (openingTime == null || closingTime == null) {
+      return true; // If no hours specified, assume always open
+    }
+
+    try {
+      // Parse opening time (assuming format like "08:00:00" or "08:00")
+      final openParts = openingTime.split(':');
+      final openHour = int.parse(openParts[0]);
+      final openMinute = int.parse(openParts[1]);
+      
+      // Parse closing time
+      final closeParts = closingTime.split(':');
+      final closeHour = int.parse(closeParts[0]);
+      final closeMinute = int.parse(closeParts[1]);
+      
+      // Create DateTime objects for today with the business hours
+      final openToday = DateTime(now.year, now.month, now.day, openHour, openMinute);
+      DateTime closeToday = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
+      
+      // Handle businesses that close after midnight
+      if (closeToday.isBefore(openToday)) {
+        closeToday = closeToday.add(const Duration(days: 1));
+      }
+      
+      return now.isAfter(openToday) && now.isBefore(closeToday);
+    } catch (e) {
+      print('Error parsing business hours: $e');
+      return true; // If there's an error parsing, assume open
+    }
+  }
 
   Future<void> _addToCart() async {
+    if (!_isBusinessOpen) return;
+    
     final cartService = ref.read(cartServiceProvider);
     
     final productWithRestaurant = Map<String, dynamic>.from(widget.product);
     productWithRestaurant['restaurantId'] = widget.shop['id'].toString();
     productWithRestaurant['restaurantName'] = widget.shop['business_name'] ?? widget.shop['name'] ?? '';
     
-    // ✅ ADD THIS: Include business_owner_id from the shop data
-    productWithRestaurant['business_owner_id'] = widget.shop['business_owner_id']?.toString() ?? 
-                                                 widget.shop['owner_id']?.toString() ?? 
-                                                 '1'; // Fallback to '1' if not available
+    // ✅ FIXED: Use the 'id' field as business_owner_id since that's what your API provides
+    productWithRestaurant['business_owner_id'] = widget.shop['id']?.toString() ?? '1';
+    
+    // Debug print to verify the data
+    print('🛒 ProductModal - Adding to cart:');
+    print('   - Product: ${widget.product['product_name'] ?? widget.product['name']}');
+    print('   - Product ID: ${widget.product['id']}');
+    print('   - Business Owner ID: ${widget.shop['id']}');
+    print('   - Business Name: ${widget.shop['business_name']}');
+    print('   - Quantity: $_quantity');
     
     await cartService.addItem(productWithRestaurant, quantity: _quantity);
     
@@ -39,7 +96,8 @@ class _ProductModalState extends ConsumerState<ProductModal> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${widget.product['product_name'] ?? 'Item'} added to cart'),
+          content: Text('${widget.product['product_name'] ?? widget.product['name'] ?? 'Item'} added to cart'),
+          backgroundColor: Colors.green,
         ),
       );
     }
@@ -71,12 +129,42 @@ class _ProductModalState extends ConsumerState<ProductModal> {
             ),
           ),
           const SizedBox(height: 12),
+          
+          // Business Status Badge
+          if (!_isBusinessOpen)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.access_time, color: Colors.red.shade600, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Currently Closed',
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
+          if (!_isBusinessOpen) const SizedBox(height: 12),
+          
           Row(
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: CustomNetworkImage(
-                  imageUrl: widget.product['product_image']?.toString() ?? '',
+                  imageUrl: widget.product['product_image']?.toString() ?? widget.product['image']?.toString() ?? '',
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,
@@ -130,28 +218,31 @@ class _ProductModalState extends ConsumerState<ProductModal> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: _isBusinessOpen ? Colors.grey.shade100 : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
                     IconButton(
                       splashRadius: 18,
-                      icon: const Icon(Icons.remove),
-                      onPressed: () {
+                      icon: Icon(Icons.remove, color: _isBusinessOpen ? Colors.black : Colors.grey),
+                      onPressed: _isBusinessOpen ? () {
                         if (_quantity > 1) {
                           setState(() => _quantity--);
                         }
-                      },
+                      } : null,
                     ),
                     Text(
                       _quantity.toString(),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: _isBusinessOpen ? Colors.black : Colors.grey,
+                      ),
                     ),
                     IconButton(
                       splashRadius: 18,
-                      icon: const Icon(Icons.add),
-                      onPressed: () => setState(() => _quantity++),
+                      icon: Icon(Icons.add, color: _isBusinessOpen ? Colors.black : Colors.grey),
+                      onPressed: _isBusinessOpen ? () => setState(() => _quantity++) : null,
                     ),
                   ],
                 ),
@@ -159,9 +250,10 @@ class _ProductModalState extends ConsumerState<ProductModal> {
               // Total preview
               Text(
                 'Total: ${(price * _quantity).toStringAsFixed(2)} DH',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
+                  color: _isBusinessOpen ? Colors.black : Colors.grey,
                 ),
               ),
             ],
@@ -169,21 +261,73 @@ class _ProductModalState extends ConsumerState<ProductModal> {
           const Spacer(),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            child: _isBusinessOpen
+                ? ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _addToCart,
+                    child: const Text(
+                      'Add to cart',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Currently Unavailable',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+          
+          // Business Hours Info
+          if (!_isBusinessOpen) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
               ),
-              onPressed: _addToCart,
-              child: const Text(
-                'Add to cart',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Business Hours',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Opens at ${widget.shop['opening_time']?.toString().substring(0, 5) ?? 'N/A'} - '
+                    'Closes at ${widget.shop['closing_time']?.toString().substring(0, 5) ?? 'N/A'}',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

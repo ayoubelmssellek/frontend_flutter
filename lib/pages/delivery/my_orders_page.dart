@@ -17,6 +17,7 @@ class MyOrdersPage extends ConsumerStatefulWidget {
 class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   bool _isLoading = false;
   bool _hasHandledTokenNavigation = false;
+  final Set<int> _updatingOrderIds = {}; // ✅ ADDED: Track which orders are being updated
 
   @override
   void initState() {
@@ -123,7 +124,8 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   }
 
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
-    setState(() => _isLoading = true);
+    // ✅ FIXED: Track individual order loading state
+    setState(() => _updatingOrderIds.add(order.id));
     
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
@@ -143,7 +145,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Order status updated to ${_getStatusText(newStatus)}'),
+            content: Text('Order #${order.id} marked as ${_getStatusText(newStatus)}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -167,7 +169,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _updatingOrderIds.remove(order.id));
       }
     }
   }
@@ -280,6 +282,35 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                 ],
               ),
               const SizedBox(height: 12),
+              
+              // Customer Info
+              Row(
+                children: [
+                  const Icon(Icons.person, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      order.customerName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.phone, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    order.clientPhone,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               
               // Restaurant and Address Info
               Row(
@@ -459,7 +490,9 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   }
 
   Widget _buildActionButton(Order order) {
-    if (_isLoading) {
+    final isUpdating = _updatingOrderIds.contains(order.id); // ✅ FIXED: Check individual order
+
+    if (isUpdating) {
       return const SizedBox(
         width: 20,
         height: 20,
@@ -470,7 +503,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     switch (order.status) {
       case OrderStatus.accepted:
         return ElevatedButton(
-          onPressed: () => _updateOrderStatus(order, OrderStatus.delivered),
+          onPressed: () => _showMarkAsDeliveredConfirmation(order),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -486,6 +519,35 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     
       default:
         return const SizedBox();
+    }
+  }
+
+  // ✅ ADDED: Confirmation dialog for marking as delivered
+  Future<void> _showMarkAsDeliveredConfirmation(Order order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delivery'),
+        content: Text('Are you sure you want to mark Order #${order.id} as delivered?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Mark Delivered'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _updateOrderStatus(order, OrderStatus.delivered);
     }
   }
 
@@ -592,6 +654,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   @override
   void dispose() {
     _hasHandledTokenNavigation = false;
+    _updatingOrderIds.clear();
     super.dispose();
   }
 }

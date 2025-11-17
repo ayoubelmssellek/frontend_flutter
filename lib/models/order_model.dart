@@ -12,6 +12,8 @@ class Order {
   final int id;
   final int? deliveryDriverId;
   final int clientId;
+  final String clientName;
+  final String clientPhone;
   final OrderStatus status;
   final double totalPrice;
   final String address;
@@ -24,6 +26,8 @@ class Order {
     required this.id,
     this.deliveryDriverId,
     required this.clientId,
+    required this.clientName,
+    required this.clientPhone,
     required this.status,
     required this.totalPrice,
     required this.address,
@@ -38,6 +42,8 @@ class Order {
     return Order(
       id: 0,
       clientId: 0,
+      clientName: '',
+      clientPhone: '',
       status: OrderStatus.pending,
       totalPrice: 0.0,
       address: '',
@@ -53,6 +59,8 @@ class Order {
         id: _parseInt(json['id'] ?? json['order_id']),
         deliveryDriverId: _parseNullableInt(json['delivery_driver_id']),
         clientId: _parseInt(json['client_id']),
+        clientName: _parseString(json['client_name'] ?? json['Client_name']),
+        clientPhone: _parseString(json['number_phone'] ?? json['client_phone'] ?? json['Client_phone']),
         status: _parseOrderStatus(json['status']),
         totalPrice: _parseDouble(json['total_price']),
         address: _parseString(json['address']),
@@ -70,12 +78,40 @@ class Order {
     }
   }
 
+  // ✅ ADD THIS: Factory constructor specifically for API response format
+  factory Order.fromApiJson(Map<String, dynamic> json) {
+    try {
+      return Order(
+        id: _parseInt(json['id']),
+        deliveryDriverId: _parseNullableInt(json['delivery_driver_id']),
+        clientId: _parseInt(json['client_id']),
+        clientName: _parseString(json['client_name'] ?? json['Client_name']),
+        clientPhone: _parseString(json['number_phone'] ?? json['client_phone'] ?? json['Client_phone']),
+        status: _parseOrderStatus(json['status']),
+        totalPrice: _parseDouble(json['total_price']),
+        address: _parseString(json['address']),
+        items: _parseOrderItems(json['items'] ?? []),
+        createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+        updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+        itemCount: _parseInt(json['item_count'] ?? (json['items'] != null ? (json['items'] as List).length : 0)),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error parsing Order from API JSON: $e');
+        print('📦 Problematic API JSON: $json');
+      }
+      rethrow;
+    }
+  }
+
   // Convert Order to JSON for sending to API
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'delivery_driver_id': deliveryDriverId,
       'client_id': clientId,
+      'client_name': clientName,
+      'number_phone': clientPhone,
       'status': _orderStatusToString(status),
       'total_price': totalPrice.toStringAsFixed(2),
       'address': address,
@@ -91,6 +127,8 @@ class Order {
     int? id,
     int? deliveryDriverId,
     int? clientId,
+    String? clientName,
+    String? clientPhone,
     OrderStatus? status,
     double? totalPrice,
     String? address,
@@ -103,6 +141,8 @@ class Order {
       id: id ?? this.id,
       deliveryDriverId: deliveryDriverId ?? this.deliveryDriverId,
       clientId: clientId ?? this.clientId,
+      clientName: clientName ?? this.clientName,
+      clientPhone: clientPhone ?? this.clientPhone,
       status: status ?? this.status,
       totalPrice: totalPrice ?? this.totalPrice,
       address: address ?? this.address,
@@ -124,11 +164,11 @@ class Order {
     return items.first.businessName;
   }
 
-  // Get customer name (you might get this from API in future)
-  String? get customerName => 'Customer #$clientId';
+  // ✅ UPDATED: Get customer name from API data
+  String get customerName => clientName.isNotEmpty ? clientName : 'Customer #$clientId';
 
-  // Get customer phone (you might get this from API in future)
-  String? get customerPhone => 'Unknown';
+  // ✅ UPDATED: Get customer phone from API data
+  String get customerPhone => clientPhone.isNotEmpty ? clientPhone : 'Unknown';
 
   // Get restaurant address (you might get this from API in future)
   String? get restaurantAddress => 'Unknown';
@@ -138,7 +178,7 @@ class Order {
 
   @override
   String toString() {
-    return 'Order(id: $id, status: $status, totalPrice: $totalPrice, items: ${items.length}, itemCount: $itemCount)';
+    return 'Order(id: $id, status: $status, totalPrice: $totalPrice, client: $clientName, phone: $clientPhone, items: ${items.length}, itemCount: $itemCount)';
   }
 
   @override
@@ -274,7 +314,7 @@ class OrderItem {
         price: Order._parseDouble(json['price']),
         productId: Order._parseNullableInt(json['product_id']),
         businessOwnerId: Order._parseNullableInt(json['business_owner_id']),
-        totalPrice: Order._parseDouble(json['total_price'] ?? (json['price'] * json['quantity'])),
+        totalPrice: Order._parseDouble(json['total_price'] ?? (Order._parseDouble(json['price']) * Order._parseInt(json['quantity']))),
       );
     } catch (e) {
       if (kDebugMode) {

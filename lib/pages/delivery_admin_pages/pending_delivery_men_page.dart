@@ -636,25 +636,25 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
     final pendingDeliveryMenAsync = ref.watch(pendingDeliveryMenProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Pending Delivery Drivers',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => ref.invalidate(pendingDeliveryMenProvider),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+      // appBar: AppBar(
+      //   title: const Text(
+      //     'Pending Delivery Drivers',
+      //     style: TextStyle(
+      //       fontWeight: FontWeight.bold,
+      //       fontSize: 18,
+      //     ),
+      //   ),
+      //   backgroundColor: Colors.blue,
+      //   foregroundColor: Colors.white,
+      //   elevation: 0,
+      //   actions: [
+      //     IconButton(
+      //       icon: const Icon(Icons.refresh_rounded),
+      //       onPressed: () => ref.invalidate(pendingDeliveryMenProvider),
+      //       tooltip: 'Refresh',
+      //     ),
+      //   ],
+      // ),
       body: pendingDeliveryMenAsync.when(
         loading: () => const Center(
           child: Column(

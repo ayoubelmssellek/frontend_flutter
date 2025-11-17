@@ -360,25 +360,25 @@ class ApprovedDeliveryMenPage extends ConsumerWidget {
     final approvedDeliveryMenAsync = ref.watch(approvedDeliveryMenProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Approved Delivery Drivers',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => ref.invalidate(approvedDeliveryMenProvider),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+      // appBar: AppBar(
+      //   title: const Text(
+      //     'Approved Delivery Drivers',
+      //     style: TextStyle(
+      //       fontWeight: FontWeight.bold,
+      //       fontSize: 18,
+      //     ),
+      //   ),
+      //   backgroundColor: Colors.green,
+      //   foregroundColor: Colors.white,
+      //   elevation: 0,
+      //   actions: [
+      //     IconButton(
+      //       icon: const Icon(Icons.refresh_rounded),
+      //       onPressed: () => ref.invalidate(approvedDeliveryMenProvider),
+      //       tooltip: 'Refresh',
+      //     ),
+      //   ],
+      // ),
       body: approvedDeliveryMenAsync.when(
         loading: () => const Center(
           child: Column(

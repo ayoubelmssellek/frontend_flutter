@@ -20,6 +20,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
   final Set<int> _acceptingOrderIds = {};
   final Set<int> _acceptedOrderIds = {};
   bool _hasHandledTokenNavigation = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -158,7 +159,6 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     return 1;
   }
 
-  // ✅ ADDED: Token error navigation
   void _navigateToTokenExpiredPage([String? customMessage]) {
     if (_hasHandledTokenNavigation || !mounted) return;
     
@@ -168,7 +168,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
         MaterialPageRoute(
           builder: (_) => TokenExpiredPage(
             message: customMessage ?? 'Your session has expired. Please login again to continue.',
-            allowGuestMode: false, // Delivery partners can't continue as guest
+            allowGuestMode: false,
           ),
         ),
         (route) => false,
@@ -176,7 +176,6 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     });
   }
 
-  // ✅ ADDED: Handle token errors
   void _handleTokenError(dynamic error) {
     if (ErrorHandlerService.isTokenError(error)) {
       print('🔐 Token error detected in AvailableOrdersPage');
@@ -209,10 +208,8 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     } catch (e) {
       print('❌ Error loading orders: $e');
       
-      // ✅ HANDLE TOKEN ERRORS
       _handleTokenError(e);
       
-      // Only show snackbar for non-token errors
       if (mounted && !ErrorHandlerService.isTokenError(e)) {
         _showErrorSnackBar('Failed to load orders: ${ErrorHandlerService.getErrorMessage(e)}');
       }
@@ -276,7 +273,6 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     } catch (e) {
       print('❌ Error accepting order: $e');
       
-      // ✅ HANDLE TOKEN ERRORS
       if (ErrorHandlerService.isTokenError(e)) {
         _navigateToTokenExpiredPage('Your session has expired while accepting the order.');
         return;
@@ -292,6 +288,11 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
 
   void _handleSuccessfulOrderAcceptance(Order order, int deliveryManId) {
     print('✅ Order #${order.id} accepted successfully');
+    
+    // ✅ FIX: Dismiss any open bottom sheet
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(); // This closes the bottom sheet
+    }
     
     setState(() {
       _acceptedOrderIds.add(order.id);
@@ -412,6 +413,221 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     }
   }
 
+  // ✅ NEW: Show full order details
+  void _showOrderDetails(Order order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildOrderDetailsSheet(order),
+    );
+  }
+
+  // ✅ NEW: Build order details bottom sheet
+  Widget _buildOrderDetailsSheet(Order order) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.only(top: 8, bottom: 8),
+            width: 40,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Order #${order.id}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${order.totalPrice.toStringAsFixed(2)} MAD',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Order details
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Restaurant Info
+                  if (order.restaurantName != null && order.restaurantName!.isNotEmpty)
+                    _buildDetailRow(
+                      icon: Icons.store,
+                      title: 'store',
+                      value: order.restaurantName!,
+                    ),
+                  
+                  // Delivery Address
+                  _buildDetailRow(
+                    icon: Icons.location_on,
+                    title: 'Delivery Address',
+                    value: order.address,
+                  ),
+                  
+                  // Customer Info
+                  _buildDetailRow(
+                    icon: Icons.person,
+                    title: 'Customer',
+                    value: 'Customer #${order.clientId}',
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Items List
+                  const Text(
+                    'Order Items',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  ...order.items.map((item) => _buildOrderItem(item)).toList(),
+                  
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+          
+          // Accept Button
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey.shade300)),
+            ),
+            child: _buildOrderButton(order, 
+              _acceptedOrderIds.contains(order.id) || order.status == OrderStatus.accepted,
+              _acceptingOrderIds.contains(order.id)
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ NEW: Build detail row
+  Widget _buildDetailRow({required IconData icon, required String title, required String value}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ NEW: Build order item
+  Widget _buildOrderItem(OrderItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          // Item image or placeholder
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: Colors.grey.shade200,
+            ),
+            child: item.productImage.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(
+                      item.productImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(Icons.fastfood, color: Colors.grey.shade400);
+                      },
+                    ),
+                  )
+                : Icon(Icons.fastfood, color: Colors.grey.shade400),
+          ),
+          
+          const SizedBox(width: 12),
+          
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.productName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${item.quantity}x • ${item.price.toStringAsFixed(2)} MAD',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                if (item.businessName.isNotEmpty)
+                  Text(
+                    'From: ${item.businessName}',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                  ),
+              ],
+            ),
+          ),
+          
+          Text(
+            '${item.totalPrice.toStringAsFixed(2)} MAD',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final availableOrders = ref.watch(availableOrdersProvider);
@@ -424,6 +640,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     return RefreshIndicator(
       onRefresh: _loadAvailableOrders,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         itemCount: availableOrders.length,
         itemBuilder: (context, index) {
@@ -433,7 +650,10 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
                             order.deliveryDriverId != null;
           final isAccepting = _acceptingOrderIds.contains(order.id);
 
-          return _buildOrderCard(order, isAccepted, isAccepting);
+          return GestureDetector(
+            onTap: () => _showOrderDetails(order),
+            child: _buildOrderCard(order, isAccepted, isAccepting),
+          );
         },
       ),
     );
@@ -599,6 +819,10 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     );
 
     if (confirmed == true) {
+      // ✅ FIX: Close the bottom sheet before accepting the order
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close the bottom sheet
+      }
       await _acceptOrder(order);
     }
   }
@@ -664,6 +888,7 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _hasHandledTokenNavigation = false;
     super.dispose();
   }

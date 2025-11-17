@@ -20,7 +20,6 @@ class ProductCard extends ConsumerWidget {
     final openingTime = shop['opening_time']?.toString();
     final closingTime = shop['closing_time']?.toString();
 
-  
     if (openingTime == null || closingTime == null) {
       return true; // If no hours specified, assume always open
     }
@@ -51,14 +50,29 @@ class ProductCard extends ConsumerWidget {
       return true; // If there's an error parsing, assume open
     }
   }
-  
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cartService = ref.watch(cartServiceProvider);
-    final String itemId = product['id'].toString();
-    final int quantity = cartService.getItemQuantity(itemId);
+    final String productId = product['id'].toString();
+    
+    // ✅ FIXED: Use 'id' field instead of 'business_owner_id' since your API doesn't have it
+    final String businessOwnerId = shop['id']?.toString() ?? '1';
+    
+    // ✅ FIXED: Use the new method that checks both product ID and business owner ID
+    final int quantity = cartService.getItemQuantity(productId, businessOwnerId);
     final bool isBusinessOpen = _isBusinessCurrentlyOpen();
+
+    // Debug print to verify the correct quantity is being fetched
+    if (kDebugMode) {
+      print('🛒 ProductCard - Product: ${product['product_name'] ?? product['name']}');
+      print('   - Product ID: $productId');
+      print('   - Business Owner ID: $businessOwnerId');
+      print('   - Shop Name: ${shop['business_name']}');
+      print('   - Shop ID from API: ${shop['id']}');
+      print('   - Quantity in cart: $quantity');
+      print('   - Is Business Open: $isBusinessOpen');
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -90,7 +104,7 @@ class ProductCard extends ConsumerWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: CustomNetworkImage(
-                    imageUrl: product['image']?.toString() ?? '',
+                    imageUrl: product['product_image']?.toString() ?? product['image']?.toString() ?? '',
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
@@ -122,7 +136,7 @@ class ProductCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  product['product_name'] ?? 'Unknown Product',
+                  product['product_name'] ?? product['name'] ?? 'Unknown Product',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
@@ -155,7 +169,8 @@ class ProductCard extends ConsumerWidget {
                 const SizedBox(height: 12),
                 _buildModernQuantitySelector(
                   context,
-                  itemId,
+                  productId,
+                  businessOwnerId,
                   product,
                   quantity,
                   ref,
@@ -171,13 +186,24 @@ class ProductCard extends ConsumerWidget {
 
   Widget _buildModernQuantitySelector(
     BuildContext context,
-    String itemId,
+    String productId,
+    String businessOwnerId,
     Map<String, dynamic> product,
     int quantity,
     WidgetRef ref,
     bool isBusinessOpen,
   ) {
     final cartService = ref.read(cartServiceProvider);
+
+    // Generate the unique key for this specific product from this specific business owner
+    final String uniqueKey = '${productId}_$businessOwnerId';
+
+    // Debug print for quantity controls
+    if (kDebugMode) {
+      print('🎛️ Quantity Selector - Unique Key: $uniqueKey');
+      print('   - Current Quantity: $quantity');
+      print('   - Is Business Open: $isBusinessOpen');
+    }
 
     return Container(
       width: 140,
@@ -234,7 +260,10 @@ class ProductCard extends ConsumerWidget {
                   ),
                   onPressed: isBusinessOpen 
                       ? () async {
-                          await cartService.decreaseQuantity(itemId);
+                          if (kDebugMode) {
+                            print('➖ Decreasing quantity for: $uniqueKey');
+                          }
+                          await cartService.decreaseQuantity(uniqueKey);
                         }
                       : null,
                   padding: EdgeInsets.zero,
@@ -258,7 +287,10 @@ class ProductCard extends ConsumerWidget {
                   ),
                   onPressed: isBusinessOpen 
                       ? () async {
-                          await cartService.increaseQuantity(itemId);
+                          if (kDebugMode) {
+                            print('➕ Increasing quantity for: $uniqueKey');
+                          }
+                          await cartService.increaseQuantity(uniqueKey);
                         }
                       : null,
                   padding: EdgeInsets.zero,
