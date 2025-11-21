@@ -21,18 +21,15 @@ class GuestProfile extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    return Scaffold( // ← ADD THIS Scaffold
-      backgroundColor: Colors.grey.shade50,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildGuestHeader(context),
-            _buildSettingsSection(context),
-            _buildEarnMoneySection(context),
-            _buildSupportSection(context),
-            _buildBenefitsSection(),
-          ],
-        ),
+    return SingleChildScrollView( // ← REMOVED Scaffold, keep only SingleChildScrollView
+      child: Column(
+        children: [
+          _buildGuestHeader(context),
+          _buildSettingsSection(context),
+          _buildEarnMoneySection(context),
+          _buildSupportSection(context),
+          _buildBenefitsSection(),
+        ],
       ),
     );
   }

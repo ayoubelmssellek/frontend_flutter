@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
 import 'package:food_app/widgets/home_page/ShopCard.dart';
 import 'package:food_app/providers/auth_providers.dart';
-import 'package:food_app/core/image_helper.dart';
 
 class CategoryDetailsPage extends ConsumerStatefulWidget {
   final String categoryName;
@@ -438,6 +437,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
+                // ignore: unused_result
                 ref.refresh(businessOwnersProvider);
               },
               style: ElevatedButton.styleFrom(

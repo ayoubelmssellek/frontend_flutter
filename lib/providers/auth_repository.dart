@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:food_app/core/api_client.dart';
 import 'package:food_app/core/secure_storage.dart';
@@ -204,7 +205,128 @@ Future<Map<String, dynamic>> updateFcmToken(String fcmToken) async {
   }
 }
 
-  // ✅ UPDATE: In logout method
+// Update the updateProfile method in AuthRepository with proper debugging
+Future<Map<String, dynamic>> updateProfile({
+  String? name,
+  String? password,
+  String? passwordConfirmation,
+  File? avatar,
+}) async {
+  try {
+    var formData = FormData();
+
+    // Debug what we're receiving
+    print('🔄 [AuthRepository] Update profile received:');
+    print('   - name: $name');
+    print('   - password: ${password != null ? "***" : "null"}');
+    print('   - passwordConfirmation: ${passwordConfirmation != null ? "***" : "null"}');
+    print('   - avatar: ${avatar != null ? avatar.path : "null"}');
+
+    // Add fields only if they are provided and not empty
+    if (name != null && name.trim().isNotEmpty) {
+      formData.fields.add(MapEntry('name', name.trim()));
+      print('✅ [AuthRepository] Added name field');
+    }
+    
+    if (password != null && password.isNotEmpty) {
+      formData.fields.add(MapEntry('password', password));
+      formData.fields.add(MapEntry('password_confirmation', passwordConfirmation ?? password));
+      print('✅ [AuthRepository] Added password fields');
+    }
+
+    // Add avatar file if exists
+    if (avatar != null) {
+      String fileName = avatar.path.split('/').last;
+      formData.files.add(MapEntry(
+        'avatar',
+        await MultipartFile.fromFile(
+          avatar.path,
+          filename: fileName,
+        ),
+      ));
+      print('✅ [AuthRepository] Added avatar file: $fileName');
+    }
+
+    // Print final form data
+    print('📦 [AuthRepository] Final form data:');
+    print('   - Fields: ${formData.fields.length}');
+    print('   - Files: ${formData.files.length}');
+ final token = await storage.read(key: 'token');
+
+final res = await ApiClient.dio.put(
+  '/update-profile',
+  data: formData,
+  options: Options(
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'multipart/form-data',
+      'Accept': 'application/json',
+    },
+  ),
+);
+
+
+    print('✅ [AuthRepository] Profile update response status: ${res.statusCode}');
+    print('✅ [AuthRepository] Profile update response data: ${res.data}');
+    
+    // Handle response data properly
+    final data = res.data;
+    Map<String, dynamic> userData = {};
+    
+    if (data is Map<String, dynamic>) {
+      if (data['user'] != null) {
+        userData = Map<String, dynamic>.from(data['user']);
+      } else if (data['data'] != null) {
+        userData = Map<String, dynamic>.from(data['data']);
+      } else {
+        // Use the entire response as user data
+        userData = Map<String, dynamic>.from(data);
+        // Remove non-user fields
+        userData.remove('success');
+        userData.remove('message');
+      }
+    }
+    
+    print('✅ [AuthRepository] Extracted user data: $userData');
+    
+    return {
+      'success': true,
+      'message': data['message'] ?? 'Profile updated successfully',
+      'data': userData,
+    };
+  } on DioException catch (e) {
+    print('❌ [AuthRepository] Dio error updating profile: ${e.message}');
+    print('❌ [AuthRepository] Dio error type: ${e.type}');
+    print('❌ [AuthRepository] Dio response: ${e.response?.data}');
+    print('❌ [AuthRepository] Dio status: ${e.response?.statusCode}');
+    
+    // More detailed error handling
+    String errorMessage = 'Failed to update profile';
+    if (e.response?.data != null && e.response!.data is Map) {
+      final errorData = e.response!.data as Map;
+      if (errorData['message'] != null) {
+        errorMessage = errorData['message'].toString();
+      } else if (errorData['errors'] != null) {
+        final errors = errorData['errors'] as Map;
+        errorMessage = errors.values.first?.first?.toString() ?? errorMessage;
+      }
+    }
+    
+    return {
+      'success': false,
+      'message': errorMessage,
+    };
+  } catch (e) {
+    print('❌ [AuthRepository] General error updating profile: $e');
+    return {
+      'success': false, 
+      'message': 'Failed to update profile: $e'
+    };
+  }
+}
+
+
+
  // In your AuthRepository class - replace the existing logout method
 Future<Map<String, dynamic>> logout() async {
   try {

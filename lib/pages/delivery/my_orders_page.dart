@@ -1,4 +1,4 @@
-// pages/delivery/my_orders_page.dart (Updated for API structure and token error handling)
+// pages/delivery/my_orders_page.dart (Updated for multiple businesses)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/order_model.dart';
@@ -17,7 +17,7 @@ class MyOrdersPage extends ConsumerStatefulWidget {
 class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   bool _isLoading = false;
   bool _hasHandledTokenNavigation = false;
-  final Set<int> _updatingOrderIds = {}; // ✅ ADDED: Track which orders are being updated
+  final Set<int> _updatingOrderIds = {};
 
   @override
   void initState() {
@@ -25,7 +25,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     _loadMyOrders();
   }
 
-  // ✅ ADDED: Token error navigation
   void _navigateToTokenExpiredPage([String? customMessage]) {
     if (_hasHandledTokenNavigation || !mounted) return;
     
@@ -35,7 +34,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         MaterialPageRoute(
           builder: (_) => TokenExpiredPage(
             message: customMessage ?? 'Your session has expired. Please login again to continue.',
-            allowGuestMode: false, // Delivery partners can't continue as guest
+            allowGuestMode: false,
           ),
         ),
         (route) => false,
@@ -43,7 +42,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     });
   }
 
-  // ✅ ADDED: Handle token errors
   void _handleTokenError(dynamic error) {
     if (ErrorHandlerService.isTokenError(error)) {
       print('🔐 Token error detected in MyOrdersPage');
@@ -58,17 +56,17 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
-      final deliveryManId = ref.read(currentDeliveryManIdProvider);
       
-      final orders = await deliveryRepo.getMyOrders(deliveryManId);
+      // ✅ FIXED: No need to send any ID - backend uses authenticated user
+      final orders = await deliveryRepo.getMyOrders();
       ref.read(myOrdersProvider.notifier).state = orders;
+      
+      print('✅ Loaded ${orders.length} orders for authenticated delivery driver');
     } catch (e) {
       print('❌ Error loading my orders: $e');
       
-      // ✅ HANDLE TOKEN ERRORS
       _handleTokenError(e);
       
-      // Only show snackbar for non-token errors
       if (mounted && !ErrorHandlerService.isTokenError(e)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -123,8 +121,28 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     }
   }
 
+  // ✅ NEW: Get unique businesses from order items
+  List<String> _getUniqueBusinesses(Order order) {
+    final businesses = <String>{};
+    for (final item in order.items) {
+      if (item.businessName.isNotEmpty && item.businessName != 'unknown') {
+        businesses.add(item.businessName);
+      }
+    }
+    return businesses.toList();
+  }
+
+  // ✅ NEW: Get display text for businesses
+  String _getBusinessesText(Order order) {
+    final businesses = _getUniqueBusinesses(order);
+    
+    if (businesses.isEmpty) return 'Multiple Stores';
+    if (businesses.length == 1) return businesses.first;
+    
+    return '${businesses.length} Stores';
+  }
+
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
-    // ✅ FIXED: Track individual order loading state
     setState(() => _updatingOrderIds.add(order.id));
     
     try {
@@ -132,7 +150,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
       final success = await deliveryRepo.updateOrderStatus(order.id, newStatus);
       
       if (success && mounted) {
-        // Update local state
         final myOrders = ref.read(myOrdersProvider);
         final updatedOrders = myOrders.map((o) {
           if (o.id == order.id) {
@@ -153,7 +170,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     } catch (e) {
       print('❌ Error updating order status: $e');
       
-      // ✅ HANDLE TOKEN ERRORS
       if (ErrorHandlerService.isTokenError(e)) {
         _navigateToTokenExpiredPage('Your session has expired while updating order status.');
         return;
@@ -209,6 +225,8 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   }
 
   Widget _buildOrderCard(Order order) {
+    final businesses = _getUniqueBusinesses(order);
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 3,
@@ -312,46 +330,75 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
               ),
               const SizedBox(height: 8),
               
-              // Restaurant and Address Info
+              // ✅ FIXED: Store Information - Shows multiple businesses
               Row(
                 children: [
-                  // Restaurant Info
-                  if (order.restaurantName != null) ...[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.restaurant, size: 14, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Text(
-                                order.restaurantName!,
+                  // Store Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.store, size: 14, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                _getBusinessesText(order),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                          if (order.restaurantAddress != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              order.restaurantAddress!,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
+                        ),
+                        // ✅ NEW: Show business badges for multiple stores
+                        if (businesses.length > 1) ...[
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 2,
+                            children: businesses.take(3).map((business) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.blue.shade100, width: 0.5),
+                                ),
+                                child: Text(
+                                  business,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          if (businesses.length > 3)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                '+ ${businesses.length - 3} more',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
                         ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                  ],
+                  ),
+                  const SizedBox(width: 16),
                   
                   // Delivery Address
                   Expanded(
@@ -404,27 +451,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                       color: Colors.deepOrange,
                     ),
                   ),
-                  Row(
-                    children: [
-                      // View Details Button
-                      OutlinedButton(
-                        onPressed: () => _showOrderDetails(order),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'View Details',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Action Button
-                      _buildActionButton(order),
-                    ],
-                  ),
+                  _buildActionButton(order),
                 ],
               ),
             ],
@@ -455,11 +482,27 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  '${item.quantity}x ${item.productName}',
-                  style: const TextStyle(fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${item.quantity}x ${item.productName}',
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    // ✅ NEW: Show business name for each item
+                    if (item.businessName.isNotEmpty && item.businessName != 'unknown')
+                      Text(
+                        'From: ${item.businessName}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                 ),
               ),
               Text(
@@ -490,7 +533,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   }
 
   Widget _buildActionButton(Order order) {
-    final isUpdating = _updatingOrderIds.contains(order.id); // ✅ FIXED: Check individual order
+    final isUpdating = _updatingOrderIds.contains(order.id);
 
     if (isUpdating) {
       return const SizedBox(
@@ -522,7 +565,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     }
   }
 
-  // ✅ ADDED: Confirmation dialog for marking as delivered
   Future<void> _showMarkAsDeliveredConfirmation(Order order) async {
     final confirmed = await showDialog<bool>(
       context: context,

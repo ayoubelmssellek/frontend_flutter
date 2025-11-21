@@ -1,8 +1,11 @@
-// pages/delivery/available_orders_page.dart
+// pages/delivery/available_orders_page.dart (Updated for multiple businesses)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:food_app/pages/delivery/delivery_home_page.dart';
+import 'package:food_app/pages/delivery_admin_pages/admin_home_page.dart';
+import 'package:food_app/providers/auth_providers.dart';
 import '../../models/order_model.dart';
 import '../../providers/delivery_providers.dart';
 import '../../services/error_handler_service.dart';
@@ -91,16 +94,16 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     try {
       final data = message.data;
       
-      final order = Order.fromJson({
-        'id': orderId,
-        'client_id': int.tryParse(data['client_id']?.toString() ?? '0') ?? 0,
-        'delivery_driver_id': null,
-        'status': 'pending',
-        'address': data['address']?.toString() ?? 'Unknown Address',
-        'total_price': double.tryParse(data['total_price']?.toString() ?? '0') ?? 0.0,
-        'items': _parseItemsFromFCM(data['items']),
-        'item_count': _parseItemCountFromFCM(data['items']),
-      });
+      final order = Order.fromFcmData(
+        id: orderId,
+        clientId: int.tryParse(data['client_id']?.toString() ?? '0') ?? 0,
+        clientName: data['client_name']?.toString() ?? 'Customer',
+        clientPhone: data['client_phone']?.toString() ?? '',
+        totalPrice: double.tryParse(data['total_price']?.toString() ?? '0') ?? 0.0,
+        address: data['address']?.toString() ?? 'Unknown Address',
+        items: _parseItemsFromFCM(data['items']),
+        deliveryDriverId: null,
+      );
 
       if (mounted) {
         ref.read(availableOrdersProvider.notifier).update((state) {
@@ -118,45 +121,56 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     }
   }
 
-  List<dynamic> _parseItemsFromFCM(dynamic itemsData) {
+  List<OrderItem> _parseItemsFromFCM(dynamic itemsData) {
     if (itemsData == null) return [];
     
     try {
+      List<dynamic> itemsList = [];
+      
       if (itemsData is String) {
         final parsed = json.decode(itemsData);
-        if (parsed is List) return parsed;
+        if (parsed is List) itemsList = parsed;
       } else if (itemsData is List) {
-        return itemsData;
+        itemsList = itemsData;
       }
+      
+      return itemsList.map((item) {
+        if (item is Map<String, dynamic>) {
+          return OrderItem(
+            productName: item['product_name']?.toString() ?? 'Product',
+            productImage: item['product_image']?.toString() ?? '',
+            businessName: item['business_name']?.toString() ?? 'Store',
+            quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
+            price: double.tryParse(item['price']?.toString() ?? '0') ?? 0.0,
+            totalPrice: double.tryParse(item['total_price']?.toString() ?? '0') ?? 0.0,
+            productId: int.tryParse(item['product_id']?.toString() ?? ''),
+            businessOwnerId: int.tryParse(item['business_owner_id']?.toString() ?? ''),
+          );
+        } else {
+          return OrderItem(
+            productName: 'Order Items',
+            productImage: '',
+            businessName: 'Restaurant',
+            quantity: 1,
+            price: 0.0,
+            totalPrice: 0.0,
+          );
+        }
+      }).toList();
     } catch (e) {
       print('❌ Error parsing items from FCM: $e');
+      
+      return [
+        OrderItem(
+          productName: 'Order Items',
+          productImage: '',
+          businessName: 'Restaurant',
+          quantity: 1,
+          price: 0.0,
+          totalPrice: 0.0,
+        )
+      ];
     }
-    
-    return [{
-      'product_name': 'Order Items',
-      'product_image': '',
-      'business_name': 'Restaurant',
-      'quantity': 1,
-      'price': 0.0,
-      'total_price': 0.0,
-    }];
-  }
-
-  int _parseItemCountFromFCM(dynamic itemsData) {
-    if (itemsData == null) return 0;
-    
-    try {
-      if (itemsData is String) {
-        final parsed = json.decode(itemsData);
-        if (parsed is List) return parsed.length;
-      } else if (itemsData is List) {
-        return itemsData.length;
-      }
-    } catch (e) {
-      print('❌ Error parsing item count from FCM: $e');
-    }
-    
-    return 1;
   }
 
   void _navigateToTokenExpiredPage([String? customMessage]) {
@@ -185,7 +199,10 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
 
   Future<void> _loadAvailableOrders() async {
     if (_isLoading) return;
-    setState(() => _isLoading = true);
+    
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
@@ -198,10 +215,12 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
         }
       }
       
-      setState(() {
-        _acceptedOrderIds.clear();
-        _acceptedOrderIds.addAll(acceptedOrders);
-      });
+      if (mounted) {
+        setState(() {
+          _acceptedOrderIds.clear();
+          _acceptedOrderIds.addAll(acceptedOrders);
+        });
+      }
       
       ref.read(availableOrdersProvider.notifier).state = orders;
       print('✅ Loaded ${orders.length} available orders, ${acceptedOrders.length} already accepted');
@@ -214,8 +233,41 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
         _showErrorSnackBar('Failed to load orders: ${ErrorHandlerService.getErrorMessage(e)}');
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+Future<void> _handleRefresh() async {
+  print('🔄 [AvailableOrdersPage] Pull-to-refresh triggered');
+  
+  // Simply call the load method - it already handles all the state updates
+  await _loadAvailableOrders();
+  
+  // The RefreshIndicator will automatically hide when the Future completes
+  print('✅ Pull-to-refresh completed');
+}
+
+  // ✅ NEW: Get unique businesses from order items
+  List<String> _getUniqueBusinesses(Order order) {
+    final businesses = <String>{};
+    for (final item in order.items) {
+      if (item.businessName.isNotEmpty) {
+        businesses.add(item.businessName);
+      }
+    }
+    return businesses.toList();
+  }
+
+  // ✅ NEW: Get display text for businesses
+  String _getBusinessesText(Order order) {
+    final businesses = _getUniqueBusinesses(order);
+    
+    if (businesses.isEmpty) return 'Multiple Stores';
+    if (businesses.length == 1) return businesses.first;
+    
+    return '${businesses.length} Stores';
   }
 
   Future<bool> _checkOrderStatus(int orderId) async {
@@ -245,58 +297,96 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     }
   }
 
-  Future<void> _acceptOrder(Order order) async {
-    final deliveryManId = ref.read(currentDeliveryManIdProvider);
-
-    final isStillAvailable = await _checkOrderStatus(order.id);
-    if (!isStillAvailable) {
-      _showOrderTakenDialog(order.id);
-      return;
-    }
-
-    if (_acceptedOrderIds.contains(order.id)) {
-      _showOrderTakenDialog(order.id);
-      return;
-    }
-
-    setState(() => _acceptingOrderIds.add(order.id));
-
-    try {
-      final deliveryRepo = ref.read(deliveryRepositoryProvider);
-      final success = await deliveryRepo.acceptOrder(order.id, deliveryManId);
-
-      if (success && mounted) {
-        _handleSuccessfulOrderAcceptance(order, deliveryManId);
-      } else {
-        _showErrorSnackBar('Failed to accept order');
-      }
-    } catch (e) {
-      print('❌ Error accepting order: $e');
-      
-      if (ErrorHandlerService.isTokenError(e)) {
-        _navigateToTokenExpiredPage('Your session has expired while accepting the order.');
-        return;
-      }
-      
-      if (mounted) {
-        await _handleAcceptOrderError(e, order);
-      }
-    } finally {
-      if (mounted) setState(() => _acceptingOrderIds.remove(order.id));
+Future<void> _acceptOrder(Order order) async {
+  // ✅ FIXED: Try both data sources to get user ID
+  int? userId;
+  
+  // First try currentUserProvider
+  final userData = ref.read(currentUserProvider);
+  if (userData.hasValue && userData.value != null) {
+    final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
+    userId = userDataMap?['id'] as int?;
+  }
+  
+  // If not found, try adminHomeStateProvider
+  if (userId == null) {
+    final adminState = ref.read(adminHomeStateProvider);
+    if (adminState.userData != null) {
+      final userDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
+      userId = userDataMap?['id'] as int?;
     }
   }
+      // If not found, try deliveryHomeStateProvider
+  if (userId == null) {
+    final adminState = ref.read(deliveryHomeStateProvider);
+    if (adminState.userData != null) {
+      final userDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
+      userId = userDataMap?['id'] as int?;
+    }
+  }
+  if (userId == null) {
+    if (mounted) {
+      _showErrorSnackBar('User profile not loaded. Please wait...');
+      // Force refresh user data
+      ref.read(adminHomeStateProvider.notifier).refreshProfile();
+    }
+    return;
+  }
+
+  final isStillAvailable = await _checkOrderStatus(order.id);
+  if (!isStillAvailable) {
+    _showOrderTakenDialog(order.id);
+    return;
+  }
+
+  if (_acceptedOrderIds.contains(order.id)) {
+    _showOrderTakenDialog(order.id);
+    return;
+  }
+
+  if (mounted) {
+    setState(() => _acceptingOrderIds.add(order.id));
+  }
+
+  try {
+    final deliveryRepo = ref.read(deliveryRepositoryProvider);
+    final success = await deliveryRepo.acceptOrder(order.id, userId);
+
+    if (success && mounted) {
+      _handleSuccessfulOrderAcceptance(order, userId);
+    } else {
+      _showErrorSnackBar('Failed to accept order');
+    }
+  } catch (e) {
+    print('❌ Error accepting order: $e');
+    
+    if (ErrorHandlerService.isTokenError(e)) {
+      _navigateToTokenExpiredPage('Your session has expired while accepting the order.');
+      return;
+    }
+    
+    if (mounted) {
+      await _handleAcceptOrderError(e, order);
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _acceptingOrderIds.remove(order.id));
+    }
+  }
+}
 
   void _handleSuccessfulOrderAcceptance(Order order, int deliveryManId) {
     print('✅ Order #${order.id} accepted successfully');
     
-    // ✅ FIX: Dismiss any open bottom sheet
     if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop(); // This closes the bottom sheet
+      Navigator.of(context).pop();
     }
     
-    setState(() {
-      _acceptedOrderIds.add(order.id);
-    });
+    if (mounted) {
+      setState(() {
+        _acceptedOrderIds.add(order.id);
+      });
+    }
     
     _removeOrderImmediately(order.id);
     
@@ -322,9 +412,11 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
         errorString.contains('400')) {
       
       await _showOrderTakenDialog(order.id);
-      setState(() {
-        _acceptedOrderIds.add(order.id);
-      });
+      if (mounted) {
+        setState(() {
+          _acceptedOrderIds.add(order.id);
+        });
+      }
       _removeOrderImmediately(order.id);
     } else {
       _showErrorSnackBar('Failed to accept order. Please try again.');
@@ -413,7 +505,6 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     }
   }
 
-  // ✅ NEW: Show full order details
   void _showOrderDetails(Order order) {
     showModalBottomSheet(
       context: context,
@@ -423,8 +514,9 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     );
   }
 
-  // ✅ NEW: Build order details bottom sheet
   Widget _buildOrderDetailsSheet(Order order) {
+    final businesses = _getUniqueBusinesses(order);
+    
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
@@ -476,12 +568,26 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Restaurant Info
-                  if (order.restaurantName != null && order.restaurantName!.isNotEmpty)
+                  // ✅ FIXED: Store Information - Shows multiple businesses
+                  _buildDetailRow(
+                    icon: Icons.store,
+                    title: 'Stores',
+                    value: _getBusinessesText(order),
+                  ),
+                  
+                  // Customer Info
+                  _buildDetailRow(
+                    icon: Icons.person,
+                    title: 'Customer',
+                    value: order.customerName,
+                  ),
+                  
+                  // Customer Phone
+                  if (order.customerPhone.isNotEmpty && order.customerPhone != 'Unknown')
                     _buildDetailRow(
-                      icon: Icons.store,
-                      title: 'store',
-                      value: order.restaurantName!,
+                      icon: Icons.phone,
+                      title: 'Phone',
+                      value: order.customerPhone,
                     ),
                   
                   // Delivery Address
@@ -491,12 +597,58 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
                     value: order.address,
                   ),
                   
-                  // Customer Info
-                  _buildDetailRow(
-                    icon: Icons.person,
-                    title: 'Customer',
-                    value: 'Customer #${order.clientId}',
-                  ),
+                  // ✅ NEW: Show business list for multiple stores
+                  if (businesses.length > 1) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Stores in this order:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...businesses.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final business = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                business,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ],
                   
                   const SizedBox(height: 16),
                   
@@ -532,7 +684,6 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     );
   }
 
-  // ✅ NEW: Build detail row
   Widget _buildDetailRow({required IconData icon, required String title, required String value}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -562,7 +713,6 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     );
   }
 
-  // ✅ NEW: Build order item
   Widget _buildOrderItem(OrderItem item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -611,9 +761,22 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
                   style: TextStyle(color: Colors.grey.shade600),
                 ),
                 if (item.businessName.isNotEmpty)
-                  Text(
-                    'From: ${item.businessName}',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.blue.shade100),
+                    ),
+                    child: Text(
+                      item.businessName,
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -628,19 +791,28 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final availableOrders = ref.watch(availableOrdersProvider);
+@override
+Widget build(BuildContext context) {
+  final availableOrders = ref.watch(availableOrdersProvider);
 
-    print('📊 Building with ${availableOrders.length} orders, ${_acceptedOrderIds.length} accepted');
+  print('📊 Building with ${availableOrders.length} orders, ${_acceptedOrderIds.length} accepted');
 
-    if (_isLoading && availableOrders.isEmpty) return _buildLoadingState();
-    if (availableOrders.isEmpty) return _buildEmptyState();
+  if (_isLoading && availableOrders.isEmpty) return _buildLoadingState();
+  if (availableOrders.isEmpty) return _buildEmptyState();
 
-    return RefreshIndicator(
-      onRefresh: _loadAvailableOrders,
+  // ✅ FIXED: Use NotificationListener to ensure RefreshIndicator works
+  return NotificationListener<ScrollNotification>(
+    onNotification: (scrollNotification) {
+      // This helps the RefreshIndicator work better with the list
+      return false;
+    },
+    child: RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: Colors.deepOrange,
+      backgroundColor: Colors.white,
       child: ListView.builder(
         controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(), // ✅ Important for RefreshIndicator
         padding: const EdgeInsets.all(16),
         itemCount: availableOrders.length,
         itemBuilder: (context, index) {
@@ -656,10 +828,12 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
           );
         },
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildOrderCard(Order order, bool isAccepted, bool isAccepting) {
+    final businesses = _getUniqueBusinesses(order);
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -691,14 +865,82 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
             ),
             const SizedBox(height: 8),
             
-            if (order.restaurantName != null && order.restaurantName!.isNotEmpty)
-              Row(
-                children: [
-                  const Icon(Icons.restaurant, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(order.restaurantName!, style: const TextStyle(color: Colors.grey)),
-                ],
-              ),
+            // ✅ FIXED: Show store information properly
+            Row(
+              children: [
+                const Icon(Icons.store, size: 16, color: Colors.grey),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getBusinessesText(order),
+                        style: const TextStyle(color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      // ✅ NEW: Show business badges for multiple stores
+                      if (businesses.length > 1) ...[
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 2,
+                          children: businesses.take(2).map((business) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.blue.shade100, width: 0.5),
+                              ),
+                              child: Text(
+                                business,
+                                style: const TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (businesses.length > 2)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              '+ ${businesses.length - 2} more',
+                              style: const TextStyle(
+                                fontSize: 8,
+                                color: Colors.grey,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 4),
+            
+            // Customer Info
+            Row(
+              children: [
+                const Icon(Icons.person, size: 16, color: Colors.grey),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    order.customerName, 
+                    style: const TextStyle(color: Colors.grey),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
             
             const SizedBox(height: 4),
             
@@ -718,12 +960,43 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
             
             const SizedBox(height: 8),
             
+            // Order Items
             if (order.items.isNotEmpty) ...[
               ...order.items.take(2).map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  '${item.quantity}x ${item.productName}',
-                  style: const TextStyle(fontSize: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      '${item.quantity}x ',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.productName,
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (item.businessName.isNotEmpty && businesses.length > 1)
+                            Text(
+                              'From: ${item.businessName}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${item.totalPrice.toStringAsFixed(2)} MAD',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               )).toList(),
               if (order.items.length > 2)
@@ -819,9 +1092,8 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     );
 
     if (confirmed == true) {
-      // ✅ FIX: Close the bottom sheet before accepting the order
       if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close the bottom sheet
+        Navigator.of(context).pop();
       }
       await _acceptOrder(order);
     }

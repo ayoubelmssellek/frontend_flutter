@@ -37,6 +37,31 @@ class Order {
     required this.itemCount,
   });
 
+  // ✅ ADD THIS: Named constructor for FCM data
+  factory Order.fromFcmData({
+    required int id,
+    required int clientId,
+    required double totalPrice,
+    required String address,
+    required List<OrderItem> items,
+    String? clientName,
+    String? clientPhone,
+    int? deliveryDriverId,
+  }) {
+    return Order(
+      id: id,
+      clientId: clientId,
+      clientName: clientName ?? 'Customer #$clientId',
+      clientPhone: clientPhone ?? '',
+      status: OrderStatus.pending,
+      totalPrice: totalPrice,
+      address: address,
+      items: items,
+      itemCount: items.length,
+      deliveryDriverId: deliveryDriverId,
+    );
+  }
+
   // ✅ ADD THIS: Factory constructor for empty order
   factory Order.empty() {
     return Order(
@@ -59,10 +84,10 @@ class Order {
         id: _parseInt(json['id'] ?? json['order_id']),
         deliveryDriverId: _parseNullableInt(json['delivery_driver_id']),
         clientId: _parseInt(json['client_id']),
-        clientName: _parseString(json['client_name'] ?? json['Client_name']),
+        clientName: _parseString(json['client_name'] ?? json['client_name']),
         clientPhone: _parseString(json['number_phone'] ?? json['client_phone'] ?? json['Client_phone']),
         status: _parseOrderStatus(json['status']),
-        totalPrice: _parseDouble(json['total_price']),
+        totalPrice: _parseDouble(json['total_price']), // ✅ Use backend total_price
         address: _parseString(json['address']),
         items: _parseOrderItems(json['items'] ?? []),
         createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
@@ -88,7 +113,7 @@ class Order {
         clientName: _parseString(json['client_name'] ?? json['Client_name']),
         clientPhone: _parseString(json['number_phone'] ?? json['client_phone'] ?? json['Client_phone']),
         status: _parseOrderStatus(json['status']),
-        totalPrice: _parseDouble(json['total_price']),
+        totalPrice: _parseDouble(json['total_price']), // ✅ Use backend total_price
         address: _parseString(json['address']),
         items: _parseOrderItems(json['items'] ?? []),
         createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,

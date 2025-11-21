@@ -1,15 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/api_client.dart';
 import 'package:food_app/core/secure_storage.dart';
+import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
 import 'package:food_app/providers/auth_repository.dart';
-import 'package:food_app/providers/order_repository.dart';
-
 
 /// ✅ Repository Providers
 final authRepositoryProvider = Provider((ref) => AuthRepository());
 final businessRepositoryProvider = Provider((ref) => AuthRepository());
-final orderRepositoryProvider = Provider((ref) => OrderRepository());
 
 /// ✅ حالة تسجيل الدخول (true = logged in)
 final authStateProvider = StateProvider<bool>((ref) => false);
@@ -120,6 +120,75 @@ final verifyCodeProvider =
   final result = await repo.verifyCode(phone: phone, code: code);
   return result;
 });
+
+// Update the updateProfileProvider in auth_providers.dart
+final updateProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, profileData) async {
+  print('🔄 [updateProfileProvider] Starting profile update');
+  print('📦 [updateProfileProvider] Received data keys: ${profileData.keys}');
+  
+  try {
+    final authRepo = ref.read(authRepositoryProvider);
+    
+    // Extract parameters with null checks
+    final name = profileData['name'] as String?;
+    final password = profileData['password'] as String?;
+    final passwordConfirmation = profileData['password_confirmation'] as String?;
+    final avatar = profileData['avatar'] as File?;
+    
+    print('🔍 [updateProfileProvider] Extracted parameters:');
+    print('   - name: $name');
+    print('   - password: ${password != null ? "***" : "null"}');
+    print('   - passwordConfirmation: ${passwordConfirmation != null ? "***" : "null"}');
+    print('   - avatar: ${avatar != null ? "File provided" : "null"}');
+    
+    final result = await authRepo.updateProfile(
+      name: name,
+      password: password,
+      passwordConfirmation: passwordConfirmation,
+      avatar: avatar,
+    );
+    
+    print('✅ [updateProfileProvider] Profile update result: ${result['success']}');
+    print('📝 [updateProfileProvider] Message: ${result['message']}');
+    
+    // If update is successful, update the local state
+    if (result['success'] == true && result['data'] != null) {
+      print('🔄 [updateProfileProvider] Updating local state with new data');
+      
+      // Get the current profile state
+      final currentState = ref.read(profileStateProvider);
+      
+      if (currentState.userData != null) {
+        // Merge the data properly
+        final newUserData = Map<String, dynamic>.from(result['data']);
+        final updatedUserData = {...currentState.userData!, ...newUserData};
+        
+        print('🔄 [updateProfileProvider] Merged user data keys: ${updatedUserData.keys}');
+        
+        // Update the state
+        ref.read(profileStateProvider.notifier).updateUserData(updatedUserData);
+        
+        print('✅ [updateProfileProvider] Local state updated successfully');
+      } else {
+        print('🔄 [updateProfileProvider] Setting new user data');
+        ref.read(profileStateProvider.notifier).updateUserData(Map<String, dynamic>.from(result['data']));
+      }
+    } else {
+      print('❌ [updateProfileProvider] Profile update failed: ${result['message']}');
+    }
+    
+    return result;
+  } catch (e) {
+    print('❌ [updateProfileProvider] Error in provider: $e');
+    return {
+      'success': false,
+      'message': 'Error in profile update: $e',
+    };
+  }
+});
+
+
+
 /// ✅ Business Types Provider
 final businessTypesProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repo = ref.read(businessRepositoryProvider);
@@ -138,27 +207,13 @@ final businessProductsProvider = FutureProvider.family<Map<String, dynamic>, Str
   return await authRepository.getBusinessProducts(businessId);
 });
 
-/// ✅ Order Providers
-final createOrderProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, orderData) async {
-  final orderRepo = ref.read(orderRepositoryProvider);
-  return await orderRepo.createOrder(orderData);
-});
-
-final userOrdersProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final orderRepo = ref.read(orderRepositoryProvider);
-  return await orderRepo.getUserOrders();
-});
-
-final orderDetailsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, orderId) async {
-  final orderRepo = ref.read(orderRepositoryProvider);
-  return await orderRepo.getOrderDetails(orderId);
-});
 // forget password provider
 final forgotPasswordProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, phoneNumber) async {
   final authRepo = ref.read(authRepositoryProvider);
   final result = await authRepo.forgotPassword(phoneNumber);
   return result;
 });
+
 /// ✅ Reset Password Provider
 final resetPasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, data) async {
   final authRepo = ref.read(authRepositoryProvider);
@@ -183,8 +238,9 @@ final updateFcmTokenProvider = FutureProvider.family<Map<String, dynamic>, Strin
   final result = await authRepo.updateFcmToken(token);
   return result;
 });
+
 /// 🌐 Language Provider — اللغة الحالية للتطبيق
-final languageProvider = StateProvider<String>((ref) => 'en'); // en or ar or fr
+final languageProvider = StateProvider<String>((ref) => 'en'); // en or ar
 
 /// 📍 Location Allowed Provider — هل المستخدم في الداخلة؟
 final locationAllowedProvider = StateProvider<bool>((ref) => false);

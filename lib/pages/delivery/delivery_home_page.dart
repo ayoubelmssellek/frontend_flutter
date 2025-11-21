@@ -217,8 +217,9 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         try {
-          final user = userData['data'] ?? {};
-          final deliveryDriver = user['delivery_driver'] ?? {};
+          // Extract nested data
+          final userDataMap = userData['data'] as Map<String, dynamic>?;
+          final deliveryDriver = userDataMap?['delivery_driver'] ?? {};
           final isActive = deliveryDriver['is_active'] == 1;
 
           print('🎯 Setting initial status - is_active: $isActive');
@@ -239,8 +240,10 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
 
   // Get delivery driver ID from user data
   int? _getDeliveryManId(Map<String, dynamic> userData) {
-    final user = userData['data'] ?? {};
-    final deliveryDriverId = user['delivery_driver_id'];
+    // Extract nested data
+    final userDataMap = userData['data'] as Map<String, dynamic>?;
+    final deliveryDriverId = userDataMap?['delivery_driver_id'];
+    
     if (deliveryDriverId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -255,13 +258,25 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
   Future<void> _toggleStatus() async {
     if (_isTogglingStatus) return;
 
-    final deliveryManId = ref.read(currentDeliveryManIdProvider);
-
-    if (deliveryManId == null) {
+    // Get user data directly from currentUserProvider to get the USER ID
+    final userData = ref.read(currentUserProvider);
+    
+    // Extract the nested data - the actual user object is under 'data' key
+    final userDataMap = userData.value?['data'] as Map<String, dynamic>?;
+    var userId = userDataMap?['id'] as int?;
+      // If not found, try deliveryHomeStateProvider
+  if (userId == null) {
+    final adminState = ref.read(deliveryHomeStateProvider);
+    if (adminState.userData != null) {
+      final userDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
+      userId = userDataMap?['id'] as int?;
+    }
+  }
+    if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Delivery man ID not found'),
+            content: Text('User ID not found'),
             backgroundColor: Colors.red,
           ),
         );
@@ -274,7 +289,7 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
 
     try {
       final repo = ref.read(deliveryRepositoryProvider);
-      final isActive = await repo.toggleDeliveryManStatus(deliveryManId);
+      final isActive = await repo.toggleDeliveryManStatus(userId);
 
       ref.read(deliveryManStatusProvider.notifier).state =
           isActive ? DeliveryManStatus.online : DeliveryManStatus.offline;
@@ -406,9 +421,9 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     // Get delivery driver ID
     final deliveryManId = _getDeliveryManId(userData);
 
-    // Check if user is approved
-    final user = userData['data'] ?? {};
-    final status = user['status']?.toString().toLowerCase();
+    // Extract nested data for user status
+    final userDataMap = userData['data'] as Map<String, dynamic>?;
+    final status = userDataMap?['status']?.toString().toLowerCase();
     
     print('🔍 DeliveryHomePage - Status: $status, fromNotApproved: ${widget.fromNotApproved}');
 
@@ -419,7 +434,7 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
         final unapprovedStatuses = ['pending', 'rejected', 'suspended','banned'];
         if (unapprovedStatuses.contains(status)) {
           print('🔍 User status is unapproved: $status - Redirecting to NotApprovedPage');
-          return NotApprovedPage(status: status ?? 'unknown', user: user);
+          return NotApprovedPage(status: status ?? 'unknown', user: userDataMap ?? {});
         } else {
           print('🔍 Unknown status: $status - Showing error');
           return _buildErrorState(

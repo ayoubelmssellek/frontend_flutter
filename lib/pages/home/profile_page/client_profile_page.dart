@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/home/profile_page/widgets/client_profile.dart';
 import 'package:food_app/pages/home/profile_page/widgets/guest_profile.dart';
@@ -16,14 +17,14 @@ class ProfileState {
   final bool isLoggedIn;
   final Map<String, dynamic>? userData;
   final String? errorMessage;
-  final bool hasTokenError; // ✅ NEW: Track if there's a token error
+  final bool hasTokenError;
 
   const ProfileState({
     this.isLoading = true,
     this.isLoggedIn = false,
     this.userData,
     this.errorMessage,
-    this.hasTokenError = false, // ✅ NEW
+    this.hasTokenError = false,
   });
 
   ProfileState copyWith({
@@ -31,14 +32,14 @@ class ProfileState {
     bool? isLoggedIn,
     Map<String, dynamic>? userData,
     String? errorMessage,
-    bool? hasTokenError, // ✅ NEW
+    bool? hasTokenError,
   }) {
     return ProfileState(
       isLoading: isLoading ?? this.isLoading,
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
       userData: userData ?? this.userData,
       errorMessage: errorMessage ?? this.errorMessage,
-      hasTokenError: hasTokenError ?? this.hasTokenError, // ✅ NEW
+      hasTokenError: hasTokenError ?? this.hasTokenError,
     );
   }
 }
@@ -55,7 +56,7 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
           isLoggedIn: false,
           userData: null,
           isLoading: false,
-          hasTokenError: false, // ✅ RESET token error flag
+          hasTokenError: false,
         );
       }
     });
@@ -74,7 +75,7 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
       state = state.copyWith(
         isLoading: true,
         isLoggedIn: isLogged,
-        hasTokenError: false, // ✅ RESET token error flag
+        hasTokenError: false,
       );
 
       if (isLogged) {
@@ -95,7 +96,7 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
     try {
       state = state.copyWith(
         isLoading: true,
-        hasTokenError: false, // ✅ RESET token error flag
+        hasTokenError: false,
       );
       
       final result = await ref.read(authRepositoryProvider).getCurrentUser();
@@ -108,19 +109,17 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
           isLoggedIn: true,
           hasTokenError: false,
         );
+        print('✅ [ProfileStateNotifier] User data loaded: ${result['data']}');
       } else {
-        // ✅ CHECK FOR TOKEN ERRORS IN THE RESPONSE
         final message = result['message'] ?? '';
         if (ErrorHandlerService.isTokenError(message)) {
-          // Token error - set flag but don't show error message
           state = state.copyWith(
             isLoading: false,
             isLoggedIn: false,
-            errorMessage: null, // Don't show error message
-            hasTokenError: true, // ✅ SET token error flag
+            errorMessage: null,
+            hasTokenError: true,
           );
         } else {
-          // Regular error - show error message
           state = state.copyWith(
             isLoading: false,
             isLoggedIn: false,
@@ -132,17 +131,14 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       print('❌ Error loading user data: $e');
       
-      // ✅ CHECK FOR TOKEN ERRORS IN THE EXCEPTION
       if (ErrorHandlerService.isTokenError(e)) {
-        // Token error - set flag but don't show error message
         state = state.copyWith(
           isLoading: false,
           isLoggedIn: false,
-          errorMessage: null, // Don't show error message
-          hasTokenError: true, // ✅ SET token error flag
+          errorMessage: null,
+          hasTokenError: true,
         );
       } else {
-        // Regular error - show error message
         state = state.copyWith(
           isLoading: false,
           isLoggedIn: false,
@@ -154,6 +150,7 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<void> refreshProfile() async {
+    print('🔄 [ProfileStateNotifier] Refreshing profile...');
     if (state.isLoggedIn) {
       await _loadUserData();
     } else {
@@ -161,10 +158,31 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
     }
   }
 
+  // UPDATED METHOD: Update user data immediately with proper type safety
+  void updateUserData(Map<String, dynamic> newUserData) {
+    print('🔄 [ProfileStateNotifier] Updating user data with: $newUserData');
+    print('🔄 [ProfileStateNotifier] Current state before update: ${state.userData}');
+    
+    if (state.userData != null) {
+      // Create a deep copy and merge the data
+      final updatedUserData = Map<String, dynamic>.from(state.userData!);
+      updatedUserData.addAll(newUserData);
+      
+      print('✅ [ProfileStateNotifier] Merged user data: $updatedUserData');
+      
+      state = state.copyWith(userData: updatedUserData);
+      print('✅ [ProfileStateNotifier] User data updated successfully in state');
+      print('🔄 [ProfileStateNotifier] New state after update: ${state.userData}');
+    } else {
+      print('⚠️ [ProfileStateNotifier] No existing user data to update');
+      state = state.copyWith(userData: newUserData);
+    }
+  }
+
   void clearError() {
     state = state.copyWith(
       errorMessage: null,
-      hasTokenError: false, // ✅ RESET token error flag
+      hasTokenError: false,
     );
   }
 
@@ -174,7 +192,7 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
       userData: null,
       errorMessage: null,
       isLoading: false,
-      hasTokenError: false, // ✅ RESET token error flag
+      hasTokenError: false,
     );
   }
 }
@@ -198,32 +216,62 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   @override
+  void dispose() {
+    _hasHandledTokenNavigation = false;
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    await ref.read(profileStateProvider.notifier).refreshProfile();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileStateProvider);
 
-    // ✅ HANDLE TOKEN ERRORS IMMEDIATELY (without showing error state)
+    print('🏠 [ProfilePage] Building with isLoggedIn: ${profileState.isLoggedIn}');
+    print('🏠 [ProfilePage] User name: ${profileState.userData?['name']}');
+
     _handleTokenErrors(profileState, context);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: profileState.isLoading
-          ? _buildSkeletonLoading()
-          : profileState.errorMessage != null
-              ? _buildErrorState(profileState, context) // Show only non-token errors
-              : profileState.isLoggedIn && profileState.userData != null
-                  ? ClientProfile(
-                      userData: profileState.userData!,
-                      onLogout: () => _logout(context, ref),
-                    )
-                  : const GuestProfile(),
+      appBar: AppBar(
+        title: Text('profile_page.profile'.tr()),
+      ),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: Colors.deepOrange,
+        backgroundColor: Colors.white,
+        child: _buildContent(profileState),
+      ),
     );
   }
 
+  Widget _buildContent(ProfileState profileState) {
+    if (profileState.isLoading) {
+      return _buildSkeletonLoading();
+    } else if (profileState.errorMessage != null) {
+      return _buildErrorState(profileState, context);
+    } else if (profileState.isLoggedIn && profileState.userData != null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+      child: ClientProfile(
+          onLogout: () => _logout(context, ref),
+          onRefresh: () => ref.read(profileStateProvider.notifier).refreshProfile(),
+        ),
+      );
+    } else {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: const GuestProfile(),
+      );
+    }
+  }
+
   void _handleTokenErrors(ProfileState state, BuildContext context) {
-    // Only handle token navigation once and when we have a valid context
     if (_hasHandledTokenNavigation || !mounted) return;
 
-    // Check if there's a token error that needs navigation
     if (state.hasTokenError) {
       _hasHandledTokenNavigation = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -235,18 +283,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  @override
-  void dispose() {
-    _hasHandledTokenNavigation = false;
-    super.dispose();
-  }
-
-
   Widget _buildSkeletonLoading() {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          // User header skeleton
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -256,17 +299,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
             child: Column(
               children: [
+                // Avatar skeleton
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Name skeleton
                 Container(
-                  width: 120,
+                  width: 150,
                   height: 20,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
@@ -274,8 +319,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                // Phone skeleton
                 Container(
-                  width: 180,
+                  width: 120,
                   height: 16,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
@@ -285,50 +331,94 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: List.generate(4, (index) => _buildMenuSkeletonItem()),
-            ),
-          ),
+          const SizedBox(height: 20),
+          
+          // Account section skeleton
+          _buildSectionSkeleton('My Account', 2),
+          const SizedBox(height: 20),
+          
+          // Settings section skeleton
+          _buildSectionSkeleton('Settings', 3),
+          const SizedBox(height: 20),
+          
+          // Support section skeleton
+          _buildSectionSkeleton('Support', 2),
         ],
       ),
     );
   }
 
-  Widget _buildMenuSkeletonItem() {
+  Widget _buildSectionSkeleton(String title, int itemCount) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Section title skeleton
           Container(
-            width: 24,
-            height: 24,
+            width: 120,
+            height: 20,
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Container(
-              height: 16,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
+          const SizedBox(height: 16),
+          
+          // Section items skeleton
+          ...List.generate(itemCount, (index) => _buildMenuItemSkeleton()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuItemSkeleton() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          // Icon skeleton
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
           const SizedBox(width: 16),
+          // Text skeleton
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 150,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Arrow skeleton
           Container(
             width: 16,
             height: 16,
@@ -345,54 +435,65 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget _buildErrorState(ProfileState state, BuildContext context) {
     final profileNotifier = ref.read(profileStateProvider.notifier);
     
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Error',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              state.errorMessage ?? 'Unknown error occurred',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () => profileNotifier.refreshProfile(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: Colors.deepOrange,
+      backgroundColor: Colors.white,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
                   ),
-                  child: const Text('Retry'),
-                ),
-                const SizedBox(width: 12),
-                TextButton(
-                  onPressed: () => profileNotifier.setGuestMode(),
-                  child: const Text('Continue as Guest'),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.errorMessage ?? 'Unknown error occurred',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => profileNotifier.refreshProfile(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Retry'),
+                      ),
+                      const SizedBox(width: 12),
+                      TextButton(
+                        onPressed: () => profileNotifier.setGuestMode(),
+                        child: const Text('Continue as Guest'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -448,13 +549,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         } catch (e) {
                           if (context.mounted) {
                             Navigator.pop(context);
-                            // ✅ USE ERROR HANDLER SERVICE
                             if (ErrorHandlerService.handleApiError(
                               error: e,
                               context: context,
                               customMessage: 'Session expired during logout.',
                             )) {
-                              return; // Token error handled, don't show snackbar
+                              return;
                             }
                             
                             ScaffoldMessenger.of(context).showSnackBar(

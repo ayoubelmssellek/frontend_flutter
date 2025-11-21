@@ -1,49 +1,146 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:food_app/core/api_client.dart';
+import 'package:food_app/models/client_order_model.dart';
 
 class OrderRepository {
   /// ✅ إنشاء طلب جديد
-Future<Map<String, dynamic>> createOrder(Map<String, dynamic> orderData) async {
-  try {
-    await ApiClient.setAuthHeader();
-    final res = await ApiClient.dio.post(
-      '/create-order',
-      data: orderData,
-    );
+  Future<Map<String, dynamic>> createOrder(Map<String, dynamic> orderData) async {
+    print('🔄 [OrderRepository] createOrder() called with data: $orderData');
+    try {
+      print('🔐 [OrderRepository] Setting auth header...');
+      await ApiClient.setAuthHeader();
+      
+      print('📤 [OrderRepository] POST → /create-order');
+      final res = await ApiClient.dio.post(
+        '/create-order',
+        data: orderData,
+      );
 
-    print('✅ Order created successfully: ${res.data}');
-    
-    // Return the complete response from Laravel
-    // Laravel returns: {'message': '...', 'order': {...}}
-    return {
-      'success': true,
-      'data': res.data, // This contains both 'message' and 'order'
-      'message': res.data['message'] ?? 'تم إنشاء الطلب بنجاح ✅'
-    };
-  } on DioException catch (e) {
-    return _handleDioError(e);
-  } catch (e) {
-    return {
-      'success': false, 
-      'message': 'حدث خطأ أثناء إنشاء الطلب: $e'
-    };
+      print('✅ [OrderRepository] Order created successfully');
+      print('📥 [OrderRepository] Response: ${res.data}');
+      
+      return {
+        'success': true,
+        'data': res.data,
+        'message': res.data['message'] ?? 'تم إنشاء الطلب بنجاح ✅'
+      };
+    } on DioException catch (e) {
+      print('❌ [OrderRepository] Dio error in createOrder: ${e.message}');
+      print('🔍 [OrderRepository] Dio error type: ${e.type}');
+      print('🔍 [OrderRepository] Dio response: ${e.response?.data}');
+      return _handleDioError(e);
+    } catch (e, stack) {
+      print('❌ [OrderRepository] General error in createOrder: $e');
+      print('🔍 [OrderRepository] Stack trace: $stack');
+      return {
+        'success': false, 
+        'message': 'حدث خطأ أثناء إنشاء الطلب: $e'
+      };
+    }
   }
-}
 
-  /// ✅ جلب طلبات المستخدم
-  Future<Map<String, dynamic>> getUserOrders() async {
+  /// ✅ Get client orders - FIXED to handle wrapped response
+  Future<List<ClientOrder>> getClientOrders(int clientId) async {
+    print('🔄 [OrderRepository] getClientOrders() called with clientId: $clientId');
+    try {
+      print('🔐 [OrderRepository] Setting auth header...');
+      await ApiClient.setAuthHeader();
+      
+      print('📤 [OrderRepository] GET → /client/orders');
+      
+      final res = await ApiClient.dio.get('/client/orders');
+
+      print('📥 [OrderRepository] Raw API Response received');
+      print('📥 [OrderRepository] Response status: ${res.statusCode}');
+      print('📥 [OrderRepository] Response data type: ${res.data.runtimeType}');
+      print('📥 [OrderRepository] Response data: ${res.data}');
+      
+      if (res.statusCode == 200) {
+        // Handle both response formats: direct List OR wrapped in success object
+        List<dynamic> ordersData;
+        
+        if (res.data is List) {
+          // Direct list format (old format)
+          ordersData = res.data as List<dynamic>;
+          print('📊 [OrderRepository] Found ${ordersData.length} orders in direct list format');
+        } else if (res.data is Map && res.data['success'] == true && res.data['orders'] is List) {
+          // Wrapped format: {success: true, orders: [...]}
+          ordersData = res.data['orders'] as List<dynamic>;
+          print('📊 [OrderRepository] Found ${ordersData.length} orders in wrapped format');
+        } else if (res.data is Map && res.data['data'] is List) {
+          // Alternative wrapped format: {data: [...]}
+          ordersData = res.data['data'] as List<dynamic>;
+          print('📊 [OrderRepository] Found ${ordersData.length} orders in data wrapper format');
+        } else {
+          print('❌ [OrderRepository] Unexpected response format: ${res.data.runtimeType}');
+          print('🔍 [OrderRepository] Response structure: ${res.data}');
+          return [];
+        }
+        
+        final orders = ordersData.map((orderJson) {
+          try {
+            print('🔧 [OrderRepository] Parsing order: ${orderJson['id']}');
+            final order = ClientOrder.fromJson(orderJson);
+            print('✅ [OrderRepository] Successfully parsed order ${order.id} with ${order.items.length} items');
+            return order;
+          } catch (e, stack) {
+            print('❌ [OrderRepository] Error parsing order ${orderJson['id']}: $e');
+            print('🔍 [OrderRepository] Problematic order data: $orderJson');
+            print('🔍 [OrderRepository] Stack trace: $stack');
+            return ClientOrder(
+              id: -1,
+              clientId: 0,
+              deliveryDriver: null,
+              status: OrderStatus.pending,
+              acceptedDate: null,
+              totalPrice: 0.0,
+              address: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              items: [],
+            );
+          }
+        }).where((order) => order.id != -1).toList();
+        
+        print('✅ [OrderRepository] Successfully parsed ${orders.length} valid orders');
+        print('📊 [OrderRepository] Order IDs: ${orders.map((o) => o.id).toList()}');
+        return orders;
+      } else {
+        print('❌ [OrderRepository] API returned non-200 status: ${res.statusCode}');
+        return [];
+      }
+    } on DioException catch (e) {
+      print('❌ [OrderRepository] Dio error in getClientOrders: ${e.message}');
+      print('🔍 [OrderRepository] Dio error type: ${e.type}');
+      print('🔍 [OrderRepository] Dio response status: ${e.response?.statusCode}');
+      print('🔍 [OrderRepository] Dio response data: ${e.response?.data}');
+      return [];
+    } catch (e, stack) {
+      print('❌ [OrderRepository] General error in getClientOrders: $e');
+      print('🔍 [OrderRepository] Stack trace: $stack');
+      return [];
+    }
+  }
+
+  /// ✅ جلب طلبات المستخدم (Legacy - returns Map for backward compatibility)
+  Future<Map<String, dynamic>> getClientOrdersLegacy() async {
+    print('🔄 [OrderRepository] getClientOrdersLegacy() called');
     try {
       await ApiClient.setAuthHeader();
-      final res = await ApiClient.dio.get('/user-orders');
+      final res = await ApiClient.dio.get('/client/orders');
       
+      print('✅ [OrderRepository] Legacy orders loaded successfully');
       return {
         'success': true,
         'data': res.data,
       };
     } on DioException catch (e) {
+      print('❌ [OrderRepository] Dio error in getClientOrdersLegacy: ${e.message}');
       return _handleDioError(e);
-    } catch (e) {
+    } catch (e, stack) {
+      print('❌ [OrderRepository] General error in getClientOrdersLegacy: $e');
       return {
         'success': false,
         'message': 'حدث خطأ أثناء جلب الطلبات: $e'
@@ -51,19 +148,46 @@ Future<Map<String, dynamic>> createOrder(Map<String, dynamic> orderData) async {
     }
   }
 
-  /// ✅ جلب تفاصيل طلب محدد
-  Future<Map<String, dynamic>> getOrderDetails(String orderId) async {
+  /// ✅ Get order details by ID (Returns ClientOrder object)
+  Future<ClientOrder> getOrderDetails(int orderId) async {
+    print('🔄 [OrderRepository] getOrderDetails() called for orderId: $orderId');
+    try {
+      await ApiClient.setAuthHeader();
+      final res = await ApiClient.dio.get('/orders/$orderId');
+
+      print('✅ [OrderRepository] Order details loaded: ${res.data}');
+      
+      if (res.data['success'] == true) {
+        return ClientOrder.fromJson(res.data['order']);
+      } else {
+        throw Exception(res.data['message'] ?? 'Failed to load order details');
+      }
+    } on DioException catch (e) {
+      print('❌ [OrderRepository] Dio error in getOrderDetails: ${e.message}');
+      throw Exception(_handleDioError(e)['message']);
+    } catch (e, stack) {
+      print('❌ [OrderRepository] General error in getOrderDetails: $e');
+      throw Exception('حدث خطأ أثناء تحميل تفاصيل الطلب: $e');
+    }
+  }
+
+  /// ✅ جلب تفاصيل طلب محدد (Legacy - returns Map for backward compatibility)
+  Future<Map<String, dynamic>> getOrderDetailsById(String orderId) async {
+    print('🔄 [OrderRepository] getOrderDetailsById() called for orderId: $orderId');
     try {
       await ApiClient.setAuthHeader();
       final res = await ApiClient.dio.get('/orders/$orderId');
       
+      print('✅ [OrderRepository] Order details by ID loaded successfully');
       return {
         'success': true,
         'data': res.data,
       };
     } on DioException catch (e) {
+      print('❌ [OrderRepository] Dio error in getOrderDetailsById: ${e.message}');
       return _handleDioError(e);
-    } catch (e) {
+    } catch (e, stack) {
+      print('❌ [OrderRepository] General error in getOrderDetailsById: $e');
       return {
         'success': false,
         'message': 'حدث خطأ أثناء جلب تفاصيل الطلب: $e'
@@ -71,10 +195,39 @@ Future<Map<String, dynamic>> createOrder(Map<String, dynamic> orderData) async {
     }
   }
 
+  /// ✅ Cancel order
+  Future<Map<String, dynamic>> cancelOrder(int orderId) async {
+    print('🔄 [OrderRepository] cancelOrder() called for orderId: $orderId');
+    try {
+      await ApiClient.setAuthHeader();
+      final res = await ApiClient.dio.put('/orders/$orderId/cancel');
+
+      print('✅ [OrderRepository] Order cancelled: ${res.data}');
+      
+      return {
+        'success': true,
+        'data': res.data,
+        'message': res.data['message'] ?? 'تم إلغاء الطلب بنجاح'
+      };
+    } on DioException catch (e) {
+      print('❌ [OrderRepository] Dio error in cancelOrder: ${e.message}');
+      return _handleDioError(e);
+    } catch (e, stack) {
+      print('❌ [OrderRepository] General error in cancelOrder: $e');
+      return {
+        'success': false,
+        'message': 'حدث خطأ أثناء إلغاء الطلب: $e'
+      };
+    }
+  }
+
   /// 🧩 دالة مساعدة لمعالجة أخطاء Dio
   Map<String, dynamic> _handleDioError(DioException e) {
+    print('🔧 [OrderRepository] Handling Dio error: ${e.type}');
+    
     if (e.response != null) {
       final data = e.response?.data;
+      print('🔧 [OrderRepository] Dio response error: $data');
       return {
         'success': false,
         'message': data['message'] ?? 'حدث خطأ من السيرفر',
@@ -83,10 +236,13 @@ Future<Map<String, dynamic>> createOrder(Map<String, dynamic> orderData) async {
       };
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
+      print('🔧 [OrderRepository] Timeout error');
       return {'success': false, 'message': '⏱ انتهى وقت الاتصال بالسيرفر'};
     } else if (e.type == DioExceptionType.connectionError) {
+      print('🔧 [OrderRepository] Connection error');
       return {'success': false, 'message': '⚠️ لا يوجد اتصال بالشبكة'};
     } else {
+      print('🔧 [OrderRepository] Other Dio error: ${e.message}');
       return {'success': false, 'message': 'خطأ غير متوقع: ${e.message}'};
     }
   }

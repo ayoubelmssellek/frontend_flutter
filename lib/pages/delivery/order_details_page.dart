@@ -1,4 +1,4 @@
-// pages/delivery/order_details_page.dart (Updated - Uses real phone number)
+// pages/delivery/order_details_page.dart (Updated - Handles multiple businesses)
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/order_model.dart';
@@ -9,16 +9,11 @@ class OrderDetailsPage extends StatelessWidget {
   const OrderDetailsPage({super.key, required this.order});
 
   Future<void> _callCustomer(BuildContext context) async {
-    // ✅ UPDATED: Use the actual phone number from the order
     final String phoneNumber = order.clientPhone;
-    
-    // Clean the phone number - remove any spaces, dashes, etc.
     final String cleanPhoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
     
-    // Ensure it has the country code if missing
     String formattedPhoneNumber = cleanPhoneNumber;
     if (!cleanPhoneNumber.startsWith('+')) {
-      // Assuming Moroccan numbers - add +212 prefix if missing
       if (cleanPhoneNumber.startsWith('0')) {
         formattedPhoneNumber = '+212${cleanPhoneNumber.substring(1)}';
       } else {
@@ -31,7 +26,6 @@ class OrderDetailsPage extends StatelessWidget {
     print('🚀 CALLING: $formattedPhoneNumber (original: $phoneNumber)');
     
     try {
-      // Direct launch without canLaunchUrl check
       final bool launched = await launchUrl(
         phoneUri,
         mode: LaunchMode.externalApplication,
@@ -64,7 +58,6 @@ class OrderDetailsPage extends StatelessWidget {
   }
 
   Future<void> _showCallDialog(BuildContext context) async {
-    // ✅ UPDATED: Show the actual phone number in the dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -127,12 +120,91 @@ class OrderDetailsPage extends StatelessWidget {
     }
   }
 
+  // ✅ NEW: Get unique businesses from order items
+  List<String> _getUniqueBusinesses() {
+    final businesses = <String>{};
+    for (final item in order.items) {
+      if (item.businessName.isNotEmpty) {
+        businesses.add(item.businessName);
+      }
+    }
+    return businesses.toList();
+  }
+
+  // ✅ NEW: Show business selection dialog for multiple businesses
+  Future<void> _showBusinessSelectionDialog(BuildContext context, String title) async {
+    final businesses = _getUniqueBusinesses();
+    
+    if (businesses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No business addresses available'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (businesses.length == 1) {
+      // If only one business, open directly
+      await _showMapsDialog(context, businesses.first, title);
+      return;
+    }
+
+    // If multiple businesses, show selection dialog
+    final selectedBusiness = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Select $title'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: businesses.length,
+            itemBuilder: (context, index) {
+              final business = businesses[index];
+              return ListTile(
+                leading: const Icon(Icons.store),
+                title: Text(business),
+                onTap: () => Navigator.pop(context, business),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedBusiness != null && context.mounted) {
+      await _showMapsDialog(context, selectedBusiness, title);
+    }
+  }
+
   Future<void> _showMapsDialog(BuildContext context, String address, String title) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Open $title Location'),
-        content: Text('Would you like to open maps for: $address?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Would you like to open maps for:'),
+            const SizedBox(height: 8),
+            Text(
+              address,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -153,6 +225,8 @@ class OrderDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uniqueBusinesses = _getUniqueBusinesses();
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Order #${order.id}'),
@@ -209,6 +283,7 @@ class OrderDetailsPage extends StatelessWidget {
                 _buildInfoRow('Total Amount', '${order.totalPrice.toStringAsFixed(2)} MAD'),
                 _buildInfoRow('Status', _getStatusText(order.status)),
                 _buildInfoRow('Items Count', order.itemCount.toString()),
+                _buildInfoRow('Stores', uniqueBusinesses.length.toString()),
                 if (order.deliveryDriverId != null)
                   _buildInfoRow('Delivery Driver ID', order.deliveryDriverId.toString()),
                 if (order.createdAt != null)
@@ -232,37 +307,87 @@ class OrderDetailsPage extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: () => _showMapsDialog(context, order.address, 'Delivery'),
                     icon: const Icon(Icons.map, size: 18),
-                    label: const Text('Open in Maps'),
+                    label: const Text('Open Delivery Location in Maps'),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
-            // Restaurant Information
-            if (order.restaurantName != null || order.restaurantAddress != null)
-              _buildSection(
-                title: 'store Information',
-                icon: Icons.store,
-                children: [
-                  if (order.restaurantName != null)
-                    _buildInfoRow('Name', order.restaurantName!),
-                  if (order.restaurantAddress != null)
-                    _buildInfoRow('Address', order.restaurantAddress!),
+            // Store Information
+            _buildSection(
+              title: 'Store Information',
+              icon: Icons.store,
+              children: [
+                // ✅ FIXED: Show all unique businesses
+                if (uniqueBusinesses.isNotEmpty) ...[
+                  _buildInfoRow('Number of Stores', uniqueBusinesses.length.toString()),
                   const SizedBox(height: 8),
-                  if (order.restaurantAddress != null)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showMapsDialog(context, order.restaurantAddress!, 'store'),
-                        icon: const Icon(Icons.directions, size: 18),
-                        label: const Text('Directions to store'),
+                  ...uniqueBusinesses.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final business = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 8, left: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: Colors.deepOrange,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              business,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 8),
+                  
+                  // ✅ FIXED: Show appropriate button based on number of businesses
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showBusinessSelectionDialog(context, 'Store'),
+                      icon: const Icon(Icons.directions, size: 18),
+                      label: Text(
+                        uniqueBusinesses.length == 1 
+                            ? 'Directions to Store' 
+                            : 'Select Store for Directions',
                       ),
                     ),
+                  ),
+                ] else ...[
+                  const Text(
+                    'No store information available',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 ],
-              ),
-            if (order.restaurantName != null || order.restaurantAddress != null)
-              const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 16),
 
             // Order Items
             _buildSection(
@@ -297,11 +422,21 @@ class OrderDetailsPage extends StatelessWidget {
                               ),
                             ),
                             if (item.businessName.isNotEmpty)
-                              Text(
-                                'From: ${item.businessName}',
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 11,
+                              Container(
+                                margin: const EdgeInsets.only(top: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.blue.shade100),
+                                ),
+                                child: Text(
+                                  item.businessName,
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             if (item.productId != null || item.businessOwnerId != null)
@@ -328,14 +463,6 @@ class OrderDetailsPage extends StatelessWidget {
                               fontSize: 14,
                             ),
                           ),
-                          if (item.totalPrice != (item.quantity * item.price))
-                            Text(
-                              '(${(item.quantity * item.price).toStringAsFixed(2)} MAD)',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
-                            ),
                         ],
                       ),
                     ],
@@ -344,7 +471,7 @@ class OrderDetailsPage extends StatelessWidget {
                 
                 const Divider(),
                 
-                // Order Total
+                // Total Amount
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -355,26 +482,13 @@ class OrderDetailsPage extends StatelessWidget {
                         fontSize: 16,
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${order.totalPrice.toStringAsFixed(2)} MAD',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.deepOrange,
-                          ),
-                        ),
-                        if (_calculateItemsTotal(order.items) != order.totalPrice)
-                          Text(
-                            'Calculated: ${_calculateItemsTotal(order.items).toStringAsFixed(2)} MAD',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey,
-                            ),
-                          ),
-                      ],
+                    Text(
+                      '${order.totalPrice.toStringAsFixed(2)} MAD',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.deepOrange,
+                      ),
                     ),
                   ],
                 ),
@@ -407,8 +521,6 @@ class OrderDetailsPage extends StatelessWidget {
                 ),
               ],
             ),
-
-            // ✅ REMOVED: Order Actions Section
           ],
         ),
       ),
@@ -417,10 +529,6 @@ class OrderDetailsPage extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  double _calculateItemsTotal(List<OrderItem> items) {
-    return items.fold(0.0, (sum, item) => sum + (item.quantity * item.price));
   }
 
   Widget _buildSection({

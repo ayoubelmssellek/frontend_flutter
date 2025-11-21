@@ -2,7 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:food_app/core/api_client.dart';
 
-import '../models/delivery_man_model.dart';
+import '../../models/delivery_man_model.dart';
 
 class AdminRepository {
   // Get pending delivery men (those who registered but not approved)

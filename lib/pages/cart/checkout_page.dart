@@ -1,11 +1,12 @@
-// lib/pages/checkout_page.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:food_app/models/delivery_driver_model.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/cart/services/cart_service.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/cart/cart_provider.dart';
+import 'package:food_app/providers/order_providers.dart';
 import 'package:food_app/services/location_manager.dart';
 import 'package:food_app/widgets/checkout/cart_items_widget.dart';
 import 'package:food_app/widgets/checkout/order_summary_widget.dart';
@@ -13,6 +14,7 @@ import 'package:food_app/widgets/checkout/user_info_widget.dart';
 import 'package:food_app/widgets/checkout/guest_warning_widget.dart';
 import 'package:food_app/widgets/checkout/order_processing_widget.dart';
 import 'package:food_app/widgets/checkout/order_confirmation_widget.dart';
+import 'package:food_app/widgets/checkout/delivery_man_selection_widget.dart';
 
 class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({super.key});
@@ -24,7 +26,7 @@ class CheckoutPage extends ConsumerStatefulWidget {
 class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   bool _isSubmittingOrder = false;
   String _selectedDeliveryOption = 'all';
-  String? _selectedDeliveryMan;
+  DeliveryDriver? _selectedDeliveryDriver; // Changed from String to DeliveryDriver
   bool _isInitializing = true;
 
   @override
@@ -121,7 +123,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       deliveryFee: 2.99,
                       serviceFee: 1.50,
                       selectedDeliveryOption: _selectedDeliveryOption,
-                      selectedDeliveryMan: _selectedDeliveryMan,
+                      selectedDeliveryMan: _selectedDeliveryDriver?.name, // Pass the name
                       onDeliveryOptionChanged: (option) {
                         setState(() => _selectedDeliveryOption = option);
                       },
@@ -604,7 +606,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
 
     // Validate delivery option
-    if (_selectedDeliveryOption == 'choose' && _selectedDeliveryMan == null) {
+    if (_selectedDeliveryOption == 'choose' && _selectedDeliveryDriver == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a delivery partner'),
@@ -680,16 +682,22 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     // Build the full address
     final String fullAddress = '$street, $city';
 
+    // ✅ FIXED: Use the actual selected driver ID instead of hardcoded 1
+    final deliveryDriverId = _selectedDeliveryOption == 'choose' && _selectedDeliveryDriver != null 
+        ? _selectedDeliveryDriver!.id 
+        : null;
+
+    print('🚚 Selected Delivery Driver ID: $deliveryDriverId');
+    print('🚚 Selected Delivery Driver Name: ${_selectedDeliveryDriver?.name}');
+
     return {
       "client_id": user['client_id'],
-      "delivery_driver_id": _selectedDeliveryOption == 'choose' && _selectedDeliveryMan != null ? 1 : null,
+      "delivery_driver_id": deliveryDriverId, // Now using the actual driver ID
       "address": fullAddress, // Now using the actual stored location
       "products": cartService.cartItems.values.map((item) => {
         "product_id": int.tryParse(item['id'].toString()) ?? 0,
         "quantity": item['quantity'],
-       "business_owner_id": item['business_owner_id'] ?? 1, // ADD THIS LINE - fallback to 1 if not available
-
-        // Note: price is sent as single item price, Laravel will calculate total
+        "business_owner_id": item['business_owner_id'] ?? 1, // fallback to 1 if not available
       }).toList(),
     };
   }
@@ -754,7 +762,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       builder: (_) => OrderConfirmationWidget(
         orderData: orderData, // Pass the actual order data from API
         deliveryOption: _selectedDeliveryOption,
-        selectedDeliveryMan: _selectedDeliveryMan,
+        selectedDeliveryMan: _selectedDeliveryDriver?.name, // Pass the actual driver name
         total: totalPrice,
         itemCount: realItemCount, // Use real item count from API
         orderId: orderId, // Pass the actual order ID from API
@@ -767,150 +775,19 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   }
 
   void _selectDeliveryMan() {
-    final deliveryMen = [
-      {
-        'id': 1,
-        'name': 'Ahmed',
-        'image': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-        'rating': 4.9,
-        'deliveries': 127,
-        'vehicle': 'Motorcycle'
-      },
-      {
-        'id': 2,
-        'name': 'Mohamed',
-        'image': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-        'rating': 4.8,
-        'deliveries': 89,
-        'vehicle': 'Bicycle'
-      },
-      {
-        'id': 3,
-        'name': 'Sara',
-        'image': 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-        'rating': 4.7,
-        'deliveries': 156,
-        'vehicle': 'Motorcycle'
-      },
-    ];
-
     showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.delivery_dining, color: Colors.deepOrange, size: 24),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Choose Delivery Partner',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: deliveryMen
-                      .map((man) => _buildDeliveryManCard(man, context))
-                      .toList(),
-                ),
-              ),
-            ],
-          ),
+        return DeliveryManSelectionWidget(
+          onDeliveryManSelected: (deliveryDriver) { // Now receives DeliveryDriver object
+            setState(() {
+              _selectedDeliveryDriver = deliveryDriver;
+            });
+          },
         );
       },
-    );
-  }
-
-  Widget _buildDeliveryManCard(Map<String, dynamic> man, BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          radius: 30,
-          backgroundImage: NetworkImage(man['image']),
-        ),
-        title: Text(
-          man['name'],
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.star, color: Colors.amber[600], size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '${man['rating']}',
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${man['vehicle']} • ${man['deliveries']} deliveries',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          ],
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.deepOrange,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Text(
-            'Select',
-            style: TextStyle(color: Colors.white, fontSize: 12),
-          ),
-        ),
-        onTap: () {
-          setState(() {
-            _selectedDeliveryMan = man['name'];
-          });
-          Navigator.pop(context, man['name']);
-        },
-      ),
     );
   }
 }

@@ -302,7 +302,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
-                      Text("Join FoodX Today",
+                      Text("Join uniqque Today",
                           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.grey.shade900)),
                       const SizedBox(height: 8),
                       Text("Create your account and start enjoying delicious food",
