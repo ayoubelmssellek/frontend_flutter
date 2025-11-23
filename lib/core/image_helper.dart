@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 class ImageHelper {
-  static const String baseUrl = 'https://api.uniqque.online';
+  static const String baseUrl = 'http://192.168.1.6:8000';
 
   static String getImageUrl(String? imagePath) {
     if (imagePath == null || imagePath.isEmpty) {

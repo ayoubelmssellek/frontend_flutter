@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/pages/delivery/delivery_home_page.dart';
+import 'package:food_app/pages/delivery/not_approved_page.dart';
 import 'package:food_app/pages/delivery_admin_pages/admin_home_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import '../home/client_home_page.dart';
@@ -18,7 +19,7 @@ class VerifyPage extends ConsumerStatefulWidget {
     super.key,
     required this.userType,
     required this.phoneNumber,
-    this.userId,
+    this.userId, 
   });
 
   @override
@@ -91,11 +92,8 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   void _onCodeChanged(String value, int index) {
     setState(() => _errorMessage = null);
     
-    // Handle single digit input
     if (value.isNotEmpty) {
-      // Take only the last character (handles manual input and some paste cases)
       if (value.length > 1) {
-        // This might be a paste operation - try to handle it
         _handlePossiblePaste(value, index);
         return;
       }
@@ -103,16 +101,13 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
       _codeControllers[index].text = value;
       _codeControllers[index].selection = TextSelection.collapsed(offset: 1);
       
-      // Auto-focus next field (left to right)
       if (index < 3) {
         _focusNodes[index + 1].requestFocus();
       } else {
-        // Last field filled - verify automatically
         _focusNodes[index].unfocus();
         _verifyCode();
       }
     } else {
-      // Handle backspace - focus previous field
       if (index > 0) {
         _focusNodes[index - 1].requestFocus();
       }
@@ -120,14 +115,11 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   }
 
   void _handlePossiblePaste(String pastedText, int currentIndex) {
-    // Clean the pasted text - remove any non-digit characters
     final cleanText = pastedText.replaceAll(RegExp(r'[^0-9]'), '');
     
-    // If we have exactly 4 digits, treat it as a paste operation
     if (cleanText.length == 4) {
       _fillAllFieldsWithPaste(cleanText);
     } else {
-      // Otherwise, just take the first character as before
       _codeControllers[currentIndex].text = pastedText[pastedText.length - 1];
       _codeControllers[currentIndex].selection = TextSelection.collapsed(offset: 1);
       
@@ -142,16 +134,13 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
       _codeControllers[i].text = code[i];
     }
     
-    // Focus the last field and verify automatically
     _focusNodes[3].requestFocus();
     
-    // Small delay to ensure all fields are updated before verification
     Future.delayed(const Duration(milliseconds: 100), () {
       _verifyCode();
     });
   }
 
-  // Alternative approach: Use onTap to handle paste in the first field
   void _handlePasteInFirstField() async {
     final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
     final pastedText = clipboardData?.text?.trim() ?? '';
@@ -164,7 +153,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   Future<void> _verifyCode() async {
     final String code = _getVerificationCode();
     
-    // Validation
     if (code.length != 4) {
       setState(() => _errorMessage = 'الكود يجب أن يتكون من 4 أرقام');
       _shakeAnimation();
@@ -199,7 +187,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
       final String message = result['message']?.toString() ?? '';
 
       if (isSuccess) {
-        _handleSuccessfulVerification(message);
+        await _handleSuccessfulVerification(result); // Pass the full result to check status
       } else {
         _handleVerificationError(message);
       }
@@ -215,22 +203,113 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
     }
   }
 
-  void _handleSuccessfulVerification(String message) {
-    final successMessage = message.isNotEmpty ? message : 'تم التحقق بنجاح ✅';
+  // UPDATED: Check user status after successful verification
+  Future<void> _handleSuccessfulVerification(Map<String, dynamic> result) async {
+    final message = result['message']?.toString() ?? 'تم التحقق بنجاح ✅';
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(successMessage),
+        content: Text(message),
         backgroundColor: Colors.green.shade600,
         duration: const Duration(seconds: 2),
       ),
     );
 
-    // Navigate based on user type
-    if (widget.userType == 'password_reset') {
+    // For delivery drivers, check the user status from the response
+    if (widget.userType == 'delivery_driver' || widget.userType == 'change_number_delivery_driver') {
+      await _checkDeliveryDriverStatus(result);
+    } else if (widget.userType == 'password_reset') {
       _navigateToResetPassword();
     } else {
       _navigateBasedOnUserType();
+    }
+  }
+
+  // NEW: Check delivery driver status from verification response
+  Future<void> _checkDeliveryDriverStatus(Map<String, dynamic> result) async {
+    try {
+      // Extract user data from verification response
+      final userData = result['data']?['user'] ?? result['user'];
+      
+      if (userData != null) {
+        final status = userData['status']?.toString().toLowerCase();
+        print('🔍 Delivery driver status from verification: $status');
+        
+        if (status == 'approved') {
+          // Status is approved - navigate to home page
+          print('🎉 Delivery driver approved - navigating to home page');
+          _navigateToDeliveryHome();
+        } else {
+          // Status is not approved - navigate to NotApprovedPage
+          print('❌ Delivery driver not approved ($status) - navigating to NotApprovedPage');
+          _navigateToNotApprovedPage(status ?? 'unknown', userData);
+        }
+      } else {
+        // If user data is not in response, try to get it from current user provider
+        print('🔍 User data not in response, fetching from current user provider');
+        await _fetchCurrentUserStatus();
+      }
+    } catch (e) {
+      print('❌ Error checking delivery driver status: $e');
+      // Fallback: try to get current user status
+      await _fetchCurrentUserStatus();
+    }
+  }
+
+  // NEW: Fetch current user status from provider
+  Future<void> _fetchCurrentUserStatus() async {
+    try {
+      // Invalidate and fetch current user data
+      ref.invalidate(currentUserProvider);
+      final userResult = await ref.read(currentUserProvider.future);
+      
+      if (userResult['success'] == true && userResult['data'] != null) {
+        final userData = userResult['data'];
+        final status = userData['status']?.toString().toLowerCase();
+        
+        print('🔍 Delivery driver status from current user: $status');
+        
+        if (status == 'approved') {
+          _navigateToDeliveryHome();
+        } else {
+          _navigateToNotApprovedPage(status ?? 'unknown', userData);
+        }
+      } else {
+        // If we can't get status, navigate to NotApprovedPage with unknown status
+        print('❌ Could not fetch user status, navigating to NotApprovedPage');
+        _navigateToNotApprovedPage('unknown', {});
+      }
+    } catch (e) {
+      print('❌ Error fetching current user status: $e');
+      _navigateToNotApprovedPage('unknown', {});
+    }
+  }
+
+  // NEW: Navigate to NotApprovedPage
+  void _navigateToNotApprovedPage(String status, Map<String, dynamic> userData) {
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NotApprovedPage(
+            status: status,
+            user: userData,
+             fromVerifyPage: true, // ✅ ADD THIS
+
+          ),
+        ),
+      );
+    }
+  }
+
+  // NEW: Navigate to delivery home
+  void _navigateToDeliveryHome() {
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const DeliveryHomePage(fromNotApproved: true)),
+        (route) => false,
+      );
     }
   }
 
@@ -255,7 +334,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   void _navigateToResetPassword() {
     final int? userId = widget.userId;
     
-    // Validate user ID
     if (userId == null || userId <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -277,7 +355,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   }
 
   void _navigateBasedOnUserType() {
-    // Navigate based on the userType passed from registration
     switch (widget.userType) {
       case 'client':
         Navigator.pushAndRemoveUntil(
@@ -294,9 +371,10 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
         );
         break;
       case 'delivery_driver':
+      case 'change_number_delivery_driver':
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const DeliveryHomePage()),
+          MaterialPageRoute(builder: (_) => const DeliveryHomePage(fromNotApproved: true)),
           (route) => false,
         );
         break;
@@ -325,7 +403,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
 
     try {
       if (widget.userType == 'password_reset') {
-        // Resend password reset code
         final result = await ref.read(forgotPasswordProvider(widget.phoneNumber).future);
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -344,8 +421,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
           );
         }
       } else {
-        // For registration resend
-        // You might need to implement a separate provider for resending verification code
         await Future.delayed(const Duration(seconds: 1));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -372,25 +447,33 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
   String _getPageTitle() {
     return widget.userType == 'password_reset' 
         ? "تحقق من الرمز" 
-        : "تحقق من الرقم";
+        : widget.userType == 'phone_change'
+          ? "Verify Phone Change"
+          : "تحقق من الرقم";
   }
 
   String _getHeaderText() {
     return widget.userType == 'password_reset'
         ? "تحقق من رقمك"
-        : "تحقق من رقم هاتفك";
+        : widget.userType == 'phone_change'
+          ? "Verify Phone Change"
+          : "تحقق من رقم هاتفك";
   }
 
   String _getDescriptionText() {
     return widget.userType == 'password_reset'
         ? "تم إرسال رمز مكون من 4 أرقام إلى ${widget.phoneNumber}\nأدخل الرمز أدناه للتحقق"
-        : "تم إرسال رمز مكون من 4 أرقام إلى ${widget.phoneNumber}\nأدخل الرمز أدناه لتفعيل حسابك";
+        : widget.userType == 'phone_change'
+          ? "A 4-digit code has been sent to ${widget.phoneNumber}\nEnter the code below to verify your new phone number"
+          : "تم إرسال رمز مكون من 4 أرقام إلى ${widget.phoneNumber}\nأدخل الرمز أدناه لتفعيل حسابك";
   }
 
   String _getButtonText() {
     return widget.userType == 'password_reset'
         ? "تحقق والمتابعة"
-        : "تحقق والمتابعة";
+        : widget.userType == 'phone_change'
+          ? "Verify and Continue"
+          : "تحقق والمتابعة";
   }
 
   @override
@@ -442,7 +525,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                 child: Column(
                   children: [
                     const SizedBox(height: 40),
-                    // Header Icon
                     Container(
                       width: 100,
                       height: 100,
@@ -463,7 +545,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                       ),
                     ),
                     const SizedBox(height: 32),
-                    // Header Text
                     Text(
                       _getHeaderText(),
                       style: TextStyle(
@@ -474,7 +555,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
-                    // Description
                     Text(
                       _getDescriptionText(),
                       style: TextStyle(
@@ -485,7 +565,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
-                    // Code Input Fields - ALWAYS LEFT TO RIGHT
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(4, (index) {
@@ -498,7 +577,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             maxLength: 1,
-                            textDirection: TextDirection.ltr, // Force LTR for numbers
+                            textDirection: TextDirection.ltr,
                             style: const TextStyle(
                               fontSize: 24, 
                               fontWeight: FontWeight.w700, 
@@ -528,12 +607,10 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                             ),
                             onChanged: (value) => _onCodeChanged(value, index),
                             onTap: () {
-                              // Ensure cursor is at the end when tapping
                               _codeControllers[index].selection = TextSelection.collapsed(
                                 offset: _codeControllers[index].text.length,
                               );
                               
-                              // Handle paste in the first field
                               if (index == 0) {
                                 _handlePasteInFirstField();
                               }
@@ -543,7 +620,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                       }),
                     ),
                     const SizedBox(height: 16),
-                    // Error Message
                     if (_errorMessage != null)
                       Text(
                         _errorMessage!, 
@@ -555,7 +631,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                         textAlign: TextAlign.center,
                       ),
                     const SizedBox(height: 32),
-                    // Verify Button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -589,7 +664,6 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Resend Code
                     _countdown > 0
                         ? Text(
                             widget.userType == 'password_reset' 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:food_app/pages/auth/token_expired_page.dart';
 import 'package:food_app/pages/cart/checkout_page.dart';
 import 'package:food_app/pages/home/ClientOrdersPage.dart';
 import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
@@ -9,12 +10,203 @@ import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/order_providers.dart';
 import 'package:food_app/providers/delivery_providers.dart';
 import 'package:food_app/providers/rating_providers.dart';
+import 'package:food_app/services/error_handler_service.dart';
 import 'package:food_app/widgets/home_page/business_types.dart';
 import 'package:food_app/widgets/home_page/custom_app_bar.dart';
 import 'package:food_app/widgets/home_page/delivery_men_section.dart';
 import 'package:food_app/widgets/home_page/orders_section.dart';
 import 'package:food_app/widgets/home_page/rating_section.dart';
 import 'package:food_app/widgets/home_page/restaurants_section.dart';
+
+// Client Home State Provider - IN THE SAME FILE
+final clientHomeStateProvider = StateNotifierProvider<ClientHomeStateNotifier, ClientHomeState>((ref) {
+  return ClientHomeStateNotifier(ref);
+});
+
+class ClientHomeState {
+  final bool isLoading;
+  final bool isLoggedIn;
+  final Map<String, dynamic>? userData;
+  final String? errorMessage;
+  final bool hasTokenError;
+  final bool hasSetInitialStatus;
+
+  const ClientHomeState({
+    this.isLoading = true,
+    this.isLoggedIn = false,
+    this.userData,
+    this.errorMessage,
+    this.hasTokenError = false,
+    this.hasSetInitialStatus = false,
+  });
+
+  ClientHomeState copyWith({
+    bool? isLoading,
+    bool? isLoggedIn,
+    Map<String, dynamic>? userData,
+    String? errorMessage,
+    bool? hasTokenError,
+    bool? hasSetInitialStatus,
+  }) {
+    return ClientHomeState(
+      isLoading: isLoading ?? this.isLoading,
+      isLoggedIn: isLoggedIn ?? this.isLoggedIn,
+      userData: userData ?? this.userData,
+      errorMessage: errorMessage ?? this.errorMessage,
+      hasTokenError: hasTokenError ?? this.hasTokenError,
+      hasSetInitialStatus: hasSetInitialStatus ?? this.hasSetInitialStatus,
+    );
+  }
+}
+
+class ClientHomeStateNotifier extends StateNotifier<ClientHomeState> {
+  final Ref ref;
+
+  ClientHomeStateNotifier(this.ref) : super(const ClientHomeState()) {
+    ref.listen<bool>(authStateProvider, (previous, next) {
+      if (next == true) {
+        _loadUserData();
+      } else {
+        state = state.copyWith(
+          isLoggedIn: false,
+          userData: null,
+          isLoading: false,
+          hasTokenError: false,
+          hasSetInitialStatus: false,
+        );
+      }
+    });
+
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    try {
+      final isLogged = ref.read(authStateProvider);
+      
+      state = state.copyWith(
+        isLoading: true,
+        isLoggedIn: isLogged,
+        hasTokenError: false,
+      );
+
+      if (isLogged) {
+        await _loadUserData();
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to check authentication status',
+        hasTokenError: false,
+      );
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      state = state.copyWith(
+        isLoading: true,
+        hasTokenError: false,
+      );
+      
+      final result = await ref.read(authRepositoryProvider).getCurrentUser();
+      
+      if (result['success'] == true && result['data'] != null) {
+        state = state.copyWith(
+          userData: result,
+          isLoading: false,
+          errorMessage: null,
+          isLoggedIn: true,
+          hasTokenError: false,
+        );
+        print('✅ [ClientHomeStateNotifier] User data loaded successfully');
+      } else {
+        final message = result['message'] ?? '';
+        if (ErrorHandlerService.isTokenError(message)) {
+          state = state.copyWith(
+            isLoading: false,
+            isLoggedIn: false,
+            errorMessage: null,
+            hasTokenError: true,
+          );
+        } else {
+          state = state.copyWith(
+            isLoading: false,
+            isLoggedIn: false,
+            errorMessage: result['message'] ?? 'Failed to load user data',
+            hasTokenError: false,
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading client user data: $e');
+      
+      if (ErrorHandlerService.isTokenError(e)) {
+        state = state.copyWith(
+          isLoading: false,
+          isLoggedIn: false,
+          errorMessage: null,
+          hasTokenError: true,
+        );
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          isLoggedIn: false,
+          errorMessage: ErrorHandlerService.getErrorMessage(e),
+          hasTokenError: false,
+        );
+      }
+    }
+  }
+
+  Future<void> refreshProfile() async {
+    print('🔄 [ClientHomeStateNotifier] Refreshing client profile...');
+    if (state.isLoggedIn) {
+      await _loadUserData();
+    } else {
+      await _checkAuthStatus();
+    }
+  }
+
+  void clearError() {
+    state = state.copyWith(
+      errorMessage: null,
+      hasTokenError: false,
+    );
+  }
+
+  void setInitialStatusCompleted() {
+    state = state.copyWith(hasSetInitialStatus: true);
+  }
+
+  // Get client ID from user data
+  int? getClientId() {
+    if (state.userData != null) {
+      final userDataMap = state.userData!['data'] as Map<String, dynamic>?;
+      final clientId = userDataMap?['client_id'];
+      print('👤 [ClientHomeStateNotifier] Extracted client ID: $clientId');
+      return clientId is int ? clientId : null;
+    }
+    return null;
+  }
+
+  // Get user ID from user data
+  int? getUserId() {
+    if (state.userData != null) {
+      final userDataMap = state.userData!['data'] as Map<String, dynamic>?;
+      final userId = userDataMap?['id'];
+      print('👤 [ClientHomeStateNotifier] Extracted user ID: $userId');
+      return userId is int ? userId : null;
+    }
+    return null;
+  }
+}
 
 class ClientHomePage extends ConsumerStatefulWidget {
   final int initialTab;
@@ -32,6 +224,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
   late int _currentIndex;
   String _selectedBusinessType = 'Restaurant';
   bool _isRefreshing = false;
+  bool _hasHandledTokenNavigation = false;
 
   @override
   void initState() {
@@ -55,19 +248,94 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     });
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _hasHandledTokenNavigation = false;
+    super.dispose();
+  }
+
   void _loadOrdersOnStartup() {
-    final clientId = ref.read(clientIdProvider);
+    // Try both data sources to get client ID
+    final clientId = _getClientId();
     print('🏠 [ClientHomePage] Loading orders on startup, clientId: $clientId');
+    
     if (clientId != 0) {
       ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
     } else {
       Future.delayed(const Duration(seconds: 2), () {
-        final delayedClientId = ref.read(clientIdProvider);
+        final delayedClientId = _getClientId();
         if (delayedClientId != 0 && mounted) {
           ref.read(clientOrdersProvider.notifier).loadClientOrders(delayedClientId);
         }
       });
     }
+  }
+
+  // ✅ FIXED: Get client ID from both data sources like delivery example
+  int _getClientId() {
+    // First try currentUserProvider
+    final userData = ref.read(currentUserProvider);
+    if (userData.hasValue && userData.value != null) {
+      final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
+      final clientId = userDataMap?['client_id'];
+      if (clientId != null && clientId is int && clientId != 0) {
+        print('✅ [ClientHomePage] Got client ID from currentUserProvider: $clientId');
+        return clientId;
+      }
+    }
+    
+    // Fallback to clientHomeStateProvider
+    final clientState = ref.read(clientHomeStateProvider);
+    if (clientState.userData != null) {
+      final userDataMap = clientState.userData!['data'] as Map<String, dynamic>?;
+      final clientId = userDataMap?['client_id'];
+      if (clientId != null && clientId is int && clientId != 0) {
+        print('✅ [ClientHomePage] Got client ID from clientHomeStateProvider: $clientId');
+        return clientId;
+      }
+    }
+
+    // If both fail, try to get user ID as fallback
+    if (userData.hasValue && userData.value != null) {
+      final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
+      final userId = userDataMap?['id'];
+      if (userId != null && userId is int) {
+        print('⚠️ [ClientHomePage] No client_id found, using user ID: $userId');
+        return userId;
+      }
+    }
+
+    print('❌ [ClientHomePage] No client ID found');
+    return 0;
+  }
+
+  // ✅ FIXED: Get user ID from both data sources like delivery example
+  int? _getUserId() {
+    // First try currentUserProvider
+    final userData = ref.read(currentUserProvider);
+    if (userData.hasValue && userData.value != null) {
+      final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
+      final userId = userDataMap?['id'] as int?;
+      if (userId != null) {
+        print('✅ [ClientHomePage] Got user ID from currentUserProvider: $userId');
+        return userId;
+      }
+    }
+    
+    // Fallback to clientHomeStateProvider
+    final clientState = ref.read(clientHomeStateProvider);
+    if (clientState.userData != null) {
+      final userDataMap = clientState.userData!['data'] as Map<String, dynamic>?;
+      final userId = userDataMap?['id'] as int?;
+      if (userId != null) {
+        print('✅ [ClientHomePage] Got user ID from clientHomeStateProvider: $userId');
+        return userId;
+      }
+    }
+    
+    print('❌ [ClientHomePage] Could not get user ID');
+    return null;
   }
 
   @override
@@ -81,37 +349,34 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     }
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  // FIXED: Proper refresh method with rating section refresh
+  // ✅ FIXED: Enhanced refresh method using both data sources
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
     
     setState(() => _isRefreshing = true);
     
     try {
-      final clientId = ref.read(clientIdProvider);
-      
-      // Create list of refresh operations
+      // Refresh both data sources first
       final refreshOperations = <Future>[];
       
-      // Refresh business data
-      refreshOperations.add(ref.refresh(businessOwnersProvider.future));
+      // Refresh currentUserProvider
+      refreshOperations.add(ref.refresh(currentUserProvider.future));
       
-      // Refresh delivery drivers
-      refreshOperations.add(ref.read(deliveryDriversProvider.notifier).refreshDeliveryDrivers());
+      // Refresh clientHomeStateProvider
+      refreshOperations.add(ref.read(clientHomeStateProvider.notifier).refreshProfile());
       
-      // Refresh orders data
+      // Wait for user data refresh first
+      await Future.wait(refreshOperations);
+      
+      // Now load orders with the updated client ID
+      final clientId = _getClientId();
       if (clientId != 0) {
-        refreshOperations.add(ref.read(clientOrdersProvider.notifier).refreshClientOrders(clientId));
+        await ref.read(clientOrdersProvider.notifier).refreshClientOrders(clientId);
       }
       
-      // Wait for all refresh operations to complete
-      await Future.wait(refreshOperations);
+      // Refresh other data
+      await ref.refresh(businessOwnersProvider.future);
+      await ref.read(deliveryDriversProvider.notifier).refreshDeliveryDrivers();
       
       // ✅ Refresh rating section data
       refreshRatingSection(ref);
@@ -143,6 +408,35 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       if (mounted) {
         setState(() => _isRefreshing = false);
       }
+    }
+  }
+
+  // ✅ ADDED: Handle token errors like delivery example
+  void _handleTokenErrors(ClientHomeState state, BuildContext context) {
+    if (_hasHandledTokenNavigation || !mounted) return;
+
+    if (state.hasTokenError) {
+      _hasHandledTokenNavigation = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _navigateToTokenExpiredPage();
+        }
+      });
+    }
+  }
+
+  // ✅ ADDED: Navigate to token expired page like delivery example
+  void _navigateToTokenExpiredPage([String? customMessage]) {
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => TokenExpiredPage(
+            message: customMessage ?? 'Your session has expired. Please login again to continue.',
+            allowGuestMode: true,
+          ),
+        ),
+        (route) => false,
+      );
     }
   }
 
@@ -198,6 +492,16 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
 
   @override
   Widget build(BuildContext context) {
+    final clientHomeState = ref.watch(clientHomeStateProvider);
+
+    // ✅ ADDED: Handle token errors like delivery example
+    _handleTokenErrors(clientHomeState, context);
+
+    // ✅ FOR TOKEN ERRORS, RETURN EMPTY CONTAINER (navigation will handle it)
+    if (clientHomeState.hasTokenError) {
+      return const Scaffold(body: SizedBox.shrink());
+    }
+
     return Scaffold(
       key: ValueKey(context.locale),
       backgroundColor: Colors.grey.shade50,

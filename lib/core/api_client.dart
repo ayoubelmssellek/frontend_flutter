@@ -26,8 +26,7 @@ class ApiClient {
           '/login',
           '/client-register',
           '/verify-number',
-          '/business-owners',
-          
+          '/business-owners',   
         ];
         
         final needsAuth = !publicEndpoints.any((endpoint) => 

@@ -100,93 +100,6 @@ final deliveryDriverRegisterProvider = FutureProvider.family<Map<String, dynamic
 });
 
  
-/// ✅ Verify Code Provider - الإصدار المصحح
-final verifyCodeProvider =
-    FutureProvider.family<Map<String, dynamic>, Map<String, String>>(
-        (ref, creds) async {
-  final repo = ref.read(authRepositoryProvider);
-  
-  // 🔧 استخدم الأسماء الصحيحة
-  final String? phone = creds['number_phone'];
-  final String? code = creds['verification_code']; // 🔥 تغيير من 'code' إلى 'verification_code'
-  
-  if (phone == null || code == null) {
-    return {
-      'success': false,
-      'message': 'رقم الهاتف أو كود التحقق مطلوب'
-    };
-  }
-  
-  final result = await repo.verifyCode(phone: phone, code: code);
-  return result;
-});
-
-// Update the updateProfileProvider in auth_providers.dart
-final updateProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, profileData) async {
-  print('🔄 [updateProfileProvider] Starting profile update');
-  print('📦 [updateProfileProvider] Received data keys: ${profileData.keys}');
-  
-  try {
-    final authRepo = ref.read(authRepositoryProvider);
-    
-    // Extract parameters with null checks
-    final name = profileData['name'] as String?;
-    final password = profileData['password'] as String?;
-    final passwordConfirmation = profileData['password_confirmation'] as String?;
-    final avatar = profileData['avatar'] as File?;
-    
-    print('🔍 [updateProfileProvider] Extracted parameters:');
-    print('   - name: $name');
-    print('   - password: ${password != null ? "***" : "null"}');
-    print('   - passwordConfirmation: ${passwordConfirmation != null ? "***" : "null"}');
-    print('   - avatar: ${avatar != null ? "File provided" : "null"}');
-    
-    final result = await authRepo.updateProfile(
-      name: name,
-      password: password,
-      passwordConfirmation: passwordConfirmation,
-      avatar: avatar,
-    );
-    
-    print('✅ [updateProfileProvider] Profile update result: ${result['success']}');
-    print('📝 [updateProfileProvider] Message: ${result['message']}');
-    
-    // If update is successful, update the local state
-    if (result['success'] == true && result['data'] != null) {
-      print('🔄 [updateProfileProvider] Updating local state with new data');
-      
-      // Get the current profile state
-      final currentState = ref.read(profileStateProvider);
-      
-      if (currentState.userData != null) {
-        // Merge the data properly
-        final newUserData = Map<String, dynamic>.from(result['data']);
-        final updatedUserData = {...currentState.userData!, ...newUserData};
-        
-        print('🔄 [updateProfileProvider] Merged user data keys: ${updatedUserData.keys}');
-        
-        // Update the state
-        ref.read(profileStateProvider.notifier).updateUserData(updatedUserData);
-        
-        print('✅ [updateProfileProvider] Local state updated successfully');
-      } else {
-        print('🔄 [updateProfileProvider] Setting new user data');
-        ref.read(profileStateProvider.notifier).updateUserData(Map<String, dynamic>.from(result['data']));
-      }
-    } else {
-      print('❌ [updateProfileProvider] Profile update failed: ${result['message']}');
-    }
-    
-    return result;
-  } catch (e) {
-    print('❌ [updateProfileProvider] Error in provider: $e');
-    return {
-      'success': false,
-      'message': 'Error in profile update: $e',
-    };
-  }
-});
-
 
 
 /// ✅ Business Types Provider
@@ -299,3 +212,123 @@ final appStartProvider = FutureProvider<void>((ref) async {
   
   print('🎯 App start check completed');
 });
+
+
+
+
+// Profile Update Providers
+final updateProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, profileData) async {
+  print('🔄 [updateProfileProvider] Starting profile update');
+  
+  try {
+    final authRepo = ref.read(authRepositoryProvider);
+    
+    final name = profileData['name'] as String?;
+    final avatar = profileData['avatar'] as File?;
+    
+    print('🔍 [updateProfileProvider] Extracted parameters:');
+    print('   - name: $name');
+    print('   - avatar: ${avatar != null ? "File provided" : "null"}');
+    
+    final result = await authRepo.updateProfile(
+      name: name,
+      avatar: avatar,
+    );
+    
+    print('✅ [updateProfileProvider] Profile update result: ${result['success']}');
+    
+    if (result['success'] == true && result['data'] != null) {
+      print('🔄 [updateProfileProvider] Updating local state with new data');
+      
+      final currentState = ref.read(profileStateProvider);
+      if (currentState.userData != null) {
+        final newUserData = Map<String, dynamic>.from(result['data']);
+        final updatedUserData = {...currentState.userData!, ...newUserData};
+        ref.read(profileStateProvider.notifier).updateUserData(updatedUserData);
+      } else {
+        ref.read(profileStateProvider.notifier).updateUserData(Map<String, dynamic>.from(result['data']));
+      }
+    }
+    
+    return result;
+  } catch (e) {
+    print('❌ [updateProfileProvider] Error in provider: $e');
+    return {
+      'success': false,
+      'message': 'Error in profile update: $e',
+    };
+  }
+});
+
+
+// Password Change Provider
+final changePasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, passwordData) async {
+  print('🔄 [changePasswordProvider] Starting password change');
+  
+  try {
+    final authRepo = ref.read(authRepositoryProvider);
+    
+    final currentPassword = passwordData['current_password'] as String;
+    final newPassword = passwordData['new_password'] as String;
+    final confirmPassword = passwordData['confirm_password'] as String;
+    
+    final result = await authRepo.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
+    
+    print('✅ [changePasswordProvider] Password change result: ${result['success']}');
+    
+    return result;
+  } catch (e) {
+    print('❌ [changePasswordProvider] Error in provider: $e');
+    return {
+      'success': false,
+      'message': 'Error changing password: $e',
+    };
+  }
+});
+
+// Phone Number Change Provider
+final changePhoneNumberProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, phoneNumber) async {
+  print('🔄 [changePhoneNumberProvider] Starting phone number change');
+  
+  try {
+    final authRepo = ref.read(authRepositoryProvider);
+    
+    final result = await authRepo.changePhoneNumber(phoneNumber: phoneNumber);
+    
+    print('✅ [changePhoneNumberProvider] Phone change result: ${result['success']}');
+    
+    return result;
+  } catch (e) {
+    print('❌ [changePhoneNumberProvider] Error in provider: $e');
+    return {
+      'success': false,
+      'message': 'Error changing phone number: $e',
+    };
+  }
+});
+
+/// ✅ Verify Code Provider - الإصدار المصحح
+final verifyCodeProvider =
+    FutureProvider.family<Map<String, dynamic>, Map<String, String>>(
+        (ref, creds) async {
+  final repo = ref.read(authRepositoryProvider);
+  
+  // 🔧 استخدم الأسماء الصحيحة
+  final String? phone = creds['number_phone'];
+  final String? code = creds['verification_code']; // 🔥 تغيير من 'code' إلى 'verification_code'
+  
+  if (phone == null || code == null) {
+    return {
+      'success': false,
+      'message': 'رقم الهاتف أو كود التحقق مطلوب'
+    };
+  }
+  
+  final result = await repo.verifyCode(phone: phone, code: code);
+  return result;
+});
+

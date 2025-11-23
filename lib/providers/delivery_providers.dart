@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:food_app/providers/delivery_repository.dart';
+import 'package:food_app/pages/delivery/delivery_profile_widgets/delivery_profile_state.dart';
 import 'package:food_app/providers/auth_providers.dart';
+import 'package:food_app/providers/delivery_repository.dart';
 import '../models/order_model.dart';
 import '../models/delivery_driver_model.dart';
 import '../core/api_client.dart';
@@ -107,3 +110,50 @@ final currentDeliveryManIdProvider = StateProvider<int?>((ref) {
     },
   );
 });
+
+
+
+final updateDeliveryProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, profileData) async {
+  print('🔄 [updateDeliveryProfileProvider] Starting delivery profile update');
+  
+  try {
+    final authRepo = ref.read(authRepositoryProvider);
+    
+    final name = profileData['name'] as String;
+    final avatar = profileData['avatar'] as File?;
+    
+    print('🔍 [updateDeliveryProfileProvider] Extracted parameters:');
+    print('   - name: $name');
+    print('   - avatar: ${avatar != null ? "File provided" : "null"}');
+    
+    final result = await authRepo.updateDeliveryProfile(
+      name: name,
+      avatar: avatar,
+    );
+    
+    print('✅ [updateDeliveryProfileProvider] Delivery profile update result: ${result['success']}');
+    
+    if (result['success'] == true && result['data'] != null) {
+      print('🔄 [updateDeliveryProfileProvider] Updating local state with new data');
+      
+      final currentState = ref.read(deliveryProfileStateProvider);
+      if (currentState.userData != null) {
+        final newUserData = Map<String, dynamic>.from(result['data']);
+        final updatedUserData = {...currentState.userData!, ...newUserData};
+        ref.read(deliveryProfileStateProvider.notifier).updateUserData(updatedUserData);
+      } else {
+        ref.read(deliveryProfileStateProvider.notifier).updateUserData(Map<String, dynamic>.from(result['data']));
+      }
+    }
+    
+    return result;
+  } catch (e) {
+    print('❌ [updateDeliveryProfileProvider] Error in provider: $e');
+    return {
+      'success': false,
+      'message': 'Error in profile update: $e',
+    };
+  }
+});
+
+

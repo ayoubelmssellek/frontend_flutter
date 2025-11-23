@@ -1,7 +1,7 @@
 // pages/auth/token_expired_page.dart
 import 'package:flutter/material.dart';
 import 'package:food_app/pages/auth/login_page.dart';
-import 'package:food_app/pages/home/profile_page/widgets/guest_profile.dart';
+import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
 
 class TokenExpiredPage extends StatelessWidget {
   final String message;
@@ -219,7 +219,7 @@ class TokenExpiredPage extends StatelessWidget {
   void _continueAsGuest(BuildContext context) {
     // Navigate to GuestProfile page
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const GuestProfile()),
+      MaterialPageRoute(builder: (_) => const ProfilePage()),
       (route) => false,
     );
     

@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:food_app/pages/home/client_home_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:food_app/core/secure_storage.dart';
@@ -116,9 +116,50 @@ class _DeliveryDriverRegisterPageState extends ConsumerState<DeliveryDriverRegis
     }
   }
 
+  // ✅ UPDATED: Image picking with camera option
   Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('من المعرض'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('التقاط صورة'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageFromCamera();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImageFromGallery() async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (image != null) {
+      setState(() {
+        _avatarImage = File(image.path);
+      });
+    }
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
     if (image != null) {
       setState(() {
         _avatarImage = File(image.path);
@@ -145,7 +186,8 @@ Future<void> _register() async {
 
     final result = await ref.read(deliveryDriverRegisterProvider(creds).future);
 
-    if (result['success'] == true) {
+    if (result['success'] == true || result['message'] != null) {
+      // ✅ Handle both success formats
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message']), backgroundColor: Colors.green),
       );
@@ -158,23 +200,12 @@ Future<void> _register() async {
       // ✅ STEP 3: Set auth state to true
       ref.read(authStateProvider.notifier).state = true;
 
-      // ✅ STEP 4: Fetch current user data after registration
-      final user = await ref.read(authRepositoryProvider).getCurrentUser();
-
-      if (user['success'] != true) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(user['message'] ?? 'Failed to fetch user data')),
-          );
-        }
-        return;
-      }
-
-      final userData = user['data'];
+      // ✅ STEP 4: Extract user data directly from register response
+      final userData = result['user'];
       if (userData == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User data is null')),
+            const SnackBar(content: Text('User data is null in response')),
           );
         }
         return;
@@ -183,31 +214,51 @@ Future<void> _register() async {
       // ✅ STEP 5: Save user data to local storage
       await _saveUserToLocalStorage(userData);
       
-      // ✅ STEP 6: Extract user ID from the fetched user data
-      final int? userId = userData['client_id'] ?? userData['id'] as int?;
+      // ✅ STEP 6: Extract user ID from the response user data
+      final int? userId = userData['id'] as int?;
       
-      print('🔑 DeliveryDriverRegisterPage - Fetched userId: $userId');
-      print('👤 DeliveryDriverRegisterPage - User Role: ${userData['role_name']}');
+      print('🔑 DeliveryDriverRegisterPage - Response userId: $userId');
+      print('👤 DeliveryDriverRegisterPage - User Data: $userData');
 
       // ✅ STEP 7: SEND FCM TOKEN AFTER SUCCESSFUL REGISTRATION
-        await _sendFcmTokenForUser(userData);
-        
+      await _sendFcmTokenForUser(userData);
+      
+      // ✅ STEP 8: CHECK WHATSAPP STATUS FROM RESPONSE AND NAVIGATE ACCORDINGLY
+      final whatsappStatus = result['whatsapp_status']?.toString().toLowerCase();
+      print('📱 WhatsApp Status from response: $whatsappStatus');
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => VerifyPage(
-              phoneNumber: _whatsappController.text.trim(),
-              userType: 'delivery_driver',
-              userId: userId, // Use the fetched user ID
+        if (whatsappStatus == 'failed') {
+          // ❌ WhatsApp failed - navigate to client homepage directly
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'تم التسجيل بنجاح! سيتم تفعيل حسابك قريباً'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
             ),
-          ),
-        );
+          );
+          
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const ClientHomePage()),
+          );
+        } else {
+          // ✅ WhatsApp success - navigate to verify page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => VerifyPage(
+                phoneNumber: _whatsappController.text.trim(),
+                userType: 'delivery_driver',
+                userId: userId, 
+                              ),
+            ),
+          );
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+        SnackBar(content: Text(result['message'] ?? 'Registration failed'), backgroundColor: Colors.red),
       );
     }
   } catch (e) {
@@ -251,6 +302,7 @@ Future<void> _register() async {
       print("❌ Error sending FCM token: $e");
     }
   }
+
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
@@ -306,27 +358,50 @@ Future<void> _register() async {
                           style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                       const SizedBox(height: 32),
 
-                      // Avatar Upload
+                      // ✅ UPDATED: Avatar Upload with better UI
                       Center(
-                        child: GestureDetector(
-                          onTap: _pickImage,
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundColor: Colors.grey.shade200,
-                            backgroundImage: _avatarImage != null 
-                                ? FileImage(_avatarImage!) 
-                                : null,
-                            child: _avatarImage == null
-                                ? const Icon(Icons.camera_alt, size: 40, color: Colors.grey)
-                                : null,
-                          ),
+                        child: Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey.shade200,
+                                backgroundImage: _avatarImage != null 
+                                    ? FileImage(_avatarImage!) 
+                                    : null,
+                                child: _avatarImage == null
+                                    ? const Icon(Icons.camera_alt, size: 40, color: Colors.grey)
+                                    : null,
+                              ),
+                            ),
+                            if (_avatarImage != null)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.deepOrange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.check, color: Colors.white, size: 16),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
                       Center(
                         child: Text(
-                          "رفع صورة الملف الشخصي",
+                          "انقر لرفع صورة الملف الشخصي",
                           style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          "يمكنك التقاط صورة أو اختيارها من المعرض",
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                         ),
                       ),
                       const SizedBox(height: 32),

@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ ADDED
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:food_app/core/secure_storage.dart';
+import 'package:food_app/pages/home/client_home_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'verify_page.dart';
@@ -26,7 +27,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  String? _fcmToken; // ✅ ADDED: Store FCM token like in LoginPage
+  String? _fcmToken;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -50,11 +51,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
 
     _animationController.forward();
     
-    // ✅ ADDED: Get FCM token like in LoginPage
     _getFcmToken();
   }
 
-  // ✅ ADDED: Get FCM token exactly like in LoginPage
   Future<void> _getFcmToken() async {
     try {
       _fcmToken = await FirebaseMessaging.instance.getToken();
@@ -78,22 +77,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
     super.dispose();
   }
 
-  // ✅ ADDED: Clear all old user data before register
   Future<void> _clearOldUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Clear shared preferences
       await prefs.remove('current_user');
       await prefs.remove('cart_items');
       
-      // Clear secure storage
       await SecureStorage.deleteToken();
       
-      // Clear provider states
       ref.read(authStateProvider.notifier).state = false;
       
-      // Invalidate providers to refresh data
       ref.invalidate(currentUserProvider);
       
       if (kDebugMode) {
@@ -106,13 +100,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
     }
   }
 
-  // ✅ ADDED: Save user data to local storage
   Future<void> _saveUserToLocalStorage(Map<String, dynamic> userData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('current_user', json.encode(userData));
       
-      // ✅ ADDED: Save to SecureStorage
       final userId = userData['client_id'] ?? userData['id'];
       if (userId != null) {
         await SecureStorage.setUserId(userId.toString());
@@ -130,13 +122,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
     }
   }
 
-  // ✅ ADDED: FCM TOKEN METHOD - EXACT COPY FROM LOGINPAGE
   Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
     try {
-      // ✅ Force refresh: delete old token first
       await FirebaseMessaging.instance.deleteToken();
 
-      // ثم جلب token جديد
       final fcmToken = await FirebaseMessaging.instance.getToken();
 
       if (fcmToken != null) {
@@ -191,23 +180,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
         // ✅ STEP 3: Set auth state to true
         ref.read(authStateProvider.notifier).state = true;
 
-        // ✅ STEP 4: Fetch current user data after registration
-        final user = await ref.read(authRepositoryProvider).getCurrentUser();
-
-        if (user['success'] != true) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(user['message'] ?? 'Failed to fetch user data')),
-            );
-          }
-          return;
-        }
-
-        final userData = user['data'];
+        // ✅ STEP 4: Extract user data directly from register response
+        final userData = result['user'];
         if (userData == null) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('User data is null')),
+              const SnackBar(content: Text('User data is null in response')),
             );
           }
           return;
@@ -216,26 +194,52 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
         // ✅ STEP 5: Save user data to local storage
         await _saveUserToLocalStorage(userData);
         
-        // ✅ STEP 6: SEND FCM TOKEN - EXACTLY LIKE IN LOGINPAGE
+        // ✅ STEP 6: SEND FCM TOKEN
         await _sendFcmTokenForUser(userData);
         
-        // ✅ STEP 7: Extract user ID from the fetched user data
+        // ✅ STEP 7: Extract user ID from the response user data
         final int? userId = userData['client_id'] ?? userData['id'] as int?;
-        
-        print('🔑 RegisterPage - Fetched userId: $userId');
+                if (kDebugMode) {
+                  print('api res: $result');
+                }
+
+        print('🔑 RegisterPage - Response userId: $userId');
         print('👤 RegisterPage - User Role: ${userData['role_name']}');
 
+        // ✅ STEP 8: CHECK WHATSAPP STATUS FROM RESPONSE AND NAVIGATE ACCORDINGLY
+        final whatsappStatus = result['whatsapp_status']?.toString().toLowerCase();
+        if (kDebugMode) {
+          print('📱 WhatsApp Status from response: $whatsappStatus');
+        }
+
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => VerifyPage(
-                phoneNumber: _whatsappController.text.trim(),
-                userType: 'client',
-                userId: userId, // Use the fetched user ID
+          if (whatsappStatus == 'failed') {
+            // ❌ WhatsApp failed - navigate to client homepage directly
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم إنشاء الحساب بنجاح! .'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 4),
               ),
-            ),
-          );
+            );
+            
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const ClientHomePage()),
+            );
+          } else {
+            // ✅ WhatsApp success - navigate to verify page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VerifyPage(
+                  phoneNumber: _whatsappController.text.trim(),
+                  userType: 'client',
+                  userId: userId, 
+                ),
+              ),
+            );
+          }
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

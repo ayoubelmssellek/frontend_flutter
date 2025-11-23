@@ -1,260 +1,30 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:food_app/pages/home/ClientOrdersPage.dart';
-import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
-import 'package:food_app/pages/home/profile_page/widgets/feature_item.dart';
-import 'package:food_app/pages/home/profile_page/widgets/section_widget.dart';
-import 'package:food_app/providers/auth_providers.dart';
-import 'package:food_app/services/language_selector.dart';
 import 'package:food_app/core/image_helper.dart';
-import 'package:food_app/pages/auth/verify_page.dart';
+import 'package:food_app/pages/auth/change_password_page.dart';
 import 'package:food_app/pages/auth/forgot_password_page.dart';
+import 'package:food_app/pages/auth/verify_page.dart';
+import 'package:food_app/providers/auth_providers.dart';
+import 'package:food_app/providers/delivery_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ClientProfile extends ConsumerStatefulWidget {
-  final VoidCallback onLogout;
-  final VoidCallback onRefresh;
-
-  const ClientProfile({
-    super.key,
-    required this.onLogout,
-    required this.onRefresh,
-  });
-
-  @override
-  ConsumerState<ClientProfile> createState() => _ClientProfileState();
-}
-
-class _ClientProfileState extends ConsumerState<ClientProfile> {
-  String _tr(String key, String fallback) {
-    try {
-      final translation = key.tr();
-      return translation == key ? fallback : translation;
-    } catch (e) {
-      return fallback;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profileState = ref.watch(profileStateProvider);
-    final userData = profileState.userData!;
-
-    print('🔄 [ClientProfile] Rebuilding with name: ${userData['name']}');
-
-    return Column(
-      children: [
-        _buildUserHeader(context, userData),
-        _buildAccountSection(context, userData),
-        _buildSecuritySection(context, userData),
-        _buildSettingsSection(context),
-        _buildSupportSection(context),
-        _buildLogoutButton(context),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildUserHeader(BuildContext context, Map<String, dynamic> userData) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.deepOrange,
-                    width: 2,
-                  ),
-                ),
-                child: ClipOval(
-                  child: CustomNetworkImage(
-                    imageUrl: ImageHelper.getImageUrl(userData['avatar']),
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    placeholder: 'avatar',
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.deepOrange.shade100,
-                        child: Center(
-                          child: Icon(
-                            Icons.person_rounded,
-                            size: 40,
-                            color: Colors.deepOrange,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            userData['name'] ?? 'No Name',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            userData['number_phone'] ?? 'No Phone',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAccountSection(BuildContext context, Map<String, dynamic> userData) {
-    return SectionWidget(
-      title: _tr('profile_page.my_account', 'My Account'),
-      features: [
-        FeatureItem(
-          icon: Icons.shopping_bag_rounded,
-          title: _tr('profile_page.my_orders', 'My Orders'),
-          subtitle: _tr('profile_page.view_your_order_history', 'View your order history'),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ClientOrdersPage()),
-            );
-          },
-        ),
-        FeatureItem(
-          icon: Icons.edit_rounded,
-          title: _tr('profile_page.edit_profile', 'Edit Profile'),
-          subtitle: _tr('profile_page.update_your_information', 'Update your personal information'),
-          onTap: () => _showUpdateProfileDialog(context, userData),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSecuritySection(BuildContext context, Map<String, dynamic> user) {
-    return SectionWidget(
-      title: _tr('profile_page.security', 'Security'),
-      features: [
-        FeatureItem(
-          icon: Icons.lock_outline,
-          title: _tr('profile_page.change_password', 'Change Password'),
-          subtitle: _tr('profile_page.update_your_password', 'Update your account password'),
-          onTap: () => _showChangePasswordDialog(context),
-        ),
-        FeatureItem(
-          icon: Icons.phone_android,
-          title: _tr('profile_page.change_phone', 'Change Phone Number'),
-          subtitle: _tr('profile_page.update_your_phone', 'Update your phone number'),
-          onTap: () => _showChangePhoneDialog(context, user),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsSection(BuildContext context) {
-    return SectionWidget(
-      title: _tr('profile_page.settings', 'Settings'),
-      features: [
-        LanguageSelector.build(context),
-        FeatureItem(
-          icon: Icons.notifications_rounded,
-          title: 'Notifications',
-          subtitle: 'Manage your notifications',
-          onTap: () {},
-        ),
-        FeatureItem(
-          icon: Icons.security_rounded,
-          title: 'Privacy & Security',
-          subtitle: 'Manage your account security',
-          onTap: () {},
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSupportSection(BuildContext context) {
-    return SectionWidget(
-      title: _tr('profile_page.support', 'Support'),
-      features: [
-        FeatureItem(
-          icon: Icons.help_center_rounded,
-          title: _tr('profile_page.help_center', 'Help Center'),
-          subtitle: _tr('profile_page.get_help_and_faqs', 'Get help and FAQs'),
-          onTap: () => _showHelpCenter(context),
-        ),
-        FeatureItem(
-          icon: Icons.support_agent_rounded,
-          title: _tr('profile_page.contact_support', 'Contact Support'),
-          subtitle: _tr('profile_page.customer_support', '24/7 customer support'),
-          onTap: () => _showContactSupport(context),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLogoutButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: widget.onLogout,
-          icon: const Icon(Icons.logout_rounded),
-          label: Text(
-            _tr('profile_page.logout', 'Logout'),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.shade50,
-            foregroundColor: Colors.red,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.red.shade200),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ✅ FIXED: Update Profile Dialog (Name & Avatar)
-  void _showUpdateProfileDialog(BuildContext context, Map<String, dynamic> userData) {
+class ProfileDialogs {
+  static void showUpdateProfileDialog(BuildContext context, Map<String, dynamic> userData, WidgetRef ref) {
+    final user = userData['data'] ?? {};
+    final deliveryDriver = user['delivery_driver'] ?? {};
+    
     showDialog(
       context: context,
       builder: (context) => _UpdateProfileDialog(
-        currentName: userData['name'] ?? '',
-        currentAvatar: userData['avatar'],
+        currentName: user['name'] ?? '',
+        currentAvatar: deliveryDriver['avatar'],
         onSave: (name, avatar) async {
           if (name.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('profile_page.name_required'.tr())),
+              SnackBar(content: Text('delivery_profile_page.name_required'.tr())),
             );
             return false;
           }
@@ -265,12 +35,12 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
               if (avatar != null) 'avatar': avatar,
             };
 
-            final result = await ref.read(updateProfileProvider(profileData).future);
+            final result = await ref.read(updateDeliveryProfileProvider(profileData).future);
             
             if (result['success'] == true) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.profile_updated'.tr()),
+                  content: Text(result['message'] ?? 'delivery_profile_page.profile_updated'.tr()),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -278,7 +48,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.update_failed'.tr()),
+                  content: Text(result['message'] ?? 'delivery_profile_page.update_failed'.tr()),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -287,7 +57,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('profile_page.update_error'.tr()),
+                content: Text('delivery_profile_page.update_error'.tr()),
                 backgroundColor: Colors.red,
               ),
             );
@@ -298,69 +68,15 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
     );
   }
 
-  // ✅ FIXED: Change Password Dialog with Forgot Password Link
-  void _showChangePasswordDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => _ChangePasswordDialog(
-        onChangePassword: (currentPassword, newPassword, confirmPassword) async {
-          if (currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('profile_page.fill_all_fields'.tr())),
-            );
-            return false;
-          }
-
-          if (newPassword != confirmPassword) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('profile_page.passwords_not_match'.tr())),
-            );
-            return false;
-          }
-
-          try {
-            // ✅ FIXED: Use changePasswordProvider instead of updateProfileProvider
-            final result = await ref.read(changePasswordProvider({
-              'current_password': currentPassword,
-              'password': newPassword,
-              'password_confirmation': confirmPassword,
-            }).future);
-            
-            if (result['success'] == true) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.password_updated'.tr()),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              return true;
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.password_update_failed'.tr()),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return false;
-            }
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('profile_page.password_update_error'.tr()),
-                backgroundColor: Colors.red,
-              ),
-            );
-            return false;
-          }
-        },
-      ),
+  static void navigateToChangePasswordPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChangePasswordPage()),
     );
   }
 
-  // ✅ FIXED: Change Phone Dialog with Verification Navigation
-  void _showChangePhoneDialog(BuildContext context, Map<String, dynamic> user) {
+  static void showChangePhoneDialog(BuildContext context, Map<String, dynamic> user, WidgetRef ref) {
     final currentPhone = user['number_phone'] ?? '';
-    final userId = user['id'];
     
     showDialog(
       context: context,
@@ -369,13 +85,12 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
         onChangePhone: (newPhone) async {
           if (newPhone.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('profile_page.phone_required'.tr())),
+              SnackBar(content: Text('delivery_profile_page.phone_required'.tr())),
             );
             return false;
           }
 
           try {
-            // ✅ FIXED: Use changePhoneNumberProvider and navigate to VerifyPage
             final result = await ref.read(changePhoneNumberProvider(newPhone).future);
             
             if (result['success'] == true) {
@@ -387,7 +102,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
                   builder: (_) => VerifyPage(
                     userType: 'phone_change',
                     phoneNumber: newPhone,
-                    userId: userId,
+                    userId: user['id'],
                   ),
                 ),
               );
@@ -395,7 +110,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.phone_change_failed'.tr()),
+                  content: Text(result['message'] ?? 'delivery_profile_page.phone_change_failed'.tr()),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -404,7 +119,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('profile_page.phone_change_error'.tr()),
+                content: Text('delivery_profile_page.phone_change_error'.tr()),
                 backgroundColor: Colors.red,
               ),
             );
@@ -415,32 +130,111 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
     );
   }
 
-  void _showHelpCenter(BuildContext context) {
+  static void showForgotPasswordDialog(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+    );
+  }
+
+  static void showLanguageDialog(BuildContext context) {
+    final currentLocale = context.locale;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(_tr('profile_page.help_center', 'Help Center')),
-        content: Text(_tr('profile_page.find_answers_faqs', 'Find answers to frequently asked questions and get help with common issues.')),
+        title: Text('delivery_profile_page.language'.tr()),
+        content: Text('delivery_profile_page.change_app_language'.tr()),
+        actions: [
+          _buildLanguageOption('العربية', const Locale('ar'), currentLocale, context),
+          _buildLanguageOption('English', const Locale('en'), currentLocale, context),
+          _buildLanguageOption('Français', const Locale('fr'), currentLocale, context),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildLanguageOption(String languageName, Locale locale, Locale currentLocale, BuildContext context) {
+    final isSelected = currentLocale.languageCode == locale.languageCode;
+
+    return ListTile(
+      title: Text(languageName),
+      trailing: isSelected ? const Icon(Icons.check, color: Colors.deepOrange) : null,
+      onTap: () async {
+        await context.setLocale(locale);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('locale', locale.languageCode);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${'common.language_changed_to'.tr()} $languageName'),
+            backgroundColor: Colors.deepOrange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+    );
+  }
+
+  static void showContactSupport(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('delivery_profile_page.contact_support'.tr()),
+        content: Text('${'delivery_profile_page.customer_support'.tr()}\nEmail: support@foodapp.com\nPhone: +212 522 123 456'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(_tr('common.close', 'Close')),
+            child: Text('common.close'.tr()),
           ),
         ],
       ),
     );
   }
 
-  void _showContactSupport(BuildContext context) {
+  static void showFeedback(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(_tr('profile_page.contact_support', 'Contact Support')),
-        content: Text(_tr('profile_page.support_team_available', 'Our support team is available 24/7 to help you with any issues or questions.')),
+        title: Text('delivery_profile_page.send_feedback'.tr()),
+        content: TextField(
+          decoration: InputDecoration(
+            hintText: 'delivery_profile_page.feedback_hint'.tr(),
+            border: const OutlineInputBorder(),
+          ),
+          maxLines: 5,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(_tr('common.close', 'Close')),
+            child: Text('common.cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('delivery_profile_page.feedback_sent'.tr())),
+              );
+            },
+            child: Text('delivery_profile_page.send'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void showPrivacyPolicy(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('delivery_profile_page.privacy_policy'.tr()),
+        content: SingleChildScrollView(
+          child: Text('delivery_profile_page.privacy_policy_content'.tr()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('common.close'.tr()),
           ),
         ],
       ),
@@ -448,11 +242,11 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
   }
 }
 
-// Update Profile Dialog Class (Name & Avatar)
+// Update Profile Dialog Class (Name & Avatar only) with camera functionality
 class _UpdateProfileDialog extends StatefulWidget {
   final String currentName;
   final String? currentAvatar;
-  final Future<bool> Function(String name, String? avatar) onSave;
+  final Future<bool> Function(String name, File? avatar) onSave;
 
   const _UpdateProfileDialog({
     required this.currentName,
@@ -467,7 +261,9 @@ class _UpdateProfileDialog extends StatefulWidget {
 class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  File? _selectedAvatar;
   bool _isLoading = false;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -481,6 +277,83 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedAvatar = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('delivery_profile_page.image_pick_error'.tr())),
+        );
+      }
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedAvatar = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('delivery_profile_page.camera_error'.tr())),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('delivery_profile_page.choose_image_source'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _pickImage();
+            },
+            child: Text('delivery_profile_page.gallery'.tr()),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _takePhoto();
+            },
+            child: Text('delivery_profile_page.camera'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _removeAvatar() {
+    setState(() {
+      _selectedAvatar = null;
+    });
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -489,7 +362,7 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
     try {
       final success = await widget.onSave(
         _nameController.text.trim(),
-        null, // For client, we're not handling avatar upload in this example
+        _selectedAvatar,
       );
 
       if (success && mounted) {
@@ -504,6 +377,9 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final hasCurrentAvatar = widget.currentAvatar != null && widget.currentAvatar!.isNotEmpty;
+    final hasSelectedAvatar = _selectedAvatar != null;
+
     return Dialog(
       insetPadding: const EdgeInsets.all(20),
       child: Padding(
@@ -515,10 +391,97 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'profile_page.update_profile'.tr(),
+                'delivery_profile_page.update_profile'.tr(),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Avatar Selection with camera option
+              Center(
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.deepOrange, width: 2),
+                          ),
+                          child: ClipOval(
+                            child: hasSelectedAvatar
+                                ? Image.file(
+                                    _selectedAvatar!,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  )
+                                : hasCurrentAvatar
+                                    ? CustomNetworkImage(
+                                        imageUrl: ImageHelper.getImageUrl(widget.currentAvatar!),
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        placeholder: 'avatar',
+                                      )
+                                    : Container(
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(Icons.person, size: 40, color: Colors.grey),
+                                      ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.deepOrange,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                              onPressed: _showImageSourceDialog,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        if (hasSelectedAvatar || hasCurrentAvatar)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.close, size: 12, color: Colors.white),
+                                onPressed: _removeAvatar,
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'delivery_profile_page.avatar_optional'.tr(),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),
@@ -527,13 +490,13 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'profile_page.name'.tr(),
+                  labelText: 'delivery_profile_page.name'.tr(),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.person),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'profile_page.name_required'.tr();
+                    return 'delivery_profile_page.name_required'.tr();
                   }
                   return null;
                 },
@@ -576,7 +539,7 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
   }
 }
 
-// ✅ FIXED: Change Password Dialog Class with Forgot Password Link
+// Change Password Dialog Class
 class _ChangePasswordDialog extends StatefulWidget {
   final Future<bool> Function(String currentPassword, String newPassword, String confirmPassword) onChangePassword;
 
@@ -628,17 +591,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
 
   String? _validateConfirmPassword(String? value) {
     if (value != _newPasswordController.text) {
-      return 'profile_page.passwords_not_match'.tr();
+      return 'delivery_profile_page.passwords_not_match'.tr();
     }
     return null;
-  }
-
-  void _navigateToForgotPassword(BuildContext context) {
-    Navigator.pop(context); // Close the change password dialog
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
-    );
   }
 
   @override
@@ -654,7 +609,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'profile_page.change_password'.tr(),
+                'delivery_profile_page.change_password'.tr(),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -666,7 +621,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               TextFormField(
                 controller: _currentPasswordController,
                 decoration: InputDecoration(
-                  labelText: 'profile_page.current_password'.tr(),
+                  labelText: 'delivery_profile_page.current_password'.tr(),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
@@ -681,7 +636,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                 obscureText: _obscureCurrentPassword,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'profile_page.current_password_required'.tr();
+                    return 'delivery_profile_page.current_password_required'.tr();
                   }
                   return null;
                 },
@@ -692,7 +647,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               TextFormField(
                 controller: _newPasswordController,
                 decoration: InputDecoration(
-                  labelText: 'profile_page.new_password'.tr(),
+                  labelText: 'delivery_profile_page.new_password'.tr(),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
@@ -707,10 +662,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                 obscureText: _obscureNewPassword,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'profile_page.new_password_required'.tr();
+                    return 'delivery_profile_page.new_password_required'.tr();
                   }
                   if (value.length < 6) {
-                    return 'profile_page.password_min_length'.tr();
+                    return 'delivery_profile_page.password_min_length'.tr();
                   }
                   return null;
                 },
@@ -721,7 +676,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               TextFormField(
                 controller: _confirmPasswordController,
                 decoration: InputDecoration(
-                  labelText: 'profile_page.confirm_password'.tr(),
+                  labelText: 'delivery_profile_page.confirm_password'.tr(),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
@@ -736,24 +691,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                 obscureText: _obscureConfirmPassword,
                 validator: _validateConfirmPassword,
               ),
-              
-              // ✅ ADDED: Forgot Password Link
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => _navigateToForgotPassword(context),
-                  child: Text(
-                    'auth.forgot_password'.tr(),
-                    style: TextStyle(
-                      color: Colors.deepOrange,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
               // Buttons
               Row(
@@ -778,7 +716,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text('profile_page.change_password'.tr()),
+                          : Text('delivery_profile_page.change_password'.tr()),
                     ),
                   ),
                 ],
@@ -791,7 +729,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   }
 }
 
-// ✅ FIXED: Change Phone Dialog Class with Verification Navigation
+// Change Phone Dialog Class
 class _ChangePhoneDialog extends StatefulWidget {
   final String currentPhone;
   final Future<bool> Function(String newPhone) onChangePhone;
@@ -853,7 +791,7 @@ class _ChangePhoneDialogState extends State<_ChangePhoneDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'profile_page.change_phone'.tr(),
+                'delivery_profile_page.change_phone'.tr(),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -861,7 +799,7 @@ class _ChangePhoneDialogState extends State<_ChangePhoneDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                '${'profile_page.current'.tr()}: ${widget.currentPhone}',
+                '${'delivery_profile_page.current'.tr()}: ${widget.currentPhone}',
                 style: TextStyle(
                   color: Colors.grey.shade600,
                 ),
@@ -873,16 +811,16 @@ class _ChangePhoneDialogState extends State<_ChangePhoneDialog> {
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
-                  labelText: 'profile_page.new_phone'.tr(),
+                  labelText: 'delivery_profile_page.new_phone'.tr(),
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.phone),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'profile_page.phone_required'.tr();
+                    return 'delivery_profile_page.phone_required'.tr();
                   }
                   if (value.length < 10) {
-                    return 'profile_page.phone_valid'.tr();
+                    return 'delivery_profile_page.phone_valid'.tr();
                   }
                   return null;
                 },
@@ -912,7 +850,7 @@ class _ChangePhoneDialogState extends State<_ChangePhoneDialog> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text('profile_page.send_code'.tr()),
+                          : Text('delivery_profile_page.send_code'.tr()),
                     ),
                   ),
                 ],

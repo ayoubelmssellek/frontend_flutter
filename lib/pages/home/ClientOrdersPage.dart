@@ -23,25 +23,28 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
       _loadOrders();
     });
   }
-
-  Future<void> _loadOrders() async {
-    if (_isLoading) return;
+Future<void> _loadOrders() async {
+  if (_isLoading) return;
+  
+  setState(() => _isLoading = true);
+  try {
+    final clientId = ref.read(clientIdProvider);
+    print('🔄 [ClientOrdersPage] Loading orders for client ID: $clientId');
     
-    setState(() => _isLoading = true);
-    try {
-      final clientId = ref.read(clientIdProvider);
-      if (clientId != 0) {
-        await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
-      }
-    } catch (e) {
-      // Silent fail - no error shown
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (clientId != 0) {
+      await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
+      print('✅ [ClientOrdersPage] Orders loaded successfully');
+    } else {
+      print('❌ [ClientOrdersPage] No client ID found');
+    }
+  } catch (e) {
+    print('❌ [ClientOrdersPage] Error loading orders: $e');
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
-
+}
   Future<void> _refreshOrders() async {
     try {
       final clientId = ref.read(clientIdProvider);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/auth/token_expired_page.dart';
+import 'package:food_app/pages/auth/verify_page.dart';
 import 'package:food_app/services/error_handler_service.dart';
 import '../../providers/auth_providers.dart';
 import 'delivery_home_page.dart';
@@ -9,11 +9,13 @@ import 'delivery_home_page.dart';
 class NotApprovedPage extends ConsumerStatefulWidget {
   final String status;
   final Map<String, dynamic> user;
+  final bool fromVerifyPage;
 
   const NotApprovedPage({
     super.key,
     required this.status,
     required this.user,
+    this.fromVerifyPage = false,
   });
 
   @override
@@ -23,20 +25,132 @@ class NotApprovedPage extends ConsumerStatefulWidget {
 class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
   bool _isRefreshing = false;
   bool _hasHandledTokenNavigation = false;
+  final TextEditingController _phoneController = TextEditingController();
+  bool _isLoading = false;
+  bool _useCurrentNumber = true;
+  late String _currentStatus;
+  bool _hasInitializedFromApi = false;
+  bool _shouldUseVerifyPageStatus = true;
 
   @override
   void initState() {
     super.initState();
-    print('🎯 NotApprovedPage initialized');
+    
+    if (widget.fromVerifyPage) {
+      _currentStatus = widget.status.toLowerCase();
+      _shouldUseVerifyPageStatus = true;
+      print('🎯 NotApprovedPage from VerifyPage with status: $_currentStatus - Provider updates will be ignored');
+    } else {
+      _currentStatus = 'loading';
+      _shouldUseVerifyPageStatus = false;
+      print('🎯 NotApprovedPage entered directly, loading status from API...');
+    }
+    
+    final currentPhone = widget.user['number_phone']?.toString() ?? '';
+    _phoneController.text = currentPhone;
+    
+    print('🎯 Initial user data: ${widget.user}');
   }
 
   @override
   void dispose() {
     print('🎯 NotApprovedPage disposed');
+    _phoneController.dispose();
     super.dispose();
   }
 
-  // ✅ FIXED: Navigate to DeliveryHomePage when user clicks the button
+  void _initializeFromApi() {
+    if (_hasInitializedFromApi) return;
+    
+    final userAsync = ref.read(currentUserProvider);
+    
+    if (userAsync.hasValue && userAsync.value != null) {
+      final userData = userAsync.value!;
+      if (userData['success'] == true && userData['data'] != null) {
+        final currentUser = userData['data'];
+        final apiStatus = currentUser['status']?.toString().toLowerCase();
+        
+        if (apiStatus != null) {
+          print('🎯 Initializing from API with status: $apiStatus');
+          setState(() {
+            _currentStatus = apiStatus;
+            _hasInitializedFromApi = true;
+          });
+        }
+      }
+    } else if (userAsync.hasError) {
+      print('❌ Error initializing from API: ${userAsync.error}');
+      setState(() {
+        _currentStatus = 'error';
+        _hasInitializedFromApi = true;
+      });
+    }
+  }
+
+  Future<void> _verifyPhoneNumber() async {
+    if (_phoneController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a phone number')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await ref.read(changePhoneNumberProvider(_phoneController.text.trim()).future);
+      
+      if (result['success'] == true) {
+        final whatsappStatus = result['whatsapp_status']?.toString().toLowerCase();
+        print('📱 WhatsApp Status from update: $whatsappStatus');
+
+        if (whatsappStatus == 'failed') {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Phone number updated successfully!'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+            await _refreshStatus();
+          }
+        } else {
+          if (mounted) {
+            final userId = widget.user['id'] as int?;
+            
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VerifyPage(
+                  phoneNumber: _phoneController.text.trim(),
+                  userType: 'change_number_delivery_driver',
+                  userId: userId,
+                ),
+              ),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update phone number: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Future<void> _navigateToDeliveryHome() async {
     print('🚀 Navigate to DeliveryHomePage called');
     
@@ -48,7 +162,6 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     setState(() => _isRefreshing = true);
     
     try {
-      // 1. First, force refresh the user data to get latest status
       print('🔄 Refreshing user data...');
       ref.invalidate(currentUserProvider);
       final result = await ref.read(currentUserProvider.future);
@@ -69,27 +182,17 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         if (newStatus == 'approved') {
           print('🎉 Status confirmed as approved - navigating to DeliveryHomePage');
           
-          // 2. Force refresh the delivery home state provider to sync data
           print('🔄 Syncing delivery home state...');
           await ref.read(deliveryHomeStateProvider.notifier).refreshProfile();
           
-          // 3. Navigate with fromNotApproved: true to skip the status check
           if (mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => const DeliveryHomePage(fromNotApproved: true),
-                  ),
-                  (route) => false,
-                );
-                print('🚀 Navigation completed successfully');
-              } else {
-                print('❌ Widget not mounted in post-frame callback - navigation cancelled');
-              }
-            });
-          } else {
-            print('❌ Widget not mounted before navigation - cancelling');
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => const DeliveryHomePage(fromNotApproved: true),
+              ),
+              (route) => false,
+            );
+            print('🚀 Navigation completed successfully');
           }
         } else {
           print('❌ Status is still $newStatus - showing message');
@@ -133,28 +236,6 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     }
   }
 
-  // Test method to check if basic navigation works
-  void _testNavigation() {
-    print('🧪 Testing basic navigation...');
-    
-    if (!mounted) {
-      print('❌ Test navigation failed - widget not mounted');
-      return;
-    }
-    
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => Scaffold(
-        appBar: AppBar(title: const Text('Test Page')),
-        body: const Center(child: Text('If you see this, navigation works!')),
-      )),
-    ).then((_) {
-      print('🧪 Test navigation completed successfully');
-    }).catchError((e) {
-      print('❌ Test navigation error: $e');
-    });
-  }
-
-  // ✅ ADDED: Token error navigation
   void _navigateToTokenExpiredPage([String? customMessage]) {
     if (_hasHandledTokenNavigation || !mounted) return;
     
@@ -174,7 +255,6 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     });
   }
 
-  // ✅ ADDED: Handle token errors
   void _handleTokenError(dynamic error) {
     if (ErrorHandlerService.isTokenError(error)) {
       print('🔐 Token error detected in NotApprovedPage');
@@ -189,10 +269,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     setState(() => _isRefreshing = true);
     
     try {
-      // Invalidate and wait for the refresh to complete
       ref.invalidate(currentUserProvider);
-      
-      // Wait for the provider to refresh
       final result = await ref.read(currentUserProvider.future);
       
       if (!mounted) return;
@@ -201,14 +278,21 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         final userData = result['data'];
         final newStatus = userData['status']?.toString().toLowerCase();
         
-        if (newStatus == 'approved') {
-          print('🎉 Account approved! Showing success page...');
+        setState(() {
+          _currentStatus = newStatus ?? _currentStatus;
+          _shouldUseVerifyPageStatus = false;
+        });
+        
+        print('🔄 Status refreshed: $_currentStatus');
+        
+        if (_currentStatus == 'approved') {
+          print('🎉 Account approved!');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('🎉 Your account has been approved!'),
+                content: Text('🎉 Your account has been approved! Click "Go to Home" to continue.'),
                 backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
+                duration: Duration(seconds: 4),
               ),
             );
           }
@@ -216,20 +300,16 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Status refreshed: ${newStatus?.toUpperCase()}'),
+                content: Text('Status refreshed: ${_currentStatus.toUpperCase()}'),
                 backgroundColor: Colors.blue,
                 duration: const Duration(seconds: 2),
               ),
             );
           }
         }
-        
-        print('🔄 Status refreshed: $newStatus');
       } else {
-        // Handle API errors
         final message = result['message'] ?? 'Failed to refresh status';
         
-        // ✅ CHECK FOR TOKEN ERRORS
         if (ErrorHandlerService.isTokenError(message)) {
           _handleTokenError(message);
           return;
@@ -248,10 +328,8 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     } catch (e) {
       print('❌ Error refreshing status: $e');
       
-      // ✅ HANDLE TOKEN ERRORS
       _handleTokenError(e);
       
-      // Only show snackbar for non-token errors
       if (mounted && !ErrorHandlerService.isTokenError(e)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -270,21 +348,45 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
 
   @override
   Widget build(BuildContext context) {
-    print('🎯 NotApprovedPage building...');
+    print('🎯 NotApprovedPage building with current status: $_currentStatus, fromVerifyPage: ${widget.fromVerifyPage}, shouldUseVerifyPageStatus: $_shouldUseVerifyPageStatus');
     
-    // ✅ FIXED: Listen to currentUserProvider to get updates
     final userAsync = ref.watch(currentUserProvider);
     
-    // Handle loading state from provider
+    if (!widget.fromVerifyPage && !_hasInitializedFromApi) {
+      _initializeFromApi();
+    }
+    
+    if (!_shouldUseVerifyPageStatus && userAsync.hasValue && userAsync.value != null) {
+      final userData = userAsync.value!;
+      if (userData['success'] == true && userData['data'] != null) {
+        final currentUser = userData['data'];
+        final newStatus = currentUser['status']?.toString().toLowerCase();
+        if (newStatus != null && newStatus != _currentStatus) {
+          print('🔄 Updating status from provider: $newStatus');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _currentStatus = newStatus;
+              });
+            }
+          });
+        }
+      }
+    } else if (_shouldUseVerifyPageStatus && userAsync.hasValue) {
+      print('🔒 Ignoring provider update - using VerifyPage status: $_currentStatus');
+    }
+    
+    if (!widget.fromVerifyPage && !_hasInitializedFromApi && _currentStatus == 'loading') {
+      return _buildRefreshingState();
+    }
+    
     if (userAsync.isLoading && _isRefreshing) {
       return _buildRefreshingState();
     }
     
-    // Handle errors from provider
     if (userAsync.hasError) {
       final error = userAsync.error;
       
-      // ✅ HANDLE TOKEN ERRORS FROM PROVIDER
       if (ErrorHandlerService.isTokenError(error)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -295,10 +397,14 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
       }
     }
     
-    // Use the latest user data if available, otherwise use the initial data
     final currentUserData = userAsync.value ?? {'data': widget.user};
     final currentUser = currentUserData['data'] ?? widget.user;
-    final currentStatus = _getCurrentStatus(userAsync);
+    
+    print('🎯 Building UI with status: $_currentStatus');
+
+    if (_currentStatus == 'unverified') {
+      return _buildUnverifiedContent(currentUser);
+    }
 
     final userName = currentUser['name'] ?? 'Driver';
     final userPhone = currentUser['number_phone'] ?? 'Not provided';
@@ -306,10 +412,10 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Account Status'),
-        backgroundColor: _getStatusColor(currentStatus),
+        backgroundColor: _getStatusColor(_currentStatus),
         foregroundColor: Colors.white,
         actions: [
-          if (currentStatus != 'approved') // Hide refresh button when approved
+          if (_currentStatus != 'approved')
             _isRefreshing
                 ? const Padding(
                     padding: EdgeInsets.all(16.0),
@@ -337,13 +443,13 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  _getStatusIcon(currentStatus),
+                  _getStatusIcon(_currentStatus),
                   size: 100,
-                  color: _getStatusColor(currentStatus),
+                  color: _getStatusColor(_currentStatus),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  _getStatusTitle(currentStatus),
+                  _getStatusTitle(_currentStatus),
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -352,7 +458,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  _getStatusDescription(currentStatus),
+                  _getStatusDescription(_currentStatus),
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -362,7 +468,6 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                 ),
                 const SizedBox(height: 24),
                 
-                // User information
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -387,14 +492,14 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(currentStatus).withOpacity(0.1),
+                            color: _getStatusColor(_currentStatus).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _getStatusColor(currentStatus)),
+                            border: Border.all(color: _getStatusColor(_currentStatus)),
                           ),
                           child: Text(
-                            currentStatus.toUpperCase(),
+                            _currentStatus.toUpperCase(),
                             style: TextStyle(
-                              color: _getStatusColor(currentStatus),
+                              color: _getStatusColor(_currentStatus),
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -407,8 +512,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                 
                 const SizedBox(height: 32),
                 
-                // Action buttons based on status
-                if (currentStatus == 'approved') ...[
+                if (_currentStatus == 'approved') ...[
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -447,7 +551,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                       child: const Text('Refresh Status'),
                     ),
                   ),
-                ] else if (currentStatus == 'pending') ...[
+                ] else if (_currentStatus == 'pending') ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -476,7 +580,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                           : const Text('Refresh Status'),
                     ),
                   ),
-                ] else if (currentStatus == 'rejected') ...[
+                ] else if (_currentStatus == 'rejected') ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -505,12 +609,12 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                           : const Text('Refresh Status'),
                     ),
                   ),
-                ] else if (currentStatus == 'suspended') ...[
+                ] else if (_currentStatus == 'banned') ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        _contactSupportForSuspension(context);
+                        _contactSupportForBan(context);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
@@ -534,6 +638,31 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                           : const Text('Refresh Status'),
                     ),
                   ),
+                ] else if (_currentStatus == 'unverified') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _verifyPhoneNumber,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepOrange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text(
+                              'Verify Phone Number',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -543,24 +672,154 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     );
   }
 
-  // ✅ ADDED: Helper method to get current status from provider
-  String _getCurrentStatus(AsyncValue<Map<String, dynamic>> userAsync) {
-    if (userAsync.isLoading) {
-      return widget.status; // Return original status while loading
-    }
-    
-    if (userAsync.hasValue && userAsync.value != null) {
-      final userData = userAsync.value!;
-      if (userData['success'] == true && userData['data'] != null) {
-        final currentUser = userData['data'];
-        return currentUser['status']?.toString().toLowerCase() ?? widget.status;
-      }
-    }
-    
-    return widget.status; // Fallback to original status
-  }
+Widget _buildUnverifiedContent(Map<String, dynamic> user) {
+  final currentPhone = user['number_phone']?.toString() ?? '';
 
-  // ✅ ADDED: Refreshing state
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Phone Verification Required'),
+      backgroundColor: Colors.orange,
+      foregroundColor: Colors.white,
+      automaticallyImplyLeading: false,
+    ),
+    body: GestureDetector(
+      onTap: () {
+        // Dismiss keyboard when tapping outside
+        FocusScope.of(context).unfocus();
+      },
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - 
+                     MediaQuery.of(context).padding.top - 
+                     kToolbarHeight,
+          ),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                const Center(
+                  child: Icon(Icons.phone_android, size: 80, color: Colors.orange),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Phone Verification Required',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Your account needs phone verification to continue working as a delivery partner.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+                ),
+                const SizedBox(height: 32),
+                
+                const Text(
+                  'Current phone number on file:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    currentPhone.isNotEmpty ? currentPhone : 'No phone number',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _useCurrentNumber,
+                      onChanged: (value) {
+                        setState(() {
+                          _useCurrentNumber = value ?? true;
+                          if (_useCurrentNumber) {
+                            _phoneController.text = currentPhone;
+                          } else {
+                            _phoneController.clear();
+                          }
+                        });
+                      },
+                    ),
+                    const Text(
+                      'Use current number',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+                
+                if (!_useCurrentNumber) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Enter new phone number:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your phone number',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.phone),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    ),
+                  ),
+                ],
+                
+                const SizedBox(height: 8),
+                const Text(
+                  'A verification code will be sent to verify your phone number. If WhatsApp fails, you can continue without verification.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                
+                const Spacer(),
+                
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _verifyPhoneNumber,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text(
+                            'Verify Phone Number',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+
   Widget _buildRefreshingState() {
     return Scaffold(
       appBar: AppBar(
@@ -589,7 +848,9 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         return Colors.orange;
       case 'rejected':
         return Colors.red;
-      case 'suspended':
+      case 'unverified':
+        return Colors.orange;
+      case 'banned':
         return Colors.red;
       default:
         return Colors.grey;
@@ -604,7 +865,9 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         return Icons.pending_actions;
       case 'rejected':
         return Icons.cancel;
-      case 'suspended':
+      case 'unverified':
+        return Icons.phone_android;
+      case 'banned':
         return Icons.block;
       default:
         return Icons.help;
@@ -619,8 +882,10 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         return 'Pending Approval';
       case 'rejected':
         return 'Application Rejected';
-      case 'suspended':
-        return 'Account Suspended';
+      case 'unverified':
+        return 'Phone Verification Required';
+      case 'banned':
+        return 'Account Banned';
       default:
         return 'Account Status: ${status.toUpperCase()}';
     }
@@ -634,8 +899,10 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         return 'Your application is under review. Our team will verify your information and get back to you soon. This usually takes 1-2 business days.';
       case 'rejected':
         return 'Your application has been rejected. Please contact our support team for more information or to reapply.';
-      case 'suspended':
-        return 'Your account has been temporarily suspended. Please contact support for assistance and to understand the reason for suspension.';
+      case 'unverified':
+        return 'Your phone number needs to be verified to ensure the security of your account and enable important notifications.';
+      case 'banned':
+        return 'Your account has been permanently banned. Please contact support for more information.';
       default:
         return 'Your account status is currently being reviewed. Please check back later or contact support.';
     }
@@ -699,7 +966,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
     );
   }
 
-  void _contactSupportForSuspension(BuildContext context) {
+  void _contactSupportForBan(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -713,7 +980,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
             Text('Phone: +212 522 123 456'),
             SizedBox(height: 16),
             Text(
-              'Your account has been suspended. Please contact our support team immediately to resolve this issue and restore your account access.',
+              'Your account has been banned. Please contact our support team for more information.',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],

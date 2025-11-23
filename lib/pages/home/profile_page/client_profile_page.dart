@@ -158,7 +158,6 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
     }
   }
 
-  // UPDATED METHOD: Update user data immediately with proper type safety
   void updateUserData(Map<String, dynamic> newUserData) {
     print('🔄 [ProfileStateNotifier] Updating user data with: $newUserData');
     print('🔄 [ProfileStateNotifier] Current state before update: ${state.userData}');
@@ -256,7 +255,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     } else if (profileState.isLoggedIn && profileState.userData != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-      child: ClientProfile(
+        child: ClientProfile(
           onLogout: () => _logout(context, ref),
           onRefresh: () => ref.read(profileStateProvider.notifier).refreshProfile(),
         ),
@@ -485,8 +484,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                       const SizedBox(width: 12),
                       TextButton(
-                        onPressed: () => profileNotifier.setGuestMode(),
-                        child: const Text('Continue as Guest'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => GuestProfile()),
+            ),               child: const Text('Continue as Guest'),
                       ),
                     ],
                   ),
