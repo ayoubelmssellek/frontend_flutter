@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:food_app/pages/home/client_home_page.dart';
+import 'package:food_app/core/api_client.dart';
+import 'package:food_app/pages/delivery/delivery_home_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:food_app/core/secure_storage.dart';
@@ -185,8 +186,11 @@ Future<void> _register() async {
     await _clearOldUserData();
 
     final result = await ref.read(deliveryDriverRegisterProvider(creds).future);
+    if (kDebugMode) {
+      print('🔑 Response result: $result');
+    }
 
-    if (result['success'] == true || result['message'] != null) {
+    if (result['success'] == true) {
       // ✅ Handle both success formats
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message']), backgroundColor: Colors.green),
@@ -195,6 +199,8 @@ Future<void> _register() async {
       // ✅ STEP 2: Store token if available
       if (result['token'] != null) {
         await SecureStorage.setToken(result['token']);
+        // ✅ CRITICAL: Update API client headers immediately
+        await ApiClient.setAuthHeader();
       }
 
       // ✅ STEP 3: Set auth state to true
@@ -225,7 +231,9 @@ Future<void> _register() async {
       
       // ✅ STEP 8: CHECK WHATSAPP STATUS FROM RESPONSE AND NAVIGATE ACCORDINGLY
       final whatsappStatus = result['whatsapp_status']?.toString().toLowerCase();
-      print('📱 WhatsApp Status from response: $whatsappStatus');
+      if (kDebugMode) {
+        print('📱 WhatsApp Status from response: $whatsappStatus');
+      }
 
       if (mounted) {
         if (whatsappStatus == 'failed') {
@@ -238,10 +246,19 @@ Future<void> _register() async {
             ),
           );
           
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const ClientHomePage()),
-          );
+          // ✅ CRITICAL: Invalidate providers to force refresh with new auth state
+          ref.invalidate(currentUserProvider);
+          ref.invalidate(deliveryHomeStateProvider);
+          
+          // ✅ Add a small delay to ensure auth state is fully set
+          // await Future.delayed(const Duration(milliseconds: 500));
+          
+           Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => const DeliveryHomePage(fromNotApproved: true),
+              ),
+              (route) => false,
+            );
         } else {
           // ✅ WhatsApp success - navigate to verify page
           Navigator.pushReplacement(
@@ -251,7 +268,7 @@ Future<void> _register() async {
                 phoneNumber: _whatsappController.text.trim(),
                 userType: 'delivery_driver',
                 userId: userId, 
-                              ),
+              ),
             ),
           );
         }
@@ -272,7 +289,6 @@ Future<void> _register() async {
     setState(() => _isLoading = false);
   }
 }
-
   // ✅ METHOD TO SEND FCM TOKEN FOR ALL USER TYPES
   Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
     try {

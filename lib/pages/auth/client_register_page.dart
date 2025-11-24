@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:food_app/core/api_client.dart';
 import 'package:food_app/core/secure_storage.dart';
 import 'package:food_app/pages/home/client_home_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
@@ -222,7 +223,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                 duration: Duration(seconds: 4),
               ),
             );
-            
+                              await SecureStorage.setToken(result['token']);
+                  await ApiClient.setAuthHeader();
+                  await _saveUserToLocalStorage(userData);
+
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const ClientHomePage()),

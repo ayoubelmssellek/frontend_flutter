@@ -30,7 +30,6 @@ final loginProvider =
   return result;
 });
 
-// Add this to your auth_providers.dart file
 // UPDATED: currentUserProvider that only fetches if logged in
 final currentUserProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   try {

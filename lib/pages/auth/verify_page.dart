@@ -304,13 +304,12 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
 
   // NEW: Navigate to delivery home
   void _navigateToDeliveryHome() {
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const DeliveryHomePage(fromNotApproved: true)),
-        (route) => false,
-      );
-    }
+     Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => const DeliveryHomePage(fromNotApproved: true),
+              ),
+              (route) => false,
+            );
   }
 
   void _handleVerificationError(String message) {
