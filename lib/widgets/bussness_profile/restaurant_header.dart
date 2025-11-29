@@ -1,9 +1,10 @@
 // lib/pages/restaurant_profile/widgets/restaurant_header.dart
 import 'package:flutter/material.dart';
 import 'package:food_app/core/image_helper.dart';
+import 'package:food_app/models/shop_model.dart';
 
 class RestaurantHeader extends StatelessWidget {
-  final Map<String, dynamic> shop;
+  final Shop shop;
   final bool showHeader;
 
   const RestaurantHeader({
@@ -24,7 +25,7 @@ class RestaurantHeader extends StatelessWidget {
           height: 200,
           width: double.infinity,
           child: CustomNetworkImage(
-            imageUrl: shop['cover_image'],
+            imageUrl: shop.coverImage,
             width: double.infinity,
             height: 200,
             fit: BoxFit.cover,
@@ -86,7 +87,7 @@ class RestaurantHeader extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(13),
                   child: CustomNetworkImage(
-                    imageUrl: (shop['cover_image'] ?? shop['avatar'])?.toString() ?? '',
+                    imageUrl: shop.coverImage ?? shop.image ?? '',
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
@@ -100,7 +101,7 @@ class RestaurantHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      shop['name'] ?? 'Unknown Business',
+                      shop.name,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -114,11 +115,11 @@ class RestaurantHeader extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: (shop['isOpen'] == true) ? Colors.green : Colors.red,
+                        color: shop.isOpen ? Colors.green : Colors.red,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        (shop['isOpen'] == true) ? 'OPEN NOW' : 'CLOSED',
+                        shop.isOpen ? 'OPEN NOW' : 'CLOSED',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -126,6 +127,26 @@ class RestaurantHeader extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Additional shop info
+                    if (shop.businessType.isNotEmpty && shop.businessType != 'General')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            shop.businessType.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

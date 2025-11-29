@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:food_app/models/shop_model.dart';
 import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
 import 'package:food_app/widgets/home_page/ShopCard.dart';
 import 'package:food_app/providers/auth_providers.dart';
@@ -21,7 +22,7 @@ class CategoryDetailsPage extends ConsumerStatefulWidget {
 }
 
 class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
-  void _navigateToShopPage(BuildContext context, Map<String, dynamic> shop) {
+  void _navigateToShopPage(BuildContext context, Shop shop) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -30,83 +31,11 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
     );
   }
 
-  // ✅ FIXED: حساب هل النشاط مفتوح مع التعامل مع الوقت بنظام 24 ساعة
-  bool _isBusinessOpen(String? openingTime, String? closingTime, DateTime now) {
-    if (openingTime == null || closingTime == null) return true;
-    
-    try {
-      // Parse opening time (assuming 24-hour format like "08:00:00" or "08:00")
-      final openParts = openingTime.split(':');
-      final openHour = int.parse(openParts[0]);
-      final openMinute = int.parse(openParts[1]);
-      
-      // Parse closing time (assuming 24-hour format)
-      final closeParts = closingTime.split(':');
-      final closeHour = int.parse(closeParts[0]);
-      final closeMinute = int.parse(closeParts[1]);
-      
-      // Create DateTime objects for today with the business hours
-      final openToday = DateTime(now.year, now.month, now.day, openHour, openMinute);
-      DateTime closeToday = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
-      
-      // Handle businesses that close after midnight (e.g., 23:00 to 03:00)
-      if (closeToday.isBefore(openToday)) {
-        closeToday = closeToday.add(const Duration(days: 1));
-      }
-      
-      // Debug print to see what's happening
-      print('🕒 CategoryDetails - Business Hours Check:');
-      print('   Now: $now');
-      print('   Open: $openToday (${openHour.toString().padLeft(2, '0')}:${openMinute.toString().padLeft(2, '0')})');
-      print('   Close: $closeToday (${closeHour.toString().padLeft(2, '0')}:${closeMinute.toString().padLeft(2, '0')})');
-      print('   Is Open: ${now.isAfter(openToday) && now.isBefore(closeToday)}');
-      
-      return now.isAfter(openToday) && now.isBefore(closeToday);
-    } catch (e) {
-      print('❌ CategoryDetails - Error parsing business hours: $e');
-      print('   Opening time: $openingTime');
-      print('   Closing time: $closingTime');
-      return true; // If there's an error parsing, assume open
-    }
-  }
-
-  List<Map<String, dynamic>> _getBusinessesByType(List<dynamic> businessOwners) {
-    final now = DateTime.now();
-
+  List<Shop> _getBusinessesByType(List<dynamic> businessOwners) {
     return businessOwners
         .where((business) => business['business_type'] == widget.categoryName)
-        .map((b) {
-          final isOpen = _isBusinessOpen(
-              b['opening_time']?.toString(), 
-              b['closing_time']?.toString(), 
-              now
-          );
-          
-          // Get category names from the new structure (pluck('name') returns list)
-          final businessCategoryNames = (b['categories'] as List<dynamic>? ?? [])
-              .whereType<String>()
-              .where((name) => name.isNotEmpty)
-              .toList();
-
-          return {
-            'id': b['id'].toString(),
-            'name': b['business_name'] ?? 'Unknown Business',
-            'image': b['avatar'],
-            'cover_image': b['cover_image'],
-            'rating': double.tryParse(b['rating']?.toString() ?? '0') ?? 0.0,
-            'isOpen': b['is_active'] == 1 && isOpen,
-            'description': b['description'] ?? '',
-            'location': b['location'] ?? '',
-            'categories': businessCategoryNames,
-            'opening_time': b['opening_time'],
-            'closing_time': b['closing_time'],
-            'phone': b['number_phone'] ?? '',
-            'business_type': b['business_type'],
-            'is_active': b['is_active'] ?? 0,
-            'created_at': b['created_at'],
-            'updated_at': b['updated_at'],
-          };
-        })
+        .map((b) => Shop.fromJson(b))
+        .where((shop) => shop.id != 0) // Filter out invalid shops
         .toList();
   }
 
@@ -148,36 +77,36 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
           }
 
           final backendBusinessOwners = result['data'] as List<dynamic>;
-          final businesses = _getBusinessesByType(backendBusinessOwners);
+          final shops = _getBusinessesByType(backendBusinessOwners);
 
           // ✅ DEBUG: Print business status for verification
-          _debugBusinessStatus(businesses);
+          _debugBusinessStatus(shops);
 
-          if (businesses.isEmpty) {
+          if (shops.isEmpty) {
             return _buildModernEmptyState();
           }
 
-          return _buildModernBusinessesList(context, businesses);
+          return _buildModernBusinessesList(context, shops);
         },
       ),
     );
   }
 
   // ✅ DEBUG: Method to check business status
-  void _debugBusinessStatus(List<Map<String, dynamic>> businesses) {
+  void _debugBusinessStatus(List<Shop> shops) {
     print('=== DEBUG: CategoryDetails Business Status ===');
-    for (var business in businesses.take(3)) {
-      print('Business: ${business['name']}');
-      print('Opening: ${business['opening_time']}');
-      print('Closing: ${business['closing_time']}');
-      print('Is Active: ${business['is_active']}');
-      print('Is Open: ${business['isOpen']}');
+    for (var shop in shops.take(3)) {
+      print('Business: ${shop.name}');
+      print('Opening: ${shop.openingTime}');
+      print('Closing: ${shop.closingTime}');
+      print('Is Active: ${shop.isActive}');
+      print('Is Open: ${shop.isOpen}');
       print('---');
     }
     print('=== END DEBUG ===');
   }
 
-  Widget _buildModernBusinessesList(BuildContext context, List<Map<String, dynamic>> businesses) {
+  Widget _buildModernBusinessesList(BuildContext context, List<Shop> shops) {
     return Column(
       children: [
         // Header with business count
@@ -212,7 +141,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${businesses.length} ${businesses.length == 1 ? 'Business' : 'Businesses'}',
+                      '${shops.length} ${shops.length == 1 ? 'Business' : 'Businesses'}',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -236,9 +165,9 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: businesses.length,
+            itemCount: shops.length,
             itemBuilder: (context, index) {
-              final shop = businesses[index];
+              final shop = shops[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: ShopCard(

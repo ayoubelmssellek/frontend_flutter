@@ -41,90 +41,85 @@ class OrderRepository {
     }
   }
 
-  /// ✅ Get client orders - FIXED to handle wrapped response
-  Future<List<ClientOrder>> getClientOrders(int clientId) async {
-    print('🔄 [OrderRepository] getClientOrders() called with clientId: $clientId');
-    try {
-      print('🔐 [OrderRepository] Setting auth header...');
-      await ApiClient.setAuthHeader();
-      
-      print('📤 [OrderRepository] GET → /client/orders');
-      
-      final res = await ApiClient.dio.get('/client/orders');
+/// ✅ Get client orders - FIXED to handle actual backend response structure
+Future<List<ClientOrder>> getClientOrders(int clientId) async {
+  print('🔄 [OrderRepository] getClientOrders() called with clientId: $clientId');
+  try {
+    print('🔐 [OrderRepository] Setting auth header...');
+    await ApiClient.setAuthHeader();
+    
+    print('📤 [OrderRepository] GET → /client/orders');
+    
+    final res = await ApiClient.dio.get('/client/orders');
 
-      print('📥 [OrderRepository] Raw API Response received');
-      print('📥 [OrderRepository] Response status: ${res.statusCode}');
-      print('📥 [OrderRepository] Response data type: ${res.data.runtimeType}');
-      print('📥 [OrderRepository] Response data: ${res.data}');
+    print('📥 [OrderRepository] Raw API Response received');
+    print('📥 [OrderRepository] Response status: ${res.statusCode}');
+    print('📥 [OrderRepository] Response data type: ${res.data.runtimeType}');
+    print('📥 [OrderRepository] Response data: ${jsonEncode(res.data)}'); // Pretty print
+    
+    if (res.statusCode == 200) {
+      List<dynamic> ordersData;
       
-      if (res.statusCode == 200) {
-        // Handle both response formats: direct List OR wrapped in success object
-        List<dynamic> ordersData;
-        
-        if (res.data is List) {
-          // Direct list format (old format)
-          ordersData = res.data as List<dynamic>;
-          print('📊 [OrderRepository] Found ${ordersData.length} orders in direct list format');
-        } else if (res.data is Map && res.data['success'] == true && res.data['orders'] is List) {
-          // Wrapped format: {success: true, orders: [...]}
-          ordersData = res.data['orders'] as List<dynamic>;
-          print('📊 [OrderRepository] Found ${ordersData.length} orders in wrapped format');
-        } else if (res.data is Map && res.data['data'] is List) {
-          // Alternative wrapped format: {data: [...]}
-          ordersData = res.data['data'] as List<dynamic>;
-          print('📊 [OrderRepository] Found ${ordersData.length} orders in data wrapper format');
-        } else {
-          print('❌ [OrderRepository] Unexpected response format: ${res.data.runtimeType}');
-          print('🔍 [OrderRepository] Response structure: ${res.data}');
-          return [];
-        }
-        
-        final orders = ordersData.map((orderJson) {
-          try {
-            print('🔧 [OrderRepository] Parsing order: ${orderJson['id']}');
-            final order = ClientOrder.fromJson(orderJson);
-            print('✅ [OrderRepository] Successfully parsed order ${order.id} with ${order.items.length} items');
-            return order;
-          } catch (e, stack) {
-            print('❌ [OrderRepository] Error parsing order ${orderJson['id']}: $e');
-            print('🔍 [OrderRepository] Problematic order data: $orderJson');
-            print('🔍 [OrderRepository] Stack trace: $stack');
-            return ClientOrder(
-              id: -1,
-              clientId: 0,
-              deliveryDriver: null,
-              status: OrderStatus.pending,
-              acceptedDate: null,
-              totalPrice: 0.0,
-              address: '',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              items: [],
-            );
-          }
-        }).where((order) => order.id != -1).toList();
-        
-        print('✅ [OrderRepository] Successfully parsed ${orders.length} valid orders');
-        print('📊 [OrderRepository] Order IDs: ${orders.map((o) => o.id).toList()}');
-        return orders;
+      // Handle different response formats
+      if (res.data is List) {
+        ordersData = res.data as List<dynamic>;
+        print('📊 [OrderRepository] Found ${ordersData.length} orders in direct list format');
+      } else if (res.data is Map && res.data['success'] == true && res.data['orders'] is List) {
+        ordersData = res.data['orders'] as List<dynamic>;
+        print('📊 [OrderRepository] Found ${ordersData.length} orders in wrapped format');
+      } else if (res.data is Map && res.data['data'] is List) {
+        ordersData = res.data['data'] as List<dynamic>;
+        print('📊 [OrderRepository] Found ${ordersData.length} orders in data wrapper format');
       } else {
-        print('❌ [OrderRepository] API returned non-200 status: ${res.statusCode}');
+        print('❌ [OrderRepository] Unexpected response format: ${res.data.runtimeType}');
         return [];
       }
-    } on DioException catch (e) {
-      print('❌ [OrderRepository] Dio error in getClientOrders: ${e.message}');
-      print('🔍 [OrderRepository] Dio error type: ${e.type}');
-      print('🔍 [OrderRepository] Dio response status: ${e.response?.statusCode}');
-      print('🔍 [OrderRepository] Dio response data: ${e.response?.data}');
-      return [];
-    } catch (e, stack) {
-      print('❌ [OrderRepository] General error in getClientOrders: $e');
-      print('🔍 [OrderRepository] Stack trace: $stack');
+      
+      final orders = <ClientOrder>[];
+      
+      for (final orderJson in ordersData) {
+        try {
+          print('🔧 [OrderRepository] Parsing order: ${orderJson['id']}');
+          print('🔍 [OrderRepository] Order JSON structure: ${jsonEncode(orderJson)}');
+          
+          // Use the fromJson method to parse the order
+          final order = ClientOrder.fromJson(orderJson);
+          print('✅ [OrderRepository] Successfully parsed order ${order.id}');
+          print('   - Items count: ${order.items.length}');
+          print('   - Restaurant: ${order.restaurantName}');
+          print('   - Total items quantity: ${order.totalItemsQuantity}');
+          
+          orders.add(order);
+        } catch (e, stack) {
+          print('❌ [OrderRepository] Error parsing order ${orderJson['id']}: $e');
+          print('🔍 [OrderRepository] Stack trace: $stack');
+          
+          // Create empty order as fallback
+          orders.add(ClientOrder.empty());
+        }
+      }
+      
+      print('✅ [OrderRepository] Successfully parsed ${orders.length} valid orders');
+      return orders;
+    } else {
+      print('❌ [OrderRepository] API returned non-200 status: ${res.statusCode}');
       return [];
     }
+  } on DioException catch (e) {
+    print('❌ [OrderRepository] Dio error in getClientOrders: ${e.message}');
+    print('🔍 [OrderRepository] Dio response data: ${e.response?.data}');
+    return [];
+  } catch (e, stack) {
+    print('❌ [OrderRepository] General error in getClientOrders: $e');
+    print('🔍 [OrderRepository] Stack trace: $stack');
+    return [];
   }
+}
 
-  /// ✅ جلب طلبات المستخدم (Legacy - returns Map for backward compatibility)
+
+
+
+/// ✅ جلب طلبات المستخدم (Legacy - returns Map for backward compatibility)
   Future<Map<String, dynamic>> getClientOrdersLegacy() async {
     print('🔄 [OrderRepository] getClientOrdersLegacy() called');
     try {

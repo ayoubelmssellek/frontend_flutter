@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:food_app/core/image_helper.dart';
+import 'package:food_app/models/shop_model.dart';
+import 'package:food_app/pages/cart/checkout_page.dart';
+import 'package:food_app/pages/home/client_home_page.dart';
+import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
 import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
-import 'package:food_app/widgets/home_page/ShopCard.dart'; // Import the ShopCard
+import 'package:food_app/widgets/home_page/ShopCard.dart';
 
 class SearchPage extends StatefulWidget {
   final List<dynamic> businesses;
@@ -14,90 +18,22 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<dynamic> _filteredBusinesses = [];
+  List<Shop> _filteredShops = [];
   String _selectedCategory = 'All';
 
   @override
   void initState() {
     super.initState();
-    _filteredBusinesses = widget.businesses;
+    // Convert businesses to Shop models
+    _filteredShops = _convertToShopModels(widget.businesses);
   }
 
-  // Map backend business owners data to shop format (UPDATED FOR NEW API)
-  Map<String, dynamic> _mapBusinessToShop(dynamic business) {
-    // Calculate if business is currently open
-    final now = DateTime.now();
-    final isOpen = _isBusinessOpen(
-      business['opening_time']?.toString(), 
-      business['closing_time']?.toString(), 
-      now
-    );
-    
-    // Get business type from the new API structure
-    final businessType = business['business_type']?.toString() ?? 'General';
-    
-    // Get categories from the new API structure (list of strings)
-    final categories = (business['categories'] as List<dynamic>? ?? [])
-        .whereType<String>()
-        .where((category) => category.isNotEmpty)
+  // Convert business data to Shop models
+  List<Shop> _convertToShopModels(List<dynamic> businesses) {
+    return businesses
+        .map((business) => Shop.fromJson(business))
+        .where((shop) => shop.id != 0) // Filter out invalid shops
         .toList();
-
-    return {
-      'id': business['id'].toString(),
-      'name': business['business_name'] ?? 'Unknown Business',
-      'image': business['avatar'], // Use avatar for profile image
-      'rating': double.tryParse(business['rating']?.toString() ?? '0.0') ?? 0.0,
-      'business_type': businessType, // Use the direct business_type field
-      'isOpen': business['is_active'] == 1 && isOpen,
-      'description': business['description'] ?? '',
-      'location': business['location'] ?? '',
-      'categories': categories, // List of category names
-      'opening_time': business['opening_time'],
-      'closing_time': business['closing_time'],
-      'cover_image': business['cover_image'], // Use cover_image for cover
-      'phone': business['number_phone'] ?? '',
-      'is_active': business['is_active'] ?? 0,
-    };
-  }
-
-  // ✅ FIXED: Helper method to check if business is currently open (24-hour format)
-  bool _isBusinessOpen(String? openingTime, String? closingTime, DateTime now) {
-    if (openingTime == null || closingTime == null) return true;
-    
-    try {
-      // Parse opening time (assuming 24-hour format like "08:00:00" or "08:00")
-      final openParts = openingTime.split(':');
-      final openHour = int.parse(openParts[0]);
-      final openMinute = int.parse(openParts[1]);
-      
-      // Parse closing time (assuming 24-hour format)
-      final closeParts = closingTime.split(':');
-      final closeHour = int.parse(closeParts[0]);
-      final closeMinute = int.parse(closeParts[1]);
-      
-      // Create DateTime objects for today with the business hours
-      final openToday = DateTime(now.year, now.month, now.day, openHour, openMinute);
-      DateTime closeToday = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
-      
-      // Handle businesses that close after midnight (e.g., 23:00 to 03:00)
-      if (closeToday.isBefore(openToday)) {
-        closeToday = closeToday.add(const Duration(days: 1));
-      }
-      
-      // Debug print to see what's happening
-      print('🕒 SearchPage - Business Hours Check:');
-      print('   Now: $now');
-      print('   Open: $openToday (${openHour.toString().padLeft(2, '0')}:${openMinute.toString().padLeft(2, '0')})');
-      print('   Close: $closeToday (${closeHour.toString().padLeft(2, '0')}:${closeMinute.toString().padLeft(2, '0')})');
-      print('   Is Open: ${now.isAfter(openToday) && now.isBefore(closeToday)}');
-      
-      return now.isAfter(openToday) && now.isBefore(closeToday);
-    } catch (e) {
-      print('❌ SearchPage - Error parsing business hours: $e');
-      print('   Opening time: $openingTime');
-      print('   Closing time: $closingTime');
-      return true; // If there's an error parsing, assume open
-    }
   }
 
   @override
@@ -121,6 +57,68 @@ class _SearchPageState extends State<SearchPage> {
           
           // Businesses List
           _buildBusinessesList(),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomNavigationBar(1),
+    );
+  }
+
+  Widget _buildBottomNavigationBar(int currentIndex) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 20,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (index) {
+          // Handle navigation based on index
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => ClientHomePage()),
+            );
+          } else if (index == 1) {
+            // Already on search page
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => CheckoutPage()),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => ProfilePage()),
+            );
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.deepOrange,
+        unselectedItemColor: Colors.grey.shade600,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.shopping_cart),
+            label: 'Cart',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -182,7 +180,7 @@ class _SearchPageState extends State<SearchPage> {
               onSelected: (selected) {
                 setState(() {
                   _selectedCategory = 'All';
-                  _filterBusinesses();
+                  _filterShops();
                 });
               },
               backgroundColor: Colors.grey.shade100,
@@ -201,7 +199,7 @@ class _SearchPageState extends State<SearchPage> {
                 onSelected: (selected) {
                   setState(() {
                     _selectedCategory = category;
-                    _filterBusinesses();
+                    _filterShops();
                   });
                 },
                 backgroundColor: Colors.grey.shade100,
@@ -221,7 +219,7 @@ class _SearchPageState extends State<SearchPage> {
       child: Row(
         children: [
           Text(
-            '${_filteredBusinesses.length} businesses found',
+            '${_filteredShops.length} businesses found',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,
@@ -234,7 +232,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildBusinessesList() {
-    if (_filteredBusinesses.isEmpty) {
+    if (_filteredShops.isEmpty) {
       return Expanded(
         child: Center(
           child: Column(
@@ -271,15 +269,13 @@ class _SearchPageState extends State<SearchPage> {
     return Expanded(
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _filteredBusinesses.length,
+        itemCount: _filteredShops.length,
         itemBuilder: (context, index) {
-          final business = _filteredBusinesses[index];
-          // Map the business to shop format before passing to ShopCard
-          final shop = _mapBusinessToShop(business);
+          final shop = _filteredShops[index];
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: ShopCard(
-              shop: shop, // Pass the mapped shop data to ShopCard
+              shop: shop, // Pass the Shop model directly
               onTap: () {
                 _navigateToBusinessDetails(shop);
               },
@@ -292,77 +288,72 @@ class _SearchPageState extends State<SearchPage> {
 
   void _performSearch(String query) {
     setState(() {
-      _filterBusinesses(query: query);
+      _filterShops(query: query);
     });
   }
 
-  void _filterBusinesses({String query = ''}) {
-    List<dynamic> results = widget.businesses;
+  void _filterShops({String query = ''}) {
+    List<Shop> results = _convertToShopModels(widget.businesses);
 
     // Filter by search query
     if (query.isNotEmpty) {
-      results = results.where((business) {
-        final name = business['business_name']?.toString().toLowerCase() ?? '';
-        final description = business['description']?.toString().toLowerCase() ?? '';
-        final location = business['location']?.toString().toLowerCase() ?? '';
-        final businessType = business['business_type']?.toString().toLowerCase() ?? '';
-        final categories = _getBusinessCategories(business);
+      results = results.where((shop) {
+        final searchQuery = query.toLowerCase();
         
-        return name.contains(query.toLowerCase()) ||
-            description.contains(query.toLowerCase()) ||
-            location.contains(query.toLowerCase()) ||
-            businessType.contains(query.toLowerCase()) ||
-            categories.any((category) => category.toLowerCase().contains(query.toLowerCase()));
+        return shop.name.toLowerCase().contains(searchQuery) ||
+            (shop.description?.toLowerCase().contains(searchQuery) ?? false) ||
+            (shop.location?.toLowerCase().contains(searchQuery) ?? false) ||
+            shop.businessType.toLowerCase().contains(searchQuery) ||
+            shop.categories.any((category) => category.toLowerCase().contains(searchQuery));
       }).toList();
     }
 
     // Filter by category
     if (_selectedCategory != 'All') {
-      results = results.where((business) {
-        final categories = _getBusinessCategories(business);
-        return categories.contains(_selectedCategory);
+      results = results.where((shop) {
+        return shop.categories.contains(_selectedCategory);
       }).toList();
     }
 
     setState(() {
-      _filteredBusinesses = results;
+      _filteredShops = results;
     });
   }
 
   List<String> _getAllCategories() {
     final allCategories = <String>{};
     
-    for (final business in widget.businesses) {
-      final categories = _getBusinessCategories(business);
-      allCategories.addAll(categories);
+    for (final shop in _convertToShopModels(widget.businesses)) {
+      allCategories.addAll(shop.categories);
+    }
+    
+    // If no categories found, extract from business types
+    if (allCategories.isEmpty) {
+      for (final shop in _convertToShopModels(widget.businesses)) {
+        if (shop.businessType.isNotEmpty && shop.businessType != 'General') {
+          allCategories.add(shop.businessType);
+        }
+      }
     }
     
     return allCategories.toList()..sort();
   }
 
-  List<String> _getBusinessCategories(dynamic business) {
-    // Get categories from the new API structure (list of strings)
-    final categories = (business['categories'] as List<dynamic>? ?? [])
-        .whereType<String>()
-        .where((category) => category.isNotEmpty)
-        .toList();
-
-    // If no categories, use business type
-    if (categories.isEmpty) {
-      final businessType = business['business_type']?.toString();
-      return businessType != null && businessType.isNotEmpty ? [businessType] : ['General'];
-    }
-    
-    return categories;
-  }
-
-  void _navigateToBusinessDetails(Map<String, dynamic> shop) {
-    // Navigate to restaurant profile with the mapped shop data
+  void _navigateToBusinessDetails(Shop shop) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RestaurantProfile(shop: shop, business: null),
+        builder: (context) => RestaurantProfile(
+          shop: shop, // Convert Shop model to JSON for the profile page
+          business: null,
+        ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }

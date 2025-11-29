@@ -1,12 +1,14 @@
 // lib/pages/restaurant_profile/widgets/product_modal.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:food_app/core/cart_storage.dart';
 import 'package:food_app/core/image_helper.dart';
+import 'package:food_app/models/shop_model.dart';
 import 'package:food_app/providers/cart/cart_provider.dart';
 
 class ProductModal extends ConsumerStatefulWidget {
   final Map<String, dynamic> product;
-  final Map<String, dynamic> shop;
+  final Shop shop;
 
   const ProductModal({
     super.key,
@@ -18,269 +20,663 @@ class ProductModal extends ConsumerStatefulWidget {
   ConsumerState<ProductModal> createState() => _ProductModalState();
 }
 
-class _ProductModalState extends ConsumerState<ProductModal> {
+class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerProviderStateMixin {
   int _quantity = 1;
   bool _isBusinessOpen = true;
+  final Map<String, int> _selectedExtras = {};
+  final ScrollController _scrollController = ScrollController();
+  bool _showHeader = false;
+  late AnimationController _animationController;
+  late Animation<double> _headerAnimation;
+  late Animation<double> _headerHeightAnimation;
+  bool _hasLoadedExistingState = false;
+  bool _isUpdatingCart = false;
+  bool _isProductInCart = false; // NEW: Track if product is in cart
 
   @override
   void initState() {
     super.initState();
     _checkBusinessHours();
-  }
-
-  void _checkBusinessHours() {
-    final now = DateTime.now();
-    final openingTime = widget.shop['opening_time']?.toString();
-    final closingTime = widget.shop['closing_time']?.toString();
+    _initializeExtras();
     
-    setState(() {
-      _isBusinessOpen = _isBusinessCurrentlyOpen(openingTime, closingTime, now);
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _headerAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    
+    _headerHeightAnimation = Tween<double>(
+      begin: 0,
+      end: 60,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _scrollController.addListener(() {
+      final shouldShowHeader = _scrollController.offset > 30;
+      if (shouldShowHeader != _showHeader) {
+        setState(() {
+          _showHeader = shouldShowHeader;
+        });
+        
+        if (_showHeader) {
+          _animationController.forward();
+        } else {
+          _animationController.reverse();
+        }
+      }
     });
   }
 
-  bool _isBusinessCurrentlyOpen(String? openingTime, String? closingTime, DateTime now) {
-    if (openingTime == null || closingTime == null) {
-      return true; // If no hours specified, assume always open
-    }
-
-    try {
-      // Parse opening time (assuming format like "08:00:00" or "08:00")
-      final openParts = openingTime.split(':');
-      final openHour = int.parse(openParts[0]);
-      final openMinute = int.parse(openParts[1]);
-      
-      // Parse closing time
-      final closeParts = closingTime.split(':');
-      final closeHour = int.parse(closeParts[0]);
-      final closeMinute = int.parse(closeParts[1]);
-      
-      // Create DateTime objects for today with the business hours
-      final openToday = DateTime(now.year, now.month, now.day, openHour, openMinute);
-      DateTime closeToday = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
-      
-      // Handle businesses that close after midnight
-      if (closeToday.isBefore(openToday)) {
-        closeToday = closeToday.add(const Duration(days: 1));
-      }
-      
-      return now.isAfter(openToday) && now.isBefore(closeToday);
-    } catch (e) {
-      print('Error parsing business hours: $e');
-      return true; // If there's an error parsing, assume open
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load existing state after the widget is built and has context
+    if (!_hasLoadedExistingState) {
+      _loadExistingProductState();
+      _hasLoadedExistingState = true;
     }
   }
 
-  Future<void> _addToCart() async {
-    if (!_isBusinessOpen) return;
-    
+  void _checkBusinessHours() {
+    setState(() {
+      _isBusinessOpen = widget.shop.isOpen;
+    });
+  }
+
+  void _initializeExtras() {
+    final childProducts = widget.product['child_products'];
+    if (childProducts != null && childProducts is List) {
+      for (final extra in childProducts) {
+        _selectedExtras[extra['id'].toString()] = 0;
+      }
+    }
+  }
+
+  void _loadExistingProductState() {
     final cartService = ref.read(cartServiceProvider);
+    final productId = widget.product['id'].toString();
+    final businessOwnerId = widget.shop.id.toString();
     
-    final productWithRestaurant = Map<String, dynamic>.from(widget.product);
-    productWithRestaurant['restaurantId'] = widget.shop['id'].toString();
-    productWithRestaurant['restaurantName'] = widget.shop['business_name'] ?? widget.shop['name'] ?? '';
+    // Check if product is already in cart
+    setState(() {
+      _isProductInCart = cartService.isProductInCart(productId, businessOwnerId);
+    });
     
-    // ✅ FIXED: Use the 'id' field as business_owner_id since that's what your API provides
-    productWithRestaurant['business_owner_id'] = widget.shop['id']?.toString() ?? '1';
+    final existingItem = cartService.getItemWithExtras(productId, businessOwnerId);
     
-    // Debug print to verify the data
-    print('🛒 ProductModal - Adding to cart:');
-    print('   - Product: ${widget.product['product_name'] ?? widget.product['name']}');
-    print('   - Product ID: ${widget.product['id']}');
-    print('   - Business Owner ID: ${widget.shop['id']}');
-    print('   - Business Name: ${widget.shop['business_name']}');
-    print('   - Quantity: $_quantity');
+    if (existingItem != null) {
+      // Load main product quantity
+      final existingQuantity = existingItem['quantity'] ?? 1;
+      setState(() {
+        _quantity = existingQuantity;
+      });
+      
+      // Load extras
+      final selectedExtras = existingItem['selected_extras'] as List<dynamic>?;
+      if (selectedExtras != null && selectedExtras.isNotEmpty) {
+        for (final extra in selectedExtras) {
+          final extraId = extra['id'].toString();
+          final quantity = extra['quantity'] ?? 1;
+          if (_selectedExtras.containsKey(extraId)) {
+            setState(() {
+              _selectedExtras[extraId] = quantity;
+            });
+          }
+        }
+      }
+    }
+  }
+
+  bool _hasExtras() {
+    final childProducts = widget.product['child_products'];
+    return childProducts != null && childProducts is List && childProducts.isNotEmpty;
+  }
+
+  List<dynamic> _getExtras() {
+    return widget.product['child_products'] ?? [];
+  }
+
+  double _getBasePrice() {
+    return double.tryParse(widget.product['price']?.toString() ?? '0.0') ?? 0.0;
+  }
+
+  double _getExtraPrice(String extraId) {
+    final extras = _getExtras();
+    final extra = extras.firstWhere(
+      (e) => e['id'].toString() == extraId,
+      orElse: () => {},
+    );
+    return double.tryParse(extra['price']?.toString() ?? '0.0') ?? 0.0;
+  }
+
+  double _getTotalPrice() {
+    double total = _getBasePrice();
     
-    await cartService.addItem(productWithRestaurant, quantity: _quantity);
+    _selectedExtras.forEach((extraId, quantity) {
+      if (quantity > 0) {
+        total += _getExtraPrice(extraId) * quantity;
+      }
+    });
     
-    if (mounted) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.product['product_name'] ?? widget.product['name'] ?? 'Item'} added to cart'),
-          backgroundColor: Colors.green,
-        ),
-      );
+    return total * _quantity;
+  }
+
+  int _getSelectedExtrasCount() {
+    return _selectedExtras.values.where((quantity) => quantity > 0).length;
+  }
+
+  int _getTotalExtrasQuantity() {
+    return _selectedExtras.values.fold(0, (sum, quantity) => sum + quantity);
+  }
+
+  bool _canSelectMoreExtras() {
+    return _getTotalExtrasQuantity() < 5;
+  }
+
+  bool _canIncreaseExtra(String extraId) {
+    final currentQuantity = _selectedExtras[extraId] ?? 0;
+    return _canSelectMoreExtras() && currentQuantity < 5;
+  }
+
+  void _toggleExtra(String extraId) {
+    if (!_selectedExtras.containsKey(extraId)) return;
+    
+    final currentQuantity = _selectedExtras[extraId] ?? 0;
+    
+    if (currentQuantity > 0) {
+      setState(() {
+        _selectedExtras[extraId] = 0;
+      });
+    } else if (_canSelectMoreExtras()) {
+      setState(() {
+        _selectedExtras[extraId] = 1;
+      });
+    }
+  }
+
+  void _increaseExtraQuantity(String extraId) {
+    if (_canIncreaseExtra(extraId)) {
+      setState(() {
+        _selectedExtras[extraId] = (_selectedExtras[extraId] ?? 0) + 1;
+      });
+    }
+  }
+
+  void _decreaseExtraQuantity(String extraId) {
+    final currentQuantity = _selectedExtras[extraId] ?? 0;
+    if (currentQuantity > 1) {
+      setState(() {
+        _selectedExtras[extraId] = currentQuantity - 1;
+      });
+    } else if (currentQuantity == 1) {
+      setState(() {
+        _selectedExtras[extraId] = 0;
+      });
+    }
+  }
+
+  Future<void> _updateCart() async {
+    if (!_isBusinessOpen || _isUpdatingCart) return;
+    
+    setState(() {
+      _isUpdatingCart = true;
+    });
+    
+    try {
+      final cartService = ref.read(cartServiceProvider);
+      final productId = widget.product['id'].toString();
+      final businessOwnerId = widget.shop.id.toString();
+      final uniqueKey = '${productId}_$businessOwnerId';
+      
+      // If quantity is 0, remove from cart
+      if (_quantity == 0) {
+        await cartService.removeItem(uniqueKey);
+        if (mounted) {
+          Navigator.pop(context);
+        }
+        return;
+      }
+      
+      // Prepare selected extras list
+      final selectedExtrasList = [];
+      _selectedExtras.forEach((extraId, quantity) {
+        if (quantity > 0) {
+          final extra = _getExtras().firstWhere(
+            (e) => e['id'].toString() == extraId,
+            orElse: () => {},
+          );
+          if (extra.isNotEmpty) {
+            final extraWithQuantity = Map<String, dynamic>.from(extra);
+            extraWithQuantity['quantity'] = quantity;
+            selectedExtrasList.add(extraWithQuantity);
+          }
+        }
+      });
+      
+      // Create complete item data
+      final itemData = {
+        'id': productId,
+        'product_name': widget.product['product_name'] ?? widget.product['name'] ?? 'Unknown Product',
+        'price': _getBasePrice(),
+        'quantity': _quantity,
+        'image': widget.product['product_image']?.toString() ?? widget.product['image']?.toString() ?? '',
+        'restaurantName': widget.shop.name,
+        'business_owner_id': businessOwnerId,
+        'selected_extras': selectedExtrasList,
+      };
+      
+      // Use the new update method to ensure complete data sync
+      if (cartService.cartItems.containsKey(uniqueKey)) {
+        await cartService.updateItemWithData(uniqueKey, itemData);
+      } else {
+        await cartService.addItem(itemData, quantity: _quantity);
+        // Update the state to reflect that product is now in cart
+        setState(() {
+          _isProductInCart = true;
+        });
+      }
+      
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      print('Error updating cart: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingCart = false;
+        });
+      }
+    }
+  }
+
+  // NEW: Get the correct button text based on cart state
+  String _getButtonText() {
+    if (_quantity == 0) {
+      return 'Remove';
+    }
+    
+    if (_isProductInCart) {
+      return 'Update';
+    } else {
+      return 'Add';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final price = double.tryParse(widget.product['price']?.toString() ?? '0.0') ?? 0.0;
+    final hasExtras = _hasExtras();
+    final extras = _getExtras();
+    final totalPrice = _getTotalPrice();
+    final selectedExtrasCount = _getSelectedExtrasCount();
+    final totalExtrasQuantity = _getTotalExtrasQuantity();
+    final productName = widget.product['product_name'] ?? widget.product['name'] ?? 'Product';
+    final buttonText = _getButtonText(); // NEW: Use dynamic button text
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.62,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
         children: [
-          // Drag handle
-          Center(
+          // Background dim
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
             child: Container(
-              width: 40,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              color: Colors.black.withOpacity(0.5),
             ),
           ),
-          const SizedBox(height: 12),
           
-          // Business Status Badge
-          if (!_isBusinessOpen)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade200),
+          // Main content
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: hasExtras ? MediaQuery.of(context).size.height * 0.9 : _calculateNoExtrasHeight(),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
                 children: [
-                  Icon(Icons.access_time, color: Colors.red.shade600, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Currently Closed',
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                  // FIXED: Smooth height animation for header
+                  AnimatedBuilder(
+                    animation: _headerHeightAnimation,
+                    builder: (context, child) {
+                      return SizedBox(
+                        height: _headerHeightAnimation.value,
+                        child: OverflowBox(
+                          maxHeight: 60,
+                          alignment: Alignment.topCenter,
+                          child: Opacity(
+                            opacity: _headerAnimation.value,
+                            child: _buildHeader(context, productName),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        CustomScrollView(
+                          controller: _scrollController,
+                          physics: const ClampingScrollPhysics(),
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: _buildImageSection(context),
+                            ),
+                            
+                            SliverToBoxAdapter(
+                              child: _buildTitleSection(),
+                            ),
+                            
+                            if (hasExtras) 
+                              _buildExtrasSection(extras, selectedExtrasCount, totalExtrasQuantity),
+                            
+                            if (!hasExtras)
+                              SliverToBoxAdapter(
+                                child: _buildQuantitySection(buttonText),
+                              ),
+
+                            // Add extra space at bottom to account for bottom section
+                            if (hasExtras)
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 120),
+                              ),
+                          ],
+                        ),
+                        
+                        // Close button positioned independently - only show when header is hidden
+                        if (!_showHeader)
+                          Positioned(
+                            top: 16,
+                            left: 16,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.close, size: 20, color: Colors.white),
+                                onPressed: () => Navigator.pop(context),
+                                padding: EdgeInsets.zero,
+                                splashRadius: 20,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                  
+                  if (hasExtras) _buildBottomSection(totalPrice, buttonText),
                 ],
               ),
             ),
-          
-          if (!_isBusinessOpen) const SizedBox(height: 12),
-          
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CustomNetworkImage(
-                  imageUrl: widget.product['product_image']?.toString() ?? widget.product['image']?.toString() ?? '',
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                  placeholder: 'restaurant',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.product['product_name'] ?? widget.product['name'] ?? 'Product',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      widget.product['category_name'] ?? '',
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${price.toStringAsFixed(2)} DH',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.deepOrange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            widget.product['description'] ?? '',
-            style: TextStyle(
-              color: Colors.grey.shade700,
-              height: 1.4,
+        ],
+      ),
+    );
+  }
+
+  // Header that smoothly appears when scrolling
+  Widget _buildHeader(BuildContext context, String productName) {
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1 * _headerAnimation.value),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close, size: 24),
+              onPressed: () => Navigator.pop(context),
+              splashRadius: 20,
+            ),
+            
+            Expanded(
+              child: Center(
+                child: Text(
+                  productName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            
+            const SizedBox(width: 48), // Balance the close button space
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _calculateNoExtrasHeight() {
+    return 180 + 80 + 140 + 50;
+  }
+
+  Widget _buildImageSection(BuildContext context) {
+    final imageUrl = widget.product['product_image']?.toString() ?? widget.product['image']?.toString() ?? '';
+    final categoryName = widget.product['category_name'] ?? '';
+
+    return Stack(
+      children: [
+        Container(
+          height: 180,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
             ),
           ),
-          const SizedBox(height: 18),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+            child: CustomNetworkImage(
+              imageUrl: imageUrl,
+              width: double.infinity,
+              height: 180,
+              fit: BoxFit.cover,
+              placeholder: 'restaurant',
+            ),
+          ),
+        ),
+        
+        if (categoryName.isNotEmpty)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.deepOrange.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                categoryName.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTitleSection() {
+    final productName = widget.product['product_name'] ?? widget.product['name'] ?? 'Product';
+    final description = widget.product['description'] ?? '';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            productName,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Colors.black87,
+              height: 1.2,
+            ),
+          ),
+          
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+                height: 1.4,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuantitySection(String buttonText) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Quantity selector
+              const Text(
+                'Quantity',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _isBusinessOpen ? Colors.grey.shade100 : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
                 child: Row(
                   children: [
                     IconButton(
-                      splashRadius: 18,
-                      icon: Icon(Icons.remove, color: _isBusinessOpen ? Colors.black : Colors.grey),
+                      icon: const Icon(Icons.remove, size: 20),
                       onPressed: _isBusinessOpen ? () {
                         if (_quantity > 1) {
                           setState(() => _quantity--);
                         }
                       } : null,
-                    ),
-                    Text(
-                      _quantity.toString(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: _isBusinessOpen ? Colors.black : Colors.grey,
+                      color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
                       ),
                     ),
+                    
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        _quantity.toString(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    
                     IconButton(
-                      splashRadius: 18,
-                      icon: Icon(Icons.add, color: _isBusinessOpen ? Colors.black : Colors.grey),
+                      icon: const Icon(Icons.add, size: 20),
                       onPressed: _isBusinessOpen ? () => setState(() => _quantity++) : null,
+                      color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                     ),
                   ],
                 ),
               ),
-              // Total preview
-              Text(
-                'Total: ${(price * _quantity).toStringAsFixed(2)} DH',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: _isBusinessOpen ? Colors.black : Colors.grey,
-                ),
-              ),
             ],
           ),
-          const Spacer(),
+          
+          const SizedBox(height: 20),
+          
           SizedBox(
             width: double.infinity,
+            height: 56,
             child: _isBusinessOpen
                 ? ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 2,
                     ),
-                    onPressed: _addToCart,
-                    child: const Text(
-                      'Add to cart',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                    onPressed: _isUpdatingCart ? null : _updateCart,
+                    child: _isUpdatingCart
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            '$buttonText ${_quantity == 0 ? '' : '$_quantity for ${_getTotalPrice().toStringAsFixed(2)} DH'}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                   )
                 : Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Center(
                       child: Text(
@@ -288,48 +684,330 @@ class _ProductModalState extends ConsumerState<ProductModal> {
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: Colors.grey,
+                          fontSize: 16,
                         ),
                       ),
                     ),
                   ),
           ),
           
-          // Business Hours Info
-          if (!_isBusinessOpen) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Business Hours',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Opens at ${widget.shop['opening_time']?.toString().substring(0, 5) ?? 'N/A'} - '
-                    'Closes at ${widget.shop['closing_time']?.toString().substring(0, 5) ?? 'N/A'}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          const SizedBox(height: 8),
         ],
       ),
     );
+  }
+
+  SliverList _buildExtrasSection(List<dynamic> extras, int selectedExtrasCount, int totalExtrasQuantity) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          if (index == 0) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Would you like some extras?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Builder(
+                    builder: (context) {
+                      final currentTotalExtras = _getTotalExtrasQuantity();
+                      return Text(
+                        'Choose a maximum of 5 extras total ($currentTotalExtras/5 selected)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          }
+          
+          final extraIndex = index - 1;
+          if (extraIndex >= extras.length) return null;
+          
+          final extra = extras[extraIndex];
+          final extraId = extra['id'].toString();
+          final extraName = extra['variant_name'] ?? extra['product_name'] ?? 'Extra';
+          final extraPrice = double.tryParse(extra['price']?.toString() ?? '0.0') ?? 0.0;
+          final extraQuantity = _selectedExtras[extraId] ?? 0;
+          final isSelected = extraQuantity > 0;
+          final isLast = extraIndex == extras.length - 1;
+          final canIncrease = _canIncreaseExtra(extraId);
+
+          return Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _isBusinessOpen ? () => _toggleExtra(extraId) : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: Row(
+                        children: [
+                          // Extra info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  extraName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '+${extraPrice.toStringAsFixed(2)} DH',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: _isBusinessOpen ? Colors.deepOrange : Colors.grey.shade400,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          if (isSelected)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.remove, 
+                                      size: 16, 
+                                      color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400
+                                    ),
+                                    onPressed: _isBusinessOpen ? () => _decreaseExtraQuantity(extraId) : null,
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                  ),
+                                  
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Text(
+                                      '${_selectedExtras[extraId] ?? 0}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400,
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.add, 
+                                      size: 16, 
+                                      color: _isBusinessOpen && canIncrease ? Colors.black87 : Colors.grey.shade400
+                                    ),
+                                    onPressed: _isBusinessOpen && canIncrease ? () => _increaseExtraQuantity(extraId) : null,
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _isBusinessOpen ? Colors.grey.shade400 : Colors.grey.shade300,
+                                  width: 2,
+                                ),
+                                color: Colors.transparent,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                if (!isLast)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Divider(
+                      height: 1,
+                      color: Colors.grey.shade200,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+        childCount: extras.length + 1,
+      ),
+    );
+  }
+
+  Widget _buildBottomSection(double totalPrice, String buttonText) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Quantity',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove, size: 20),
+                      onPressed: _isBusinessOpen ? () {
+                        if (_quantity > 1) {
+                          setState(() => _quantity--);
+                        }
+                      } : null,
+                      color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                    ),
+                    
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        _quantity.toString(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    
+                    IconButton(
+                      icon: const Icon(Icons.add, size: 20),
+                      onPressed: _isBusinessOpen ? () => setState(() => _quantity++) : null,
+                      color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: _isBusinessOpen
+                ? ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: _isUpdatingCart ? null : _updateCart,
+                    child: _isUpdatingCart
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            '$buttonText ${_quantity == 0 ? '' : '$_quantity for ${_getTotalPrice().toStringAsFixed(2)} DH'}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Currently Unavailable',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _animationController.dispose();
+    super.dispose();
   }
 }

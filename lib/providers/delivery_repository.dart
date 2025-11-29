@@ -161,47 +161,55 @@ Future<bool> acceptOrder(int orderId, int userId) async { // Changed parameter n
   }
 }
 
-  Future<List<Order>> getMyOrders() async {
-    try {
-      final response = await ApiClient.dio.get('/delivery-driver/orders');
+Future<List<Order>> getMyOrders() async {
+  try {
+    final response = await ApiClient.dio.get('/delivery-driver/orders');
 
-      if (response.statusCode == 200) {
-        final data = response.data;
+    if (response.statusCode == 200) {
+      final data = response.data;
+      print('📥 [getMyOrders] Raw API response: $data');
 
-        // ✅ FIX: Handle both response formats
-        List<dynamic> ordersData;
+      List<dynamic> ordersData;
 
-        if (data is List) {
-          ordersData = data;
-        } else if (data is Map && data.containsKey('data')) {
-          ordersData = data['data'] as List<dynamic>;
-        } else if (data is Map && data.containsKey('orders')) {
-          ordersData = data['orders'] as List<dynamic>;
-        } else {
-          throw Exception('Unexpected API response format: $data');
-        }
-
-        // Convert to Order objects
-        final orders = <Order>[];
-        for (var orderJson in ordersData) {
-          try {
-            final order = Order.fromJson(orderJson);
-            orders.add(order);
-          } catch (e) {
-            print('Error parsing order: $e\nOrder data: $orderJson');
-          }
-        }
-
-        return orders;
+      if (data is Map && data.containsKey('orders')) {
+        // ✅ FIX: Handle the actual API response format
+        ordersData = data['orders'] as List<dynamic>;
+        print('✅ Found ${ordersData.length} orders in "orders" key');
+      } else if (data is List) {
+        ordersData = data;
+        print('✅ Found ${ordersData.length} orders in direct list');
+      } else if (data is Map && data.containsKey('data')) {
+        ordersData = data['data'] as List<dynamic>;
+        print('✅ Found ${ordersData.length} orders in "data" key');
       } else {
-        throw Exception('Failed to load orders: ${response.statusCode}');
+        print('❌ Unexpected API response format: ${data.runtimeType}');
+        throw Exception('Unexpected API response format: $data');
       }
-    } catch (e) {
-      print('Error loading my orders: $e');
-      rethrow;
-    }
-  }
 
+      // Convert to Order objects
+      final orders = <Order>[];
+      for (var orderJson in ordersData) {
+        try {
+          print('🔧 Parsing order: ${orderJson['id']}');
+          final order = Order.fromJson(orderJson);
+          orders.add(order);
+          print('✅ Successfully parsed order #${order.id}');
+        } catch (e) {
+          print('❌ Error parsing order: $e\nOrder data: $orderJson');
+        }
+      }
+
+      print('🎉 Successfully loaded ${orders.length} orders');
+      return orders;
+    } else {
+      print('❌ API error: ${response.statusCode}');
+      throw Exception('Failed to load orders: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('❌ Error loading my orders: $e');
+    rethrow;
+  }
+}
   Future<bool> updateOrderStatus(int orderId, OrderStatus status) async {
     try {
       final response = await ApiClient.dio.post(

@@ -8,6 +8,7 @@ import 'package:food_app/core/secure_storage.dart';
 import 'package:food_app/pages/auth/forgot_password_page.dart';
 import 'package:food_app/pages/delivery/delivery_home_page.dart';
 import 'package:food_app/pages/delivery_admin_pages/admin_home_page.dart';
+import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/delivery_providers.dart';
 import '../home/client_home_page.dart';
@@ -152,32 +153,35 @@ Future<void> _login() async {
       return;
     }
 
-    // Store token
-    if (result['token'] != null) {
-      print('💾 Storing token: ${result['token']}');
-      await SecureStorage.setToken(result['token']);
-      await ApiClient.setAuthHeader();
-    } else {
-      print('⚠️ No token received in login response');
+    //✅Token is already stored and headers updated in the login method
+    if (kDebugMode) {
+      print('✅ Token stored and headers updated in login method');
     }
 
     // Set auth state
     ref.read(authStateProvider.notifier).state = true;
 
-    // Get user data
-    print('📤 Fetching current user...');
-    final user = await ref.read(authRepositoryProvider).getCurrentUser();
-    print('📥 Current user response: $user');
+    // ✅ CRITICAL: Invalidate providers to force refresh BEFORE getting user data
+    print('🔄 Invalidating providers before fetching user data...');
+    ref.invalidate(currentUserProvider);
 
-    if (user['success'] != true) {
+    // ✅ CRITICAL: Add small delay to ensure auth state is fully set
+    print('⏳ Waiting for auth state to stabilize...');
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // ✅ Get user data via separate API call
+    print('📤 Fetching current user data...');
+    final userResponse = await ref.read(authRepositoryProvider).getCurrentUser();
+    
+    if (userResponse['success'] != true) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(user['message'])));
+            .showSnackBar(SnackBar(content: Text(userResponse['message'])));
       }
       return;
     }
 
-    final userData = user['data'];
+    final userData = userResponse['data'];
     if (userData == null) {
       print('⚠️ User data is null');
       if (mounted) {
@@ -193,14 +197,26 @@ Future<void> _login() async {
     // Save user data
     await _saveUserToLocalStorage(userData);
 
-    // Initialize delivery status if needed
-    if (role == 'delivery_driver') {
+    // ✅ CRITICAL: Invalidate role-specific providers
+    print('🔄 Invalidating role-specific providers...');
+    if (role == 'delivery_driver' || role == 'delivery_admin') {
+      ref.invalidate(deliveryHomeStateProvider);
+      ref.invalidate(adminHomeStateProvider);
+      
+      // Initialize delivery status if needed
       await _initializeDeliveryStatus(userData);
     }
 
     // ✅ FCM token: Force refresh after login
     print('📌 Refreshing FCM token with force refresh...');
     await _sendFcmTokenForUser(userData);
+
+    // ✅ CRITICAL: Force refresh providers again after user data is loaded
+    print('🔄 Force refreshing providers after user data load...');
+    ref.invalidate(currentUserProvider);
+    
+    // Wait for providers to refresh with new user data
+    await Future.delayed(const Duration(milliseconds: 300));
 
     if (!mounted) {
       print('⚠️ Widget not mounted, cannot navigate');
@@ -224,7 +240,6 @@ Future<void> _login() async {
     }
   }
 }
-
 
   // ✅ Initialize delivery status
   Future<void> _initializeDeliveryStatus(Map<String, dynamic> userData) async {

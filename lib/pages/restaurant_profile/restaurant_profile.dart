@@ -1,17 +1,26 @@
 // lib/pages/restaurant_profile/restaurant_profile.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:food_app/models/shop_model.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/cart/cart_provider.dart';
 import 'package:food_app/widgets/bussness_profile/cart_bottom_bar.dart';
 import 'package:food_app/widgets/bussness_profile/products_section.dart';
 import 'package:food_app/widgets/bussness_profile/restaurant_header.dart';
 import 'package:food_app/widgets/bussness_profile/restaurant_info.dart';
+import 'package:food_app/widgets/bussness_profile/product_modal.dart';
 
 class RestaurantProfile extends ConsumerStatefulWidget {
-  final Map<String, dynamic> shop;
+  final Shop shop;
+  final String? initialProductId;
+  final Map<String, dynamic>? business;
 
-  const RestaurantProfile({super.key, required this.shop, required business});
+  const RestaurantProfile({
+    super.key, 
+    required this.shop, 
+    this.initialProductId,
+    this.business,
+  });
 
   @override
   ConsumerState<RestaurantProfile> createState() => _RestaurantProfilePageState();
@@ -21,9 +30,10 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
+  final ScrollController _scrollController = ScrollController();
 
   String _selectedCategory = 'All';
-  bool _showInfo = true;
+  List<dynamic> _products = [];
 
   @override
   void initState() {
@@ -42,33 +52,62 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
     setState(() => _selectedCategory = category);
   }
 
+  void _openProductModal(String productId) {
+    final product = _products.firstWhere(
+      (p) => p['id'].toString() == productId,
+      orElse: () => null,
+    );
+
+    if (product != null && mounted) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => ProductModal(
+          product: product,
+          shop: widget.shop,
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(businessProductsProvider(widget.shop['id'].toString()));
+    final productsAsync = ref.watch(businessProductsProvider(widget.shop.id.toString()));
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: productsAsync.when(
-          loading: () => _buildSkeletonLoading(),
-          error: (e, _) => _buildErrorState(e.toString()),
-          data: (result) {
-            if (result['success'] != true) {
-              return _buildErrorState('Failed to load products');
+      body: productsAsync.when(
+        loading: () => _buildSkeletonLoading(),
+        error: (e, _) => _buildErrorState(e.toString()),
+        data: (result) {
+          if (result['success'] != true) {
+            return _buildErrorState('Failed to load products');
+          }
+          final products = result['data'] as List<dynamic>;
+          _products = products;
+          
+          // Open modal if initialProductId is provided
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (widget.initialProductId != null && mounted) {
+              _openProductModal(widget.initialProductId!);
             }
-            final products = result['data'] as List<dynamic>;
-            return _buildContent(products);
-          },
-        ),
+          });
+
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: _buildContent(products),
+          );
+        },
       ),
-      bottomNavigationBar: CartBottomBar(shop: widget.shop),
+      bottomNavigationBar: CartBottomBar(shop: widget.shop.toJson()), // Convert back to JSON for compatibility
     );
   }
 
@@ -124,6 +163,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
 
   Widget _buildProductsSkeleton() {
     return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 100),
       itemCount: 8,
       itemBuilder: (context, index) => Container(
         margin: const EdgeInsets.all(16),
@@ -232,7 +272,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
-                    ref.invalidate(businessProductsProvider(widget.shop['id'].toString()));
+                    ref.invalidate(businessProductsProvider(widget.shop.id.toString()));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,
@@ -249,43 +289,24 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
   }
 
   Widget _buildContent(List<dynamic> products) {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (scrollNotification) {
-        if (scrollNotification is ScrollUpdateNotification) {
-          final metrics = scrollNotification.metrics;
-          
-          // Hide info when scrolling down past 100px
-          if (metrics.pixels > 100 && _showInfo) {
-            setState(() {
-              _showInfo = false;
-            });
-          }
-          // Show info when scrolling back to top (less than 50px)
-          else if (metrics.pixels <= 50 && !_showInfo) {
-            setState(() {
-              _showInfo = true;
-            });
-          }
-        }
-        return false;
-      },
-      child: Column(
-        children: [
-          // Header always visible
-          RestaurantHeader(shop: widget.shop, showHeader: true),
-          // Info section that hides on scroll
-          RestaurantInfo(shop: widget.shop, showHeader: _showInfo),
-          Expanded(
-            child: ProductsSection(
-              products: products,
-              selectedCategory: _selectedCategory,
-              scrollController: ScrollController(), // Create new controller
-              onCategoryChanged: _onCategoryChanged,
-              shop: widget.shop,
-            ),
+    return Column(
+      children: [
+        // Fixed Header
+        RestaurantHeader(shop: widget.shop, showHeader: true),
+        
+        // Info Section
+        RestaurantInfo(shop: widget.shop, showHeader: true),
+        
+        // Products Section with Expanded to take remaining space
+        Expanded(
+          child: ProductsSection(
+            products: products,
+            selectedCategory: _selectedCategory,
+            onCategoryChanged: _onCategoryChanged,
+            shop: widget.shop,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

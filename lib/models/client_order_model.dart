@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 
 @immutable
 class ClientOrder {
@@ -11,8 +12,9 @@ class ClientOrder {
   final String address;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<ClientOrderItem> items;
+  final Map<String, ClientOrderItem> items;
   final String? restaurantName;
+  final int itemCount;
 
   const ClientOrder({
     required this.id,
@@ -26,6 +28,7 @@ class ClientOrder {
     required this.updatedAt,
     required this.items,
     this.restaurantName,
+    required this.itemCount,
   });
 
   // Empty order for error handling
@@ -40,71 +43,111 @@ class ClientOrder {
       address: '',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      items: [],
+      items: {},
       restaurantName: null,
+      itemCount: 0,
     );
   }
 
   bool get isEmpty => id == 0;
 
-  factory ClientOrder.fromJson(Map<String, dynamic> json) {
-    print('🔧 [ClientOrder] Parsing order: ${json['id']}');
+factory ClientOrder.fromJson(Map<String, dynamic> json) {
+  try {
+    print('🔧 [ClientOrder] Parsing order ID: ${json['id']}');
     
-    // Extract restaurant name from the first item
-    String? restaurantName;
-    try {
-      if (json['items'] != null && json['items'].isNotEmpty) {
-        final firstItem = json['items'][0];
-        restaurantName = firstItem['business_name'] as String?;
-      }
-    } catch (e) {
-      print('❌ [ClientOrder] Error extracting restaurant name: $e');
-      restaurantName = null;
-    }
-
     // Parse delivery driver
     DeliveryDriver? deliveryDriver;
-    try {
-      if (json['delivery_driver'] != null) {
-        deliveryDriver = DeliveryDriver.fromJson(json['delivery_driver']);
-      }
-    } catch (e) {
-      print('❌ [ClientOrder] Error parsing delivery driver: $e');
-      deliveryDriver = null;
+    if (json['delivery_driver'] != null && json['delivery_driver'] is Map) {
+      deliveryDriver = DeliveryDriver.fromJson(json['delivery_driver']);
     }
 
-    // Parse items
-    List<ClientOrderItem> items = [];
-    try {
-      if (json['items'] != null) {
-        items = (json['items'] as List<dynamic>)
-            .map((item) => ClientOrderItem.fromJson(item as Map<String, dynamic>))
-            .toList();
+    // Parse items - FIXED: Handle List format from API
+    Map<String, ClientOrderItem> items = {};
+    int totalItemsQuantity = 0;
+    String? restaurantName;
+
+    if (json['items'] != null && json['items'] is List) {
+      print('📦 [ClientOrder] Items is a List with ${json['items'].length} items');
+      
+      final itemsList = json['items'] as List<dynamic>;
+      for (int i = 0; i < itemsList.length; i++) {
+        try {
+          final itemData = itemsList[i] as Map<String, dynamic>;
+          final item = ClientOrderItem.fromJson(itemData);
+          items[i.toString()] = item; // Use index as key
+          
+          // Calculate total quantity
+          totalItemsQuantity += item.quantity;
+          
+          // Get restaurant name from first item
+          if (restaurantName == null && item.businessName.isNotEmpty) {
+            restaurantName = item.businessName;
+          }
+          
+          print('✅ [ClientOrder] Added item: ${item.productName}');
+        } catch (e) {
+          print('❌ [ClientOrder] Error parsing item at index $i: $e');
+        }
       }
-    } catch (e) {
-      print('❌ [ClientOrder] Error parsing items: $e');
-      items = [];
+    } else if (json['items'] != null && json['items'] is Map) {
+      // Fallback for Map format
+      final itemsMap = json['items'] as Map<String, dynamic>;
+      itemsMap.forEach((key, value) {
+        try {
+          if (value is Map<String, dynamic>) {
+            final item = ClientOrderItem.fromJson(value);
+            items[key] = item;
+            totalItemsQuantity += item.quantity;
+            
+            if (restaurantName == null && item.businessName.isNotEmpty) {
+              restaurantName = item.businessName;
+            }
+          }
+        } catch (e) {
+          print('❌ [ClientOrder] Error parsing item $key: $e');
+        }
+      });
+    } else {
+      print('⚠️ [ClientOrder] No items found or unexpected format');
     }
 
-    return ClientOrder(
+    // Parse dates
+    DateTime createdAt = DateTime.parse(json['created_at'] as String);
+    DateTime updatedAt = json['updated_at'] != null 
+        ? DateTime.parse(json['updated_at'] as String)
+        : createdAt;
+
+    final order = ClientOrder(
       id: json['id'] as int,
-      clientId: json['client_id'] as int? ?? 0, // Handle missing client_id
+      clientId: json['client_id'] as int? ?? 0,
       deliveryDriver: deliveryDriver,
       status: _parseOrderStatus(json['status'] as String),
       acceptedDate: json['accepted_date'] != null 
           ? DateTime.parse(json['accepted_date'] as String)
           : null,
       totalPrice: double.tryParse(json['total_price']?.toString() ?? '0') ?? 0.0,
-      address: json['address'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] != null 
-          ? DateTime.parse(json['updated_at'] as String)
-          : DateTime.parse(json['created_at'] as String), // Fallback to created_at
+      address: json['address'] as String? ?? '',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
       items: items,
       restaurantName: restaurantName,
+      itemCount: json['item_count'] as int? ?? items.length,
     );
-  }
 
+    print('✅ [ClientOrder] Successfully created order ${order.id}');
+    print('   - Items: ${order.items.length}');
+    print('   - Restaurant: $restaurantName');
+    print('   - Total Quantity: $totalItemsQuantity');
+    print('   - Total Price: ${order.totalPrice}');
+    
+    return order;
+  } catch (e, stack) {
+    print('❌ [ClientOrder] CRITICAL ERROR parsing order: $e');
+    print('🔍 [ClientOrder] Stack trace: $stack');
+    print('📋 [ClientOrder] Problematic JSON: ${jsonEncode(json)}');
+    return ClientOrder.empty();
+  }
+}
   static OrderStatus _parseOrderStatus(String status) {
     switch (status) {
       case 'pending':
@@ -130,8 +173,10 @@ class ClientOrder {
         'address': address,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
-        'items': items.map((item) => item.toJson()).toList(),
+        'items': items.map((key, value) => MapEntry(key, value.toJson())),
+        'item_count': itemCount,
       };
+
 
   static String _statusToString(OrderStatus status) {
     switch (status) {
@@ -147,10 +192,39 @@ class ClientOrder {
   }
 
   // Helper getters for compatibility with existing code
-  int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
+  List<ClientOrderItem> get itemsList => items.values.toList();
 
-  // Get total items quantity (sum of all item quantities)
-  int get totalItemsQuantity => items.fold(0, (sum, item) => sum + item.quantity);
+  // Get total items quantity (sum of all item quantities including extras)
+  int get totalItemsQuantity {
+    int total = 0;
+    items.forEach((key, item) {
+      total += item.quantity;
+      // Add extras quantities
+      item.extras?.forEach((extraKey, extra) {
+        total += extra.quantity;
+      });
+    });
+    return total;
+  }
+
+  // Get first product name for display
+  String get firstProductName {
+    if (items.isEmpty) return 'No items';
+    return items.values.first.productName;
+  }
+
+  // Get items preview text
+  String get itemsPreview {
+    if (items.isEmpty) return 'No items';
+    final itemNames = items.values.take(2).map((item) => item.productName).toList();
+    final preview = itemNames.join(', ');
+    
+    if (items.length > 2) {
+      return '$preview, +${items.length - 2} more';
+    }
+    
+    return preview;
+  }
 
   // Check if order can be rated (delivered and has driver and not already rated)
   bool get canBeRated => status == OrderStatus.delivered && 
@@ -176,8 +250,9 @@ class ClientOrder {
     String? address,
     DateTime? createdAt,
     DateTime? updatedAt,
-    List<ClientOrderItem>? items,
+    Map<String, ClientOrderItem>? items,
     String? restaurantName,
+    int? itemCount,
   }) {
     return ClientOrder(
       id: id ?? this.id,
@@ -191,6 +266,7 @@ class ClientOrder {
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
       restaurantName: restaurantName ?? this.restaurantName,
+      itemCount: itemCount ?? this.itemCount,
     );
   }
 
@@ -206,61 +282,214 @@ class ClientOrder {
 
 @immutable
 class ClientOrderItem {
+  final int orderItemId;
+  final int productId;
   final String productName;
   final String productImage;
-  final int quantity;
-  final double price;
+  final int businessOwnerId;
   final String businessName;
+  final int quantity;
+  final double unitPrice;
+  final double price;
+  final Map<String, ClientOrderExtra>? extras;
 
   const ClientOrderItem({
+    required this.orderItemId,
+    required this.productId,
     required this.productName,
     required this.productImage,
-    required this.quantity,
-    required this.price,
+    required this.businessOwnerId,
     required this.businessName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.price,
+    this.extras,
   });
 
-  factory ClientOrderItem.fromJson(Map<String, dynamic> json) {
-    return ClientOrderItem(
-      productName: json['product_name'] as String,
-      productImage: json['product_image'] as String,
-      quantity: json['quantity'] as int,
+ factory ClientOrderItem.fromJson(Map<String, dynamic> json) {
+  try {
+    print('🍕 [ClientOrderItem] Parsing item: ${json['product_name']}');
+    
+    // Parse extras if they exist - FIXED for API structure
+    Map<String, ClientOrderExtra>? extras;
+    if (json['extras'] != null && json['extras'] is Map) {
+      final extrasMap = json['extras'] as Map<String, dynamic>;
+      if (extrasMap.isNotEmpty) {
+        extras = {};
+        extrasMap.forEach((key, value) {
+          try {
+            if (value is Map<String, dynamic>) {
+              extras![key] = ClientOrderExtra.fromJson(value);
+              print('➕ [ClientOrderItem] Added extra: ${value['product_name']}');
+            }
+          } catch (e) {
+            print('❌ [ClientOrderItem] Error parsing extra $key: $e');
+          }
+        });
+      }
+    }
+
+    final item = ClientOrderItem(
+      orderItemId: json['order_item_id'] as int? ?? 0,
+      productId: json['product_id'] as int? ?? 0,
+      productName: json['product_name'] as String? ?? 'Unknown Product',
+      productImage: json['product_image'] as String? ?? '',
+      businessOwnerId: json['business_owner_id'] as int? ?? 0,
+      businessName: json['business_name'] as String? ?? 'Unknown Store',
+      quantity: json['quantity'] as int? ?? 1, // Default to 1 if not provided
+      unitPrice: double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
-      businessName: json['business_name'] as String,
+      extras: extras,
+    );
+
+    print('✅ [ClientOrderItem] Created item: ${item.productName}');
+    print('   - Quantity: ${item.quantity}');
+    print('   - Price: ${item.price}');
+    print('   - Extras: ${extras?.length ?? 0}');
+    
+    return item;
+  } catch (e, stack) {
+    print('❌ [ClientOrderItem] Error parsing item: $e');
+    print('🔍 [ClientOrderItem] Stack trace: $stack');
+    print('📋 [ClientOrderItem] Problematic JSON: ${jsonEncode(json)}');
+    
+    // Return a fallback item
+    return ClientOrderItem(
+      orderItemId: 0,
+      productId: 0,
+      productName: 'Error Loading Item',
+      productImage: '',
+      businessOwnerId: 0,
+      businessName: 'Unknown Store',
+      quantity: 1,
+      unitPrice: 0.0,
+      price: 0.0,
+      extras: null,
     );
   }
-
+}
   Map<String, dynamic> toJson() => {
+        'order_item_id': orderItemId,
+        'product_id': productId,
         'product_name': productName,
         'product_image': productImage,
-        'quantity': quantity,
-        'price': price.toStringAsFixed(2),
+        'business_owner_id': businessOwnerId,
         'business_name': businessName,
+        'quantity': quantity,
+        'unit_price': unitPrice.toStringAsFixed(2),
+        'price': price.toStringAsFixed(2),
+        'extras': extras?.map((key, value) => MapEntry(key, value.toJson())),
       };
 
-  // Calculate item subtotal
-  double get subtotal => quantity * price;
+  // Calculate item subtotal including extras
+  double get subtotal {
+    double total = price; // Main item price already includes quantity
+    // Add extras prices
+    extras?.forEach((key, extra) {
+      total += extra.price;
+    });
+    return total;
+  }
+
+  // Get all extras as list
+  List<ClientOrderExtra> get extrasList => extras?.values.toList() ?? [];
 
   // Getter for compatibility with existing code
   Product get product => Product(
         name: productName,
         image: productImage,
-        price: price,
+        price: unitPrice,
       );
 
   ClientOrderItem copyWith({
+    int? orderItemId,
+    int? productId,
+    String? productName,
+    String? productImage,
+    int? businessOwnerId,
+    String? businessName,
+    int? quantity,
+    double? unitPrice,
+    double? price,
+    Map<String, ClientOrderExtra>? extras,
+  }) {
+    return ClientOrderItem(
+      orderItemId: orderItemId ?? this.orderItemId,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productImage: productImage ?? this.productImage,
+      businessOwnerId: businessOwnerId ?? this.businessOwnerId,
+      businessName: businessName ?? this.businessName,
+      quantity: quantity ?? this.quantity,
+      unitPrice: unitPrice ?? this.unitPrice,
+      price: price ?? this.price,
+      extras: extras ?? this.extras,
+    );
+  }
+}
+
+@immutable
+class ClientOrderExtra {
+  final int orderItemId;
+  final int productId;
+  final String productName;
+  final String productImage;
+  final int quantity;
+  final double unitPrice;
+  final double price;
+
+  const ClientOrderExtra({
+    required this.orderItemId,
+    required this.productId,
+    required this.productName,
+    required this.productImage,
+    required this.quantity,
+    required this.unitPrice,
+    required this.price,
+  });
+
+  factory ClientOrderExtra.fromJson(Map<String, dynamic> json) {
+    return ClientOrderExtra(
+      orderItemId: json['order_item_id'] as int? ?? 0,
+      productId: json['product_id'] as int? ?? 0,
+      productName: json['product_name'] as String? ?? 'Unknown Extra',
+      productImage: json['product_image'] as String? ?? '',
+      quantity: json['quantity'] as int? ?? 0,
+      unitPrice: double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'order_item_id': orderItemId,
+        'product_id': productId,
+        'product_name': productName,
+        'product_image': productImage,
+        'quantity': quantity,
+        'unit_price': unitPrice.toStringAsFixed(2),
+        'price': price.toStringAsFixed(2),
+      };
+
+  // Calculate extra subtotal
+  double get subtotal => price; // Price already includes quantity
+
+  ClientOrderExtra copyWith({
+    int? orderItemId,
+    int? productId,
     String? productName,
     String? productImage,
     int? quantity,
+    double? unitPrice,
     double? price,
-    String? businessName,
   }) {
-    return ClientOrderItem(
+    return ClientOrderExtra(
+      orderItemId: orderItemId ?? this.orderItemId,
+      productId: productId ?? this.productId,
       productName: productName ?? this.productName,
       productImage: productImage ?? this.productImage,
       quantity: quantity ?? this.quantity,
+      unitPrice: unitPrice ?? this.unitPrice,
       price: price ?? this.price,
-      businessName: businessName ?? this.businessName,
     );
   }
 }

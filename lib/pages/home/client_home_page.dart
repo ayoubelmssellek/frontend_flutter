@@ -225,6 +225,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
   String _selectedBusinessType = 'Restaurant';
   bool _isRefreshing = false;
   bool _hasHandledTokenNavigation = false;
+  bool _mounted = true; // ADDED: Mounted flag to prevent disposed widget access
 
   @override
   void initState() {
@@ -250,22 +251,31 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
 
   @override
   void dispose() {
+    _mounted = false; // ADDED: Set mounted to false when widget is disposed
     _animationController.dispose();
     _hasHandledTokenNavigation = false;
     super.dispose();
   }
 
   void _loadOrdersOnStartup() {
+    // ADDED: Check if widget is still mounted before proceeding
+    if (!_mounted) return;
+    
     // Try both data sources to get client ID
     final clientId = _getClientId();
     print('🏠 [ClientHomePage] Loading orders on startup, clientId: $clientId');
     
     if (clientId != 0) {
-      ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
+      // ADDED: Check mounted before calling ref
+      if (_mounted) {
+        ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
+      }
     } else {
       Future.delayed(const Duration(seconds: 2), () {
+        // ADDED: Check mounted before accessing ref
+        if (!_mounted) return;
         final delayedClientId = _getClientId();
-        if (delayedClientId != 0 && mounted) {
+        if (delayedClientId != 0 && _mounted) {
           ref.read(clientOrdersProvider.notifier).loadClientOrders(delayedClientId);
         }
       });
@@ -274,6 +284,9 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
 
   // ✅ FIXED: Get client ID from both data sources like delivery example
   int _getClientId() {
+    // ADDED: Check if widget is still mounted before using ref
+    if (!_mounted) return 0;
+    
     // First try currentUserProvider
     final userData = ref.read(currentUserProvider);
     if (userData.hasValue && userData.value != null) {
@@ -312,6 +325,9 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
 
   // ✅ FIXED: Get user ID from both data sources like delivery example
   int? _getUserId() {
+    // ADDED: Check if widget is still mounted before using ref
+    if (!_mounted) return null;
+    
     // First try currentUserProvider
     final userData = ref.read(currentUserProvider);
     if (userData.hasValue && userData.value != null) {
@@ -370,21 +386,25 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       
       // Now load orders with the updated client ID
       final clientId = _getClientId();
-      if (clientId != 0) {
+      if (clientId != 0 && _mounted) { // ADDED: Check mounted
         await ref.read(clientOrdersProvider.notifier).refreshClientOrders(clientId);
       }
       
       // Refresh other data
-      await ref.refresh(businessOwnersProvider.future);
-      await ref.read(deliveryDriversProvider.notifier).refreshDeliveryDrivers();
+      if (_mounted) { // ADDED: Check mounted
+        await ref.refresh(businessOwnersProvider.future);
+        await ref.read(deliveryDriversProvider.notifier).refreshDeliveryDrivers();
+      }
       
       // ✅ Refresh rating section data
-      refreshRatingSection(ref);
+      if (_mounted) { // ADDED: Check mounted
+        refreshRatingSection(ref);
+      }
       
       // Simulate loading for better UX
       await Future.delayed(const Duration(milliseconds: 500));
       
-      if (mounted) {
+      if (_mounted) { // ADDED: Check mounted
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(tr('common.refresh_success')),
@@ -395,7 +415,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       }
     } catch (e) {
       print('❌ [ClientHomePage] Refresh error: $e');
-      if (mounted) {
+      if (_mounted) { // ADDED: Check mounted
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${tr('common.refresh_failed')}: ${e.toString()}'),
@@ -405,7 +425,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
         );
       }
     } finally {
-      if (mounted) {
+      if (_mounted) { // ADDED: Check mounted
         setState(() => _isRefreshing = false);
       }
     }
@@ -413,12 +433,12 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
 
   // ✅ ADDED: Handle token errors like delivery example
   void _handleTokenErrors(ClientHomeState state, BuildContext context) {
-    if (_hasHandledTokenNavigation || !mounted) return;
+    if (_hasHandledTokenNavigation || !_mounted) return; // ADDED: Check _mounted
 
     if (state.hasTokenError) {
       _hasHandledTokenNavigation = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
+        if (_mounted) { // ADDED: Check _mounted
           _navigateToTokenExpiredPage();
         }
       });
@@ -427,7 +447,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
 
   // ✅ ADDED: Navigate to token expired page like delivery example
   void _navigateToTokenExpiredPage([String? customMessage]) {
-    if (mounted) {
+    if (_mounted) { // ADDED: Check _mounted
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => TokenExpiredPage(

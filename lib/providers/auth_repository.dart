@@ -26,13 +26,11 @@ class AuthRepository {
     }
 
     // ✅ تخزين التوكن
-    await storage.write(key: 'token', value: token);
     await SecureStorage.setToken(token);
 
     // ✅ تحديث الهيدر مباشرة
-    ApiClient.dio.options.headers['Authorization'] = 'Bearer $token';
+    await ApiClient.setAuthHeader();
 
-    // ✅ إرجاع التوكن مع النتيجة ليستعمله الكود بعد تسجيل الدخول
     return {
       'success': true,
       'message': data['message'] ?? 'تم تسجيل الدخول بنجاح ✅',
@@ -46,8 +44,6 @@ class AuthRepository {
     return {'success': false, 'message': 'حدث خطأ أثناء تسجيل الدخول: $e'};
   }
 }
-
-
 Future<Map<String, dynamic>> registerClient({
   required String name,
   required String phone,
@@ -72,7 +68,6 @@ Future<Map<String, dynamic>> registerClient({
         return {'success': false, 'message': 'لم يتم استلام رمز الدخول من الخادم'};
       }
 
-      await storage.write(key: 'token', value: token);
       await SecureStorage.setToken(token);
       await ApiClient.setAuthHeader();
     return {
@@ -124,7 +119,6 @@ Future<Map<String, dynamic>> registerDeliveryDriver({
         return {'success': false, 'message': 'لم يتم استلام رمز الدخول من الخادم'};
       }
 
-      await storage.write(key: 'token', value: token);
       await SecureStorage.setToken(token);
       await ApiClient.setAuthHeader();
 

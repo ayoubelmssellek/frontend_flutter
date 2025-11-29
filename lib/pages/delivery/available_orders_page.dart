@@ -1,4 +1,4 @@
-// pages/delivery/available_orders_page.dart (Updated for multiple businesses)
+// pages/delivery/available_orders_page.dart (Fixed)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -121,8 +121,31 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     }
   }
 
-  List<OrderItem> _parseItemsFromFCM(dynamic itemsData) {
-    if (itemsData == null) return [];
+  // ✅ FIXED: Helper methods for parsing
+  int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is double) return value.toInt();
+    return 0;
+  }
+
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  String _parseString(dynamic value) {
+    if (value == null) return '';
+    return value.toString();
+  }
+
+  // ✅ FIXED: Update _parseItemsFromFCM to return Map<String, OrderItem>
+  Map<String, OrderItem> _parseItemsFromFCM(dynamic itemsData) {
+    if (itemsData == null) return {};
     
     try {
       List<dynamic> itemsList = [];
@@ -134,42 +157,70 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
         itemsList = itemsData;
       }
       
-      return itemsList.map((item) {
+      final items = <String, OrderItem>{};
+      for (int i = 0; i < itemsList.length; i++) {
+        final item = itemsList[i];
         if (item is Map<String, dynamic>) {
-          return OrderItem(
-            productName: item['product_name']?.toString() ?? 'Product',
-            productImage: item['product_image']?.toString() ?? '',
-            businessName: item['business_name']?.toString() ?? 'Store',
-            quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
-            price: double.tryParse(item['price']?.toString() ?? '0') ?? 0.0,
-            totalPrice: double.tryParse(item['total_price']?.toString() ?? '0') ?? 0.0,
-            productId: int.tryParse(item['product_id']?.toString() ?? ''),
-            businessOwnerId: int.tryParse(item['business_owner_id']?.toString() ?? ''),
-          );
-        } else {
-          return OrderItem(
-            productName: 'Order Items',
-            productImage: '',
-            businessName: 'Restaurant',
-            quantity: 1,
-            price: 0.0,
-            totalPrice: 0.0,
+          items[i.toString()] = OrderItem(
+            orderItemId: _parseInt(item['order_item_id']),
+            productId: _parseInt(item['product_id']),
+            productName: _parseString(item['product_name']),
+            productImage: _parseString(item['product_image']),
+            businessOwnerId: _parseInt(item['business_owner_id']),
+            businessName: _parseString(item['business_name']),
+            quantity: _parseInt(item['quantity']),
+            unitPrice: _parseDouble(item['unit_price']),
+            price: _parseDouble(item['price']),
+            totalPrice: _parseDouble(item['total_price'] ?? (_parseDouble(item['price']) * _parseInt(item['quantity']))),
+            extras: _parseExtrasFromFCM(item['extras']),
           );
         }
-      }).toList();
+      }
+      
+      return items;
     } catch (e) {
       print('❌ Error parsing items from FCM: $e');
       
-      return [
-        OrderItem(
-          productName: 'Order Items',
-          productImage: '',
-          businessName: 'Restaurant',
-          quantity: 1,
-          price: 0.0,
-          totalPrice: 0.0,
-        )
-      ];
+      return {
+        '0': OrderItem.empty()
+      };
+    }
+  }
+
+  // ✅ ADD THIS: Parse extras from FCM data
+  Map<String, OrderExtra>? _parseExtrasFromFCM(dynamic extrasData) {
+    if (extrasData == null) return null;
+    
+    try {
+      List<dynamic> extrasList = [];
+      
+      if (extrasData is String) {
+        final parsed = json.decode(extrasData);
+        if (parsed is List) extrasList = parsed;
+      } else if (extrasData is List) {
+        extrasList = extrasData;
+      }
+      
+      final extras = <String, OrderExtra>{};
+      for (int i = 0; i < extrasList.length; i++) {
+        final extra = extrasList[i];
+        if (extra is Map<String, dynamic>) {
+          extras[i.toString()] = OrderExtra(
+            orderItemId: _parseInt(extra['order_item_id']),
+            productId: _parseInt(extra['product_id']),
+            productName: _parseString(extra['product_name']),
+            productImage: _parseString(extra['product_image']),
+            quantity: _parseInt(extra['quantity']),
+            unitPrice: _parseDouble(extra['unit_price']),
+            price: _parseDouble(extra['price']),
+          );
+        }
+      }
+      
+      return extras.isEmpty ? null : extras;
+    } catch (e) {
+      print('❌ Error parsing extras from FCM: $e');
+      return null;
     }
   }
 
@@ -239,20 +290,16 @@ class _AvailableOrdersPageState extends ConsumerState<AvailableOrdersPage> {
     }
   }
 
-Future<void> _handleRefresh() async {
-  print('🔄 [AvailableOrdersPage] Pull-to-refresh triggered');
-  
-  // Simply call the load method - it already handles all the state updates
-  await _loadAvailableOrders();
-  
-  // The RefreshIndicator will automatically hide when the Future completes
-  print('✅ Pull-to-refresh completed');
-}
+  Future<void> _handleRefresh() async {
+    print('🔄 [AvailableOrdersPage] Pull-to-refresh triggered');
+    await _loadAvailableOrders();
+    print('✅ Pull-to-refresh completed');
+  }
 
-  // ✅ NEW: Get unique businesses from order items
+  // ✅ FIXED: Get unique businesses from order items
   List<String> _getUniqueBusinesses(Order order) {
     final businesses = <String>{};
-    for (final item in order.items) {
+    for (final item in order.items.values) {
       if (item.businessName.isNotEmpty) {
         businesses.add(item.businessName);
       }
@@ -260,7 +307,7 @@ Future<void> _handleRefresh() async {
     return businesses.toList();
   }
 
-  // ✅ NEW: Get display text for businesses
+  // ✅ FIXED: Get display text for businesses
   String _getBusinessesText(Order order) {
     final businesses = _getUniqueBusinesses(order);
     
@@ -297,83 +344,81 @@ Future<void> _handleRefresh() async {
     }
   }
 
-Future<void> _acceptOrder(Order order) async {
-  // ✅ FIXED: Try both data sources to get user ID
-  int? userId;
-  
-  // First try currentUserProvider
-  final userData = ref.read(currentUserProvider);
-  if (userData.hasValue && userData.value != null) {
-    final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
-    userId = userDataMap?['id'] as int?;
-  }
-  
-  // If not found, try adminHomeStateProvider
-  if (userId == null) {
-    final adminState = ref.read(adminHomeStateProvider);
-    if (adminState.userData != null) {
-      final userDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
-      userId = userDataMap?['id'] as int?;
-    }
-  }
-      // If not found, try deliveryHomeStateProvider
-  if (userId == null) {
-    final adminState = ref.read(deliveryHomeStateProvider);
-    if (adminState.userData != null) {
-      final userDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
-      userId = userDataMap?['id'] as int?;
-    }
-  }
-  if (userId == null) {
-    if (mounted) {
-      _showErrorSnackBar('User profile not loaded. Please wait...');
-      // Force refresh user data
-      ref.read(adminHomeStateProvider.notifier).refreshProfile();
-    }
-    return;
-  }
-
-  final isStillAvailable = await _checkOrderStatus(order.id);
-  if (!isStillAvailable) {
-    _showOrderTakenDialog(order.id);
-    return;
-  }
-
-  if (_acceptedOrderIds.contains(order.id)) {
-    _showOrderTakenDialog(order.id);
-    return;
-  }
-
-  if (mounted) {
-    setState(() => _acceptingOrderIds.add(order.id));
-  }
-
-  try {
-    final deliveryRepo = ref.read(deliveryRepositoryProvider);
-    final success = await deliveryRepo.acceptOrder(order.id, userId);
-
-    if (success && mounted) {
-      _handleSuccessfulOrderAcceptance(order, userId);
-    } else {
-      _showErrorSnackBar('Failed to accept order');
-    }
-  } catch (e) {
-    print('❌ Error accepting order: $e');
+  Future<void> _acceptOrder(Order order) async {
+    int? userId;
     
-    if (ErrorHandlerService.isTokenError(e)) {
-      _navigateToTokenExpiredPage('Your session has expired while accepting the order.');
+    // First try currentUserProvider
+    final userData = ref.read(currentUserProvider);
+    if (userData.hasValue && userData.value != null) {
+      final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
+      userId = userDataMap?['id'] as int?;
+    }
+    
+    // If not found, try adminHomeStateProvider
+    if (userId == null) {
+      final adminState = ref.read(adminHomeStateProvider);
+      if (adminState.userData != null) {
+        final userDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
+        userId = userDataMap?['id'] as int?;
+      }
+    }
+    // If not found, try deliveryHomeStateProvider
+    if (userId == null) {
+      final adminState = ref.read(deliveryHomeStateProvider);
+      if (adminState.userData != null) {
+        final userDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
+        userId = userDataMap?['id'] as int?;
+      }
+    }
+    if (userId == null) {
+      if (mounted) {
+        _showErrorSnackBar('User profile not loaded. Please wait...');
+        ref.read(adminHomeStateProvider.notifier).refreshProfile();
+      }
       return;
     }
-    
-    if (mounted) {
-      await _handleAcceptOrderError(e, order);
+
+    final isStillAvailable = await _checkOrderStatus(order.id);
+    if (!isStillAvailable) {
+      _showOrderTakenDialog(order.id);
+      return;
     }
-  } finally {
+
+    if (_acceptedOrderIds.contains(order.id)) {
+      _showOrderTakenDialog(order.id);
+      return;
+    }
+
     if (mounted) {
-      setState(() => _acceptingOrderIds.remove(order.id));
+      setState(() => _acceptingOrderIds.add(order.id));
+    }
+
+    try {
+      final deliveryRepo = ref.read(deliveryRepositoryProvider);
+      final success = await deliveryRepo.acceptOrder(order.id, userId);
+
+      if (success && mounted) {
+        _handleSuccessfulOrderAcceptance(order, userId);
+      } else {
+        _showErrorSnackBar('Failed to accept order');
+      }
+    } catch (e) {
+      print('❌ Error accepting order: $e');
+      
+      if (ErrorHandlerService.isTokenError(e)) {
+        _navigateToTokenExpiredPage('Your session has expired while accepting the order.');
+        return;
+      }
+      
+      if (mounted) {
+        await _handleAcceptOrderError(e, order);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _acceptingOrderIds.remove(order.id));
+      }
     }
   }
-}
 
   void _handleSuccessfulOrderAcceptance(Order order, int deliveryManId) {
     print('✅ Order #${order.id} accepted successfully');
@@ -513,177 +558,228 @@ Future<void> _acceptOrder(Order order) async {
       builder: (context) => _buildOrderDetailsSheet(order),
     );
   }
-
-  Widget _buildOrderDetailsSheet(Order order) {
-    final businesses = _getUniqueBusinesses(order);
-    
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          // Drag handle
-          Container(
-            margin: const EdgeInsets.only(top: 8, bottom: 8),
-            width: 40,
-            height: 5,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(8),
-            ),
+ // ✅ ADD THIS: Calculate total extras count for an order
+int _getTotalExtrasCount(Order order) {
+  int totalExtras = 0;
+  for (final item in order.items.values) {
+    if (item.extras != null) {
+      totalExtras += item.extras!.length;
+    }
+  }
+  return totalExtras;
+}
+Widget _buildOrderDetailsSheet(Order order) {
+  final businesses = _getUniqueBusinesses(order);
+  final totalExtrasCount = _getTotalExtrasCount(order);
+  
+  return Container(
+    height: MediaQuery.of(context).size.height * 0.85,
+    decoration: const BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    child: Column(
+      children: [
+        // Drag handle
+        Container(
+          margin: const EdgeInsets.only(top: 8, bottom: 8),
+          width: 40,
+          height: 5,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
           ),
-          
-          // Header
-          Padding(
+        ),
+        
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Order #${order.id}',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${order.totalPrice.toStringAsFixed(2)} MAD',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                    ),
+                  ),
+                  // ✅ Show total extras count
+                  if (totalExtrasCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        '$totalExtrasCount extras',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Order details
+        Expanded(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Order #${order.id}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                // Store Information
+                _buildDetailRow(
+                  icon: Icons.store,
+                  title: 'Stores',
+                  value: _getBusinessesText(order),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${order.totalPrice.toStringAsFixed(2)} MAD',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
-                  ),
+                
+                // Customer Info
+                _buildDetailRow(
+                  icon: Icons.person,
+                  title: 'Customer',
+                  value: order.customerName,
                 ),
+                
+                // Customer Phone
+                if (order.customerPhone.isNotEmpty && order.customerPhone != 'Unknown')
+                  _buildDetailRow(
+                    icon: Icons.phone,
+                    title: 'Phone',
+                    value: order.customerPhone,
+                  ),
+                
+                // Delivery Address
+                _buildDetailRow(
+                  icon: Icons.location_on,
+                  title: 'Delivery Address',
+                  value: order.address,
+                ),
+                
+                // Show business list for multiple stores
+                if (businesses.length > 1) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Stores in this order:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...businesses.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final business = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              business,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+                
+                const SizedBox(height: 16),
+                
+                // Items List
+                Row(
+                  children: [
+                    const Text(
+                      'Order Items',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    // ✅ Show total extras count
+                    if (totalExtrasCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.shade100),
+                        ),
+                        child: Text(
+                          '$totalExtrasCount extras',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // ✅ FIXED: Use itemsList with extras grouped as children
+                ...order.itemsList.map((item) => _buildOrderItem(item)).toList(),
+                
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          
-          // Order details
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ✅ FIXED: Store Information - Shows multiple businesses
-                  _buildDetailRow(
-                    icon: Icons.store,
-                    title: 'Stores',
-                    value: _getBusinessesText(order),
-                  ),
-                  
-                  // Customer Info
-                  _buildDetailRow(
-                    icon: Icons.person,
-                    title: 'Customer',
-                    value: order.customerName,
-                  ),
-                  
-                  // Customer Phone
-                  if (order.customerPhone.isNotEmpty && order.customerPhone != 'Unknown')
-                    _buildDetailRow(
-                      icon: Icons.phone,
-                      title: 'Phone',
-                      value: order.customerPhone,
-                    ),
-                  
-                  // Delivery Address
-                  _buildDetailRow(
-                    icon: Icons.location_on,
-                    title: 'Delivery Address',
-                    value: order.address,
-                  ),
-                  
-                  // ✅ NEW: Show business list for multiple stores
-                  if (businesses.length > 1) ...[
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Stores in this order:',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...businesses.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final business = entry.value;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${index + 1}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                business,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Items List
-                  const Text(
-                    'Order Items',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  ...order.items.map((item) => _buildOrderItem(item)).toList(),
-                  
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
+        ),
+        
+        // Accept Button
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+border: Border.all(color: Colors.grey.shade300),
           ),
-          
-          // Accept Button
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade300)),
-            ),
-            child: _buildOrderButton(order, 
-              _acceptedOrderIds.contains(order.id) || order.status == OrderStatus.accepted,
-              _acceptingOrderIds.contains(order.id)
-            ),
+          child: _buildOrderButton(order, 
+            _acceptedOrderIds.contains(order.id) || order.status == OrderStatus.accepted,
+            _acceptingOrderIds.contains(order.id)
           ),
-        ],
-      ),
-    );
-  }
-
+        ),
+      ],
+    ),
+  );
+}
   Widget _buildDetailRow({required IconData icon, required String title, required String value}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -713,124 +809,270 @@ Future<void> _acceptOrder(Order order) async {
     );
   }
 
-  Widget _buildOrderItem(OrderItem item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          // Item image or placeholder
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              color: Colors.grey.shade200,
+ // ✅ UPDATED: Build order item with extras grouped as children
+Widget _buildOrderItem(OrderItem item) {
+  final hasExtras = item.extras != null && item.extras!.isNotEmpty;
+  
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Main Item Row
+        Row(
+          children: [
+            // Item image or placeholder
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                color: Colors.grey.shade200,
+              ),
+              child: item.productImage.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        item.productImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.fastfood, color: Colors.grey.shade400);
+                        },
+                      ),
+                    )
+                  : Icon(Icons.fastfood, color: Colors.grey.shade400),
             ),
-            child: item.productImage.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.network(
-                      item.productImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.fastfood, color: Colors.grey.shade400);
-                      },
+            
+            const SizedBox(width: 12),
+            
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.productName,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item.quantity}x • ${item.unitPrice.toStringAsFixed(2)} MAD',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                  if (item.businessName.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.blue.shade100),
+                      ),
+                      child: Text(
+                        item.businessName,
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
-                  )
-                : Icon(Icons.fastfood, color: Colors.grey.shade400),
-          ),
-          
-          const SizedBox(width: 12),
-          
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+              ),
+            ),
+            
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  item.productName,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  '${item.price.toStringAsFixed(2)} MAD',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item.quantity}x • ${item.price.toStringAsFixed(2)} MAD',
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-                if (item.businessName.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 2),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.blue.shade100),
-                    ),
-                    child: Text(
-                      item.businessName,
-                      style: const TextStyle(
-                        color: Colors.blue,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
+                if (hasExtras)
+                  Text(
+                    '+ ${item.extras!.length} extras',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
               ],
             ),
+          ],
+        ),
+        
+        // ✅ UPDATED: Extras as children of the main product
+        if (hasExtras) ...[
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          
+          // Extras Header
+          Row(
+            children: [
+              const Icon(Icons.add, size: 14, color: Colors.green),
+              const SizedBox(width: 4),
+              Text(
+                'Extras (${item.extras!.length})',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          
+          // Extras List as children
+          ...item.extrasList.map((extra) => Padding(
+            padding: const EdgeInsets.only(bottom: 6, left: 16), // Indented to show hierarchy
+            child: Row(
+              children: [
+                // Child indicator
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_right,
+                    size: 12,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${extra.quantity}x ${extra.productName}',
+                    style: const TextStyle(fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  '+${extra.price.toStringAsFixed(2)} MAD',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.green,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
+          
+          // Extras Total
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Extras Total:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.green,
+                  ),
+                ),
+                Text(
+                  '+${_calculateExtrasTotal(item.extras!).toStringAsFixed(2)} MAD',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
           ),
           
-          Text(
-            '${item.totalPrice.toStringAsFixed(2)} MAD',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          // Item Subtotal (including extras)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Item Subtotal:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  '${item.subtotal.toStringAsFixed(2)} MAD',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepOrange,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
+      ],
+    ),
+  );
+}
+
+// ✅ ADD THIS: Helper method to calculate extras total
+double _calculateExtrasTotal(Map<String, OrderExtra> extras) {
+  double total = 0.0;
+  extras.forEach((key, extra) {
+    total += extra.price;
+  });
+  return total;
+}
+  @override
+  Widget build(BuildContext context) {
+    final availableOrders = ref.watch(availableOrdersProvider);
+
+    print('📊 Building with ${availableOrders.length} orders, ${_acceptedOrderIds.length} accepted');
+
+    if (_isLoading && availableOrders.isEmpty) return _buildLoadingState();
+    if (availableOrders.isEmpty) return _buildEmptyState();
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollNotification) {
+        return false;
+      },
+      child: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: Colors.deepOrange,
+        backgroundColor: Colors.white,
+        child: ListView.builder(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          itemCount: availableOrders.length,
+          itemBuilder: (context, index) {
+            final order = availableOrders[index];
+            final isAccepted = _acceptedOrderIds.contains(order.id) ||
+                              order.status == OrderStatus.accepted ||
+                              order.deliveryDriverId != null;
+            final isAccepting = _acceptingOrderIds.contains(order.id);
+
+            return GestureDetector(
+              onTap: () => _showOrderDetails(order),
+              child: _buildOrderCard(order, isAccepted, isAccepting),
+            );
+          },
+        ),
       ),
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  final availableOrders = ref.watch(availableOrdersProvider);
-
-  print('📊 Building with ${availableOrders.length} orders, ${_acceptedOrderIds.length} accepted');
-
-  if (_isLoading && availableOrders.isEmpty) return _buildLoadingState();
-  if (availableOrders.isEmpty) return _buildEmptyState();
-
-  // ✅ FIXED: Use NotificationListener to ensure RefreshIndicator works
-  return NotificationListener<ScrollNotification>(
-    onNotification: (scrollNotification) {
-      // This helps the RefreshIndicator work better with the list
-      return false;
-    },
-    child: RefreshIndicator(
-      onRefresh: _handleRefresh,
-      color: Colors.deepOrange,
-      backgroundColor: Colors.white,
-      child: ListView.builder(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(), // ✅ Important for RefreshIndicator
-        padding: const EdgeInsets.all(16),
-        itemCount: availableOrders.length,
-        itemBuilder: (context, index) {
-          final order = availableOrders[index];
-          final isAccepted = _acceptedOrderIds.contains(order.id) ||
-                            order.status == OrderStatus.accepted ||
-                            order.deliveryDriverId != null;
-          final isAccepting = _acceptingOrderIds.contains(order.id);
-
-          return GestureDetector(
-            onTap: () => _showOrderDetails(order),
-            child: _buildOrderCard(order, isAccepted, isAccepting),
-          );
-        },
-      ),
-    ),
-  );
-}
   Widget _buildOrderCard(Order order, bool isAccepted, bool isAccepting) {
     final businesses = _getUniqueBusinesses(order);
     
@@ -865,7 +1107,7 @@ Widget build(BuildContext context) {
             ),
             const SizedBox(height: 8),
             
-            // ✅ FIXED: Show store information properly
+            // Store Information
             Row(
               children: [
                 const Icon(Icons.store, size: 16, color: Colors.grey),
@@ -879,7 +1121,7 @@ Widget build(BuildContext context) {
                         style: const TextStyle(color: Colors.grey),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      // ✅ NEW: Show business badges for multiple stores
+                      // Show business badges for multiple stores
                       if (businesses.length > 1) ...[
                         const SizedBox(height: 4),
                         Wrap(
@@ -962,7 +1204,8 @@ Widget build(BuildContext context) {
             
             // Order Items
             if (order.items.isNotEmpty) ...[
-              ...order.items.take(2).map((item) => Padding(
+              // ✅ FIXED: Use itemsList and take first 2 items
+              ...order.itemsList.take(2).map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Row(
                   children: [

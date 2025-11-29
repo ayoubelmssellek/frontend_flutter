@@ -1,4 +1,5 @@
-// services/app_initialization_service.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -15,16 +16,43 @@ class AppInitializationService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final FCMService _fcmService = FCMService();
 
+  // Store the navigator key globally
+  static GlobalKey<NavigatorState>? navigatorKey;
+
   AppInitializationService(this.ref);
 
-  Future<AppInitializationResult> initializeApp() async {
+  Future<AppInitializationResult> initializeApp({GlobalKey<NavigatorState>? navKey}) async {
     try {
-      // Get FCM token
+      // Store navigator key FIRST
+      if (navKey != null) {
+        AppInitializationService.navigatorKey = navKey;
+        print("🎯 Navigator key stored for FCM");
+      }
+
+      // Initialize FCM FIRST
+      print("🔧 Initializing FCM service...");
       await _fcmService.initialize();
       final fcmToken = await _fcmService.getToken();
+      print("✅ FCM initialized with token: ${fcmToken != null ? 'YES' : 'NO'}");
 
-      // Check authentication status
+      // Setup FCM listeners IMMEDIATELY
+      if (AppInitializationService.navigatorKey != null) {
+        print("🎯 Setting up FCM listeners...");
+        _fcmService.setupListeners(
+          navigatorKey: AppInitializationService.navigatorKey!,
+          onNotificationCountUpdate: (count) {
+            print("🔄 Badge count updated: $count");
+          },
+        );
+        print("✅ FCM listeners setup complete");
+      } else {
+        print("⚠️ No navigator key provided for FCM");
+      }
+
+      // THEN check authentication
+      print("🔐 Checking authentication...");
       final authResult = await _checkAuthenticationStatus();
+      print("✅ Authentication check complete");
       
       return AppInitializationResult(
         fcmToken: fcmToken,
@@ -45,11 +73,13 @@ class AppInitializationService {
 
   Future<AuthenticationResult> _checkAuthenticationStatus() async {
     try {
+      print("🔄 Waiting for app start authentication...");
       // Wait for app start authentication check
       await ref.read(appStartProvider.future);
       
       // Check if user is logged in
       final isLogged = await _secureStorage.read(key: 'isLogged');
+      print("🔐 User logged in: $isLogged");
       
       if (isLogged == 'true') {
         return await _loadUserAndDetermineRoute();
@@ -60,6 +90,7 @@ class AppInitializationService {
         );
       }
     } catch (e) {
+      print("❌ Authentication check error: $e");
       return AuthenticationResult(
         initialPage: const ClientHomePage(),
         userData: null,
@@ -69,12 +100,14 @@ class AppInitializationService {
 
   Future<AuthenticationResult> _loadUserAndDetermineRoute() async {
     try {
+      print("👤 Loading user data...");
       final authRepo = ref.read(authRepositoryProvider);
       final userResult = await authRepo.getCurrentUser();
       
       if (userResult['success'] == true) {
         final userData = userResult['data'];
         final role = userData['role_name']?.toString().toLowerCase();
+        print("🎯 User role detected: $role");
         
         final targetPage = _getPageForRole(role);
         
@@ -83,21 +116,40 @@ class AppInitializationService {
           _setDeliveryManId(userData);
         }
         
+        // Store user data in secure storage for FCM to access
+        await _storeUserDataForFCM(userData);
+        
         return AuthenticationResult(
           initialPage: targetPage,
           userData: userData,
         );
       } else {
+        print("❌ User data load failed");
         return AuthenticationResult(
           initialPage: const ClientHomePage(),
           userData: null,
         );
       }
     } catch (e) {
+      print("❌ Load user error: $e");
       return AuthenticationResult(
         initialPage: const ClientHomePage(),
         userData: null,
       );
+    }
+  }
+
+  // Store user data for FCM to access
+  Future<void> _storeUserDataForFCM(Map<String, dynamic> userData) async {
+    try {
+      await _secureStorage.write(
+        key: 'userData', 
+        value: json.encode(userData)
+      );
+      await _secureStorage.write(key: 'isLogged', value: 'true');
+      print("✅ User data stored for FCM access");
+    } catch (e) {
+      print("❌ Error storing user data for FCM: $e");
     }
   }
 
@@ -111,7 +163,7 @@ class AppInitializationService {
       case 'delivery_driver':
       case 'delivery_man':
       case 'delivery':
-        return const DeliveryHomePage(initialTab: 0,);
+        return const DeliveryHomePage(initialTab: 0);
       case 'delivery_admin':
         return const AdminHomePage();
       default:
@@ -130,6 +182,13 @@ class AppInitializationService {
   }
 
   FCMService get fcmService => _fcmService;
+
+  // Method to handle FCM navigation from main app
+  static void handleFcmNavigation() {
+    if (navigatorKey?.currentState?.mounted == true) {
+      print("🔄 FCM navigation handler ready");
+    }
+  }
 }
 
 class AppInitializationResult {

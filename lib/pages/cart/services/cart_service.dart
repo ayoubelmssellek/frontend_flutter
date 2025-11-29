@@ -1,220 +1,233 @@
 // lib/pages/cart/services/cart_service.dart
-import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:food_app/core/cart_storage.dart';
 
 class CartService extends ChangeNotifier {
-  Map<String, Map<String, dynamic>> _cartItems = {};
+  final Map<String, Map<String, dynamic>> _cartItems = {};
 
-  Map<String, Map<String, dynamic>> get cartItems => _cartItems;
-
-  // Generate unique key for cart items (productId + businessOwnerId)
-  String _generateItemKey(String productId, String businessOwnerId) {
-    return '${productId}_$businessOwnerId';
+  Map<String, Map<String, dynamic>> get cartItems => Map.from(_cartItems);
+  
+  bool get isEmpty => _cartItems.isEmpty;
+  int get itemCount => _cartItems.length;
+  
+  double get subtotal {
+    double total = 0.0;
+    _cartItems.forEach((key, item) {
+      total += _calculateItemTotalPrice(item);
+    });
+    return total;
   }
 
-  // Group cart items by restaurant/business owner
+  // ✅ Group cart items by business owner
   Map<String, List<Map<String, dynamic>>> get groupedCartItems {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     
-    for (final item in _cartItems.values) {
-      final restaurantId = item['restaurantId']?.toString() ?? '';
-      final businessOwnerId = item['business_owner_id']?.toString() ?? '';
+    _cartItems.forEach((key, item) {
+      final businessOwnerId = item['business_owner_id']?.toString() ?? 'unknown';
       
-      // Use business owner ID as the primary grouping key
-      final groupKey = businessOwnerId.isNotEmpty ? businessOwnerId : restaurantId;
+      // Calculate total price including extras for this item
+      final double totalPrice = _calculateItemTotalPrice(item);
       
-      if (groupKey.isNotEmpty) {
-        grouped.putIfAbsent(groupKey, () => []).add(item);
+      // Create a copy of the item with additional calculated fields
+      final itemWithTotal = Map<String, dynamic>.from(item);
+      itemWithTotal['unique_key'] = key;
+      itemWithTotal['totalPrice'] = totalPrice;
+      
+      if (!grouped.containsKey(businessOwnerId)) {
+        grouped[businessOwnerId] = [];
       }
-    }
+      
+      grouped[businessOwnerId]!.add(itemWithTotal);
+    });
     
     return grouped;
   }
 
-  double get subtotal => _cartItems.values.fold(
-      0.0, (sum, item) => sum + ((item['totalPrice'] as num?)?.toDouble() ?? 0.0));
+  // ✅ NEW: Calculate total price for a single item including extras
+  double _calculateItemTotalPrice(Map<String, dynamic> item) {
+    double total = 0.0;
+    
+    // Main product price
+    final price = double.tryParse(item['price']?.toString() ?? '0.0') ?? 0.0;
+    final quantity = item['quantity'] ?? 1;
+    total += price * quantity;
+    
+    // Extras prices
+    final selectedExtras = item['selected_extras'] as List<dynamic>?;
+    if (selectedExtras != null && selectedExtras.isNotEmpty) {
+      for (final extra in selectedExtras) {
+        final extraPrice = double.tryParse(extra['price']?.toString() ?? '0.0') ?? 0.0;
+        final extraQuantity = extra['quantity'] ?? 1;
+        total += extraPrice * extraQuantity;
+      }
+    }
+    
+    return total;
+  }
 
-  int get itemCount => _cartItems.length;
-  bool get isEmpty => _cartItems.isEmpty;
+  int getItemQuantity(String productId, String businessOwnerId) {
+    final uniqueKey = '${productId}_$businessOwnerId';
+    return _cartItems[uniqueKey]?['quantity'] ?? 0;
+  }
+
+  // ✅ NEW: Check if product is in cart
+  bool isProductInCart(String productId, String businessOwnerId) {
+    final uniqueKey = '${productId}_$businessOwnerId';
+    return _cartItems.containsKey(uniqueKey);
+  }
+
+  // ✅ NEW: Get item with extras for modal
+  Map<String, dynamic>? getItemWithExtras(String productId, String businessOwnerId) {
+    final uniqueKey = '${productId}_$businessOwnerId';
+    if (_cartItems.containsKey(uniqueKey)) {
+      return Map<String, dynamic>.from(_cartItems[uniqueKey]!);
+    }
+    return null;
+  }
 
   Future<void> initializeCart() async {
-    await _loadCart();
-  }
-
-  Future<void> _loadCart() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString('cart_items');
-      if (jsonString != null && jsonString.isNotEmpty) {
-        final Map<String, dynamic> decoded = json.decode(jsonString);
-        _cartItems.clear();
-        decoded.forEach((key, value) {
-          if (value is Map<String, dynamic>) {
-            _cartItems[key] = Map<String, dynamic>.from(value);
-          }
-        });
-        notifyListeners();
-        
-        // Debug: Print loaded cart items
-        if (kDebugMode) {
-          print('🛒 Loaded Cart Items: ${_cartItems.length}');
-          _cartItems.forEach((key, value) {
-            print('   - $key: ${value['product_name']} from ${value['restaurantName']}');
-          });
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error loading cart: $e');
-      }
-    }
-  }
-
-  Future<void> _saveCart() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = json.encode(_cartItems);
-      await prefs.setString('cart_items', jsonString);
-      
-      // Debug: Print saved cart items
-      if (kDebugMode) {
-        print('💾 Saved Cart Items: ${_cartItems.length}');
-        _cartItems.forEach((key, value) {
-          print('   - $key: ${value['product_name']} (Qty: ${value['quantity']}) from ${value['restaurantName']}');
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error saving cart: $e');
-      }
-    }
+    final loadedCart = await loadCart();
+    _cartItems.clear();
+    _cartItems.addAll(loadedCart);
+    notifyListeners();
   }
 
   Future<void> addItem(Map<String, dynamic> product, {int quantity = 1}) async {
     final String productId = product['id'].toString();
-    final String businessOwnerId = product['business_owner_id']?.toString() ?? 
-                                   product['restaurantOwnerId']?.toString() ?? 
-                                   'unknown';
-    final String restaurantId = product['restaurantId']?.toString() ?? '';
-    final String restaurantName = product['restaurantName']?.toString() ?? 'Unknown Restaurant';
+    final String businessOwnerId = product['business_owner_id']?.toString() ?? '1';
+    final String uniqueKey = '${productId}_$businessOwnerId';
+    
     final double price = double.tryParse(product['price']?.toString() ?? '0.0') ?? 0.0;
+    final String productName = product['product_name'] ?? product['name'] ?? 'Unknown Product';
+    final String imageUrl = product['product_image']?.toString() ?? product['image']?.toString() ?? '';
+    final String restaurantName = product['restaurantName'] ?? '';
     
-    // Generate unique key for this item
-    final String itemKey = _generateItemKey(productId, businessOwnerId);
-    
-    // Debug: Print product being added
-    if (kDebugMode) {
-      print('➕ Adding to cart: ${product['product_name']}');
-      print('   - Product ID: $productId');
-      print('   - Business Owner ID: $businessOwnerId');
-      print('   - Restaurant ID: $restaurantId');
-      print('   - Restaurant Name: $restaurantName');
-      print('   - Unique Key: $itemKey');
-      print('   - Price: $price');
-    }
-    
-    if (_cartItems.containsKey(itemKey)) {
-      // Same product from same business owner - increase quantity
-      _cartItems[itemKey]!['quantity'] = (_cartItems[itemKey]!['quantity'] as int) + quantity;
-      _cartItems[itemKey]!['totalPrice'] = (_cartItems[itemKey]!['quantity'] as int) * price;
-      
-      if (kDebugMode) {
-        print('   ↗️ Increased quantity to: ${_cartItems[itemKey]!['quantity']}');
-      }
+    if (_cartItems.containsKey(uniqueKey)) {
+      // Update existing item
+      final currentQuantity = _cartItems[uniqueKey]!['quantity'] ?? 0;
+      _cartItems[uniqueKey]!['quantity'] = currentQuantity + quantity;
     } else {
-      // New item or same product from different business owner
-      _cartItems[itemKey] = {
+      // Add new item
+      _cartItems[uniqueKey] = {
         'id': productId,
-        'unique_key': itemKey, // Store the unique key for reference
-        'product_name': product['product_name'] ?? product['name'] ?? 'Unknown Product',
+        'product_name': productName,
         'price': price,
         'quantity': quantity,
-        'totalPrice': quantity * price,
-        'product_image': product['product_image'] ?? product['image'] ?? '',
-        'restaurantId': restaurantId,
+        'image': imageUrl,
         'restaurantName': restaurantName,
         'business_owner_id': businessOwnerId,
-        'original_product_id': productId, // Keep original product ID for reference
+        'selected_extras': product['selected_extras'] ?? [],
       };
-      
-      if (kDebugMode) {
-        print('   🆕 Added new item with unique key: $itemKey');
-      }
     }
     
-    await _saveCart();
+    await saveCart(_cartItems);
     notifyListeners();
   }
 
-  Future<void> removeItem(String itemKey) async {
-    if (kDebugMode) {
-      print('🗑️ Removing from cart: $itemKey');
-      print('   - Product: ${_cartItems[itemKey]?['product_name']}');
+  // ✅ NEW: Update item with complete data (for modal updates)
+  Future<void> updateItemWithData(String uniqueKey, Map<String, dynamic> itemData) async {
+    _cartItems[uniqueKey] = Map<String, dynamic>.from(itemData);
+    await saveCart(_cartItems);
+    notifyListeners();
+  }
+
+  Future<void> increaseQuantity(String uniqueKey) async {
+    if (_cartItems.containsKey(uniqueKey)) {
+      _cartItems[uniqueKey]!['quantity'] = (_cartItems[uniqueKey]!['quantity'] ?? 0) + 1;
+      await saveCart(_cartItems);
+      notifyListeners();
     }
-    _cartItems.remove(itemKey);
-    await _saveCart();
+  }
+
+  Future<void> decreaseQuantity(String uniqueKey) async {
+    if (_cartItems.containsKey(uniqueKey)) {
+      final currentQuantity = _cartItems[uniqueKey]!['quantity'] ?? 0;
+      if (currentQuantity > 1) {
+        _cartItems[uniqueKey]!['quantity'] = currentQuantity - 1;
+      } else {
+        _cartItems.remove(uniqueKey);
+      }
+      await saveCart(_cartItems);
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeItem(String uniqueKey) async {
+    _cartItems.remove(uniqueKey);
+    await saveCart(_cartItems);
     notifyListeners();
   }
 
   Future<void> clearCart() async {
-    if (kDebugMode) {
-      print('🔄 Clearing cart');
-    }
     _cartItems.clear();
-    await _saveCart();
+    await clearCartStorage();
     notifyListeners();
   }
 
-  Future<void> updateQuantity(String itemKey, int newQuantity) async {
-    if (!_cartItems.containsKey(itemKey)) return;
+  // ✅ Convert cart to order format that backend expects
+  Map<String, dynamic> toOrderFormat() {
+    final List<Map<String, dynamic>> orderProducts = [];
     
-    if (newQuantity <= 0) {
-      await removeItem(itemKey);
-      return;
+    for (final item in _cartItems.values) {
+      final mainProduct = {
+        'product_id': int.tryParse(item['id'].toString()) ?? 0,
+        'quantity': item['quantity'] ?? 1,
+        'business_owner_id': int.tryParse(item['business_owner_id']?.toString() ?? '1'),
+      };
+      
+      // Add extras if they exist
+      final selectedExtras = item['selected_extras'] as List<dynamic>?;
+      if (selectedExtras != null && selectedExtras.isNotEmpty) {
+        final extrasList = selectedExtras.map((extra) {
+          return {
+            'product_id': int.tryParse(extra['id'].toString()) ?? 0,
+            'quantity': extra['quantity'] ?? 1,
+          };
+        }).toList();
+        
+        mainProduct['extras'] = extrasList;
+      }
+      
+      orderProducts.add(mainProduct);
     }
     
-    final price = _cartItems[itemKey]!['price'] as double;
-    _cartItems[itemKey]!['quantity'] = newQuantity;
-    _cartItems[itemKey]!['totalPrice'] = newQuantity * price;
-    
+    return {
+      'products': orderProducts,
+    };
+  }
+
+  // ✅ Debug method to check cart contents
+  void debugCartContents() {
     if (kDebugMode) {
-      print('🔄 Updated quantity for $itemKey to: $newQuantity');
+      print('🛒 CURRENT CART CONTENTS:');
+      _cartItems.forEach((key, item) {
+        final itemTotal = _calculateItemTotalPrice(item);
+        print('📦 Item: ${item['product_name']}');
+        print('   Base Price: ${item['price']}');
+        print('   Quantity: ${item['quantity']}');
+        print('   Business Owner ID: ${item['business_owner_id']}');
+        
+        final selectedExtras = item['selected_extras'] as List<dynamic>?;
+        if (selectedExtras != null && selectedExtras.isNotEmpty) {
+          print('   Extras:');
+          for (final extra in selectedExtras) {
+            final extraPrice = double.tryParse(extra['price']?.toString() ?? '0.0') ?? 0.0;
+            final extraQuantity = extra['quantity'] ?? 1;
+            final extraTotal = extraPrice * extraQuantity;
+            print('     - ${extra['variant_name'] ?? extra['product_name']} (Qty: $extraQuantity, Price: $extraPrice, Total: $extraTotal)');
+          }
+        } else {
+          print('   Extras: None');
+        }
+        
+        print('   TOTAL ITEM PRICE: $itemTotal');
+      });
+      
+      print('💰 SUBTOTAL: $subtotal');
+      print('📤 ORDER DATA TO BE SENT:');
+      final orderFormat = toOrderFormat();
+      print(jsonEncode(orderFormat));
     }
-    
-    await _saveCart();
-    notifyListeners();
-  }
-
-  Future<void> increaseQuantity(String itemKey) async {
-    if (!_cartItems.containsKey(itemKey)) return;
-    final currentQty = _cartItems[itemKey]!['quantity'] as int;
-    await updateQuantity(itemKey, currentQty + 1);
-  }
-
-  Future<void> decreaseQuantity(String itemKey) async {
-    if (!_cartItems.containsKey(itemKey)) return;
-    final currentQty = _cartItems[itemKey]!['quantity'] as int;
-    await updateQuantity(itemKey, currentQty - 1);
-  }
-
-  int getItemQuantity(String productId, String businessOwnerId) {
-    final itemKey = _generateItemKey(productId, businessOwnerId);
-    return _cartItems[itemKey]?['quantity'] as int? ?? 0;
-  }
-
-  // Get quantity by unique key (for use in UI)
-  int getItemQuantityByKey(String itemKey) {
-    return _cartItems[itemKey]?['quantity'] as int? ?? 0;
-  }
-
-  int getTotalItemsCount() {
-    return _cartItems.values.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
-  }
-
-  // Check if a product from specific business owner is in cart
-  bool isProductInCart(String productId, String businessOwnerId) {
-    final itemKey = _generateItemKey(productId, businessOwnerId);
-    return _cartItems.containsKey(itemKey);
   }
 }

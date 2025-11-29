@@ -1,8 +1,9 @@
 // lib/pages/restaurant_profile/widgets/restaurant_info.dart
 import 'package:flutter/material.dart';
+import 'package:food_app/models/shop_model.dart';
 
 class RestaurantInfo extends StatelessWidget {
-  final Map<String, dynamic> shop;
+  final Shop shop;
   final bool showHeader;
 
   const RestaurantInfo({
@@ -10,8 +11,6 @@ class RestaurantInfo extends StatelessWidget {
     required this.shop,
     required this.showHeader,
   });
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +41,7 @@ class RestaurantInfo extends StatelessWidget {
                     const Icon(Icons.star, size: 16, color: Colors.orange),
                     const SizedBox(width: 4),
                     Text(
-                      (shop['rating'] ?? '0.0').toString(),
+                      shop.rating.toStringAsFixed(1),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
@@ -53,7 +52,7 @@ class RestaurantInfo extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${((double.tryParse(shop['rating']?.toString() ?? '0.0') ?? 0.0) * 50).toInt()} reviews',
+                '${(shop.rating * 50).toInt()} reviews',
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 14,
@@ -63,7 +62,7 @@ class RestaurantInfo extends StatelessWidget {
               const Icon(Icons.access_time, size: 16, color: Colors.grey),
               const SizedBox(width: 4),
               Text(
-                '${shop['opening_time'] ?? '09:00'} - ${shop['closing_time'] ?? '23:00'}',
+                '${_formatTime(shop.openingTime) ?? '09:00'} - ${_formatTime(shop.closingTime) ?? '23:00'}',
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 14,
@@ -73,7 +72,7 @@ class RestaurantInfo extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            shop['description'] ?? 'No description available',
+            shop.description ?? 'No description available',
             style: TextStyle(
               color: Colors.grey.shade700,
               fontSize: 14,
@@ -81,25 +80,33 @@ class RestaurantInfo extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
             children: [
-              _buildInfoChip(
-                Icons.location_on,
-                shop['location'] ?? 'Location not specified',
-              ),
-              const SizedBox(width: 12),
-              _buildInfoChip(
-                Icons.category,
-                shop['business_type'] ?? 'general',
-
-              ),
+              if (shop.location != null && shop.location!.isNotEmpty)
+                _buildInfoChip(
+                  Icons.location_on,
+                  shop.location!,
+                ),
+              if (shop.businessType.isNotEmpty && shop.businessType != 'General')
+                _buildInfoChip(
+                  Icons.category,
+                  shop.businessType,
+                ),
+              // Add categories as chips if available
+              ...shop.categories.take(2).map((category) => 
+                _buildInfoChip(
+                  Icons.local_offer,
+                  category,
+                )
+              ).toList(),
             ],
           ),
         ],
       ),
     );
   }
-
 
   Widget _buildInfoChip(IconData icon, String text) {
     return Container(
@@ -125,5 +132,17 @@ class RestaurantInfo extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Helper method to format time (remove seconds if present)
+  String? _formatTime(String? time) {
+    if (time == null) return null;
+    
+    // If time includes seconds (e.g., "08:00:00"), remove them
+    if (time.length > 5) {
+      return time.substring(0, 5);
+    }
+    
+    return time;
   }
 }

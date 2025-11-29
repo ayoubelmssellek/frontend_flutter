@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:food_app/core/api_client.dart';
+import 'package:food_app/pages/home/client_home_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/services/location_service_widget.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/widgets/main_file_widgets/app_initialization_service.dart';
-import 'package:food_app/widgets/main_file_widgets/fcm_service.dart' as fcm_service;
+import 'package:food_app/widgets/main_file_widgets/fcm_service.dart';
 import 'package:food_app/widgets/main_file_widgets/loading_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,7 +35,7 @@ void main() async {
   ApiClient.init();
 
   // Setup Firebase Messaging background handler
-  FirebaseMessaging.onBackgroundMessage(fcm_service.firebaseMessagingBackgroundHandler);
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   runApp(
     EasyLocalization(
@@ -42,7 +43,7 @@ void main() async {
         Locale('ar'),
         Locale('en'),
         Locale('fr'),
-      ], // جميع اللغات المحتملة
+      ],
       path: 'assets/translations',
       fallbackLocale: const Locale('ar'),
       startLocale: startLocale,
@@ -60,41 +61,47 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> {
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  late AppInitializationService _appInitService;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   AppInitializationResult? _appInitResult;
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    _appInitService = AppInitializationService(ref);
     _initializeApp();
   }
 
   Future<void> _initializeApp() async {
-    final result = await _appInitService.initializeApp();
-    
-    if (mounted) {
+    try {
+      print("🚀 Starting app initialization...");
+      
+      // Initialize the app service
+      final appInitService = AppInitializationService(ref);
+      final result = await appInitService.initializeApp(navKey: _navigatorKey);
+      
       setState(() {
         _appInitResult = result;
+        _isInitializing = false;
       });
-      
-      // Setup FCM listeners after app is initialized
-      _setupFCMListeners(result.fcmToken, result.userData);
-    }
-  }
 
-  void _setupFCMListeners(String? fcmToken, Map<String, dynamic>? userData) {
-    _appInitService.fcmService.setupListeners(
-      navigatorKey: navigatorKey,
-      onNotificationCountUpdate: (count) {
-        ref.read(notificationCountProvider.notifier).state = count;
-      },
-    );
+      print("✅ App initialization complete!");
 
-    // Send FCM token to server if user is logged in
-    if (fcmToken != null && userData != null) {
-      _sendFcmTokenToServer(fcmToken, userData);
+      // Send FCM token to server if user is logged in
+      if (result.fcmToken != null && result.userData != null) {
+        _sendFcmTokenToServer(result.fcmToken!, result.userData!);
+      }
+
+    } catch (e) {
+      print("❌ App initialization error: $e");
+      setState(() {
+        _isInitializing = false;
+        _appInitResult = AppInitializationResult(
+          fcmToken: null,
+          initialPage: const ClientHomePage(),
+          userData: null,
+          isLoading: false,
+        );
+      });
     }
   }
 
@@ -118,7 +125,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   Widget build(BuildContext context) {
     // Show loading screen while initializing
-    if (_appInitResult == null) {
+    if (_isInitializing) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: const LoadingWidget(),
@@ -126,7 +133,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     }
 
     return MaterialApp(
-      navigatorKey: navigatorKey,
+      navigatorKey: _navigatorKey,
       title: 'uniqque',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

@@ -1,5 +1,7 @@
+// widgets/home_page/shops_list.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:food_app/models/shop_model.dart';
 import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/widgets/home_page/ShopCard.dart';
@@ -11,100 +13,29 @@ class ShopsList extends ConsumerWidget {
 
   const ShopsList({super.key, required this.selectedCategory});
 
-  // Map backend business owners data to shop format
-  List<Map<String, dynamic>> _mapBusinessOwnersToShops(List<dynamic> businessOwners) {
-    final now = DateTime.now();
-    
-    return businessOwners.map((business) {
-      // Calculate if business is currently open
-      final isOpen = _isBusinessOpen(
-        business['opening_time']?.toString(), 
-        business['closing_time']?.toString(), 
-        now
-      );
-      
-      // Get business type from the new API structure
-      final businessType = business['business_type']?.toString() ?? 'General';
-      
-      // Get categories from the new API structure (list of strings)
-      final categories = (business['categories'] as List<dynamic>? ?? [])
-          .whereType<String>()
-          .where((category) => category.isNotEmpty)
-          .toList();
-
-      return {
-        'id': business['id'].toString(),
-        'name': business['business_name'] ?? 'Unknown Business',
-        'image': business['avatar'], // Use avatar for profile image
-        'rating': double.tryParse(business['rating']?.toString() ?? '0.0') ?? 0.0,
-        'business_type': businessType, // Use the direct business_type field
-        'isOpen': business['is_active'] == 1 && isOpen,
-        'description': business['description'] ?? '',
-        'location': business['location'] ?? '',
-        'categories': categories, // List of category names
-        'opening_time': business['opening_time'],
-        'closing_time': business['closing_time'],
-        'cover_image': business['cover_image'], // Use cover_image for cover
-        'phone': business['number_phone'] ?? '',
-        'is_active': business['is_active'] ?? 0,
-      };
-    }).toList();
-  }
-
-  // Helper method to check if business is currently open (24-hour format)
-  bool _isBusinessOpen(String? openingTime, String? closingTime, DateTime now) {
-    if (openingTime == null || closingTime == null) return true;
-    
-    try {
-      // Parse opening time (assuming 24-hour format like "08:00:00" or "08:00")
-      final openParts = openingTime.split(':');
-      final openHour = int.parse(openParts[0]);
-      final openMinute = int.parse(openParts[1]);
-      
-      // Parse closing time (assuming 24-hour format)
-      final closeParts = closingTime.split(':');
-      final closeHour = int.parse(closeParts[0]);
-      final closeMinute = int.parse(closeParts[1]);
-      
-      // Create DateTime objects for today with the business hours
-      final openToday = DateTime(now.year, now.month, now.day, openHour, openMinute);
-      DateTime closeToday = DateTime(now.year, now.month, now.day, closeHour, closeMinute);
-      
-      // Handle businesses that close after midnight (e.g., 23:00 to 03:00)
-      if (closeToday.isBefore(openToday)) {
-        closeToday = closeToday.add(const Duration(days: 1));
-      }
-      
-      // Debug print to see what's happening
-      print('🕒 Business Hours Check:');
-      print('   Now: $now');
-      print('   Open: $openToday (${openHour.toString().padLeft(2, '0')}:${openMinute.toString().padLeft(2, '0')})');
-      print('   Close: $closeToday (${closeHour.toString().padLeft(2, '0')}:${closeMinute.toString().padLeft(2, '0')})');
-      print('   Is Open: ${now.isAfter(openToday) && now.isBefore(closeToday)}');
-      
-      return now.isAfter(openToday) && now.isBefore(closeToday);
-    } catch (e) {
-      print('❌ Error parsing business hours: $e');
-      print('   Opening time: $openingTime');
-      print('   Closing time: $closingTime');
-      return true; // If there's an error parsing, assume open
-    }
+  // Convert business owners data to Shop models
+  List<Shop> _mapBusinessOwnersToShops(List<dynamic> businessOwners) {
+    return businessOwners
+        .map((business) => Shop.fromJson(business))
+        .where((shop) => shop.id != 0) // Filter out invalid shops
+        .toList();
   }
 
   // Get top rated shops (sorted by rating)
-  List<Map<String, dynamic>> _getTopRatedShops(List<Map<String, dynamic>> shops) {
-    List<Map<String, dynamic>> sortedShops = List.from(shops);
-    sortedShops.sort((a, b) => b['rating'].compareTo(a['rating']));
-    
-    // Take top 4 highest rated shops for better UX
+  List<Shop> _getTopRatedShops(List<Shop> shops) {
+    List<Shop> sortedShops = List.from(shops);
+    sortedShops.sort((a, b) => b.rating.compareTo(a.rating));
     return sortedShops.take(4).toList();
   }
 
-  void _navigateToShopPage(BuildContext context, Map<String, dynamic> shop) {
+  void _navigateToShopPage(BuildContext context, Shop shop) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RestaurantProfile(shop: shop, business: null),
+        builder: (_) => RestaurantProfile(
+          shop: shop, // Convert Shop model to JSON for the profile page
+          business: null,
+        ),
       ),
     );
   }
@@ -135,25 +66,25 @@ class ShopsList extends ConsumerWidget {
   }
 
   // ✅ DEBUG: Method to check image URLs from backend
-  void _debugImageUrls(List<Map<String, dynamic>> shops) {
+  void _debugImageUrls(List<Shop> shops) {
     print('=== DEBUG: Image URLs from Backend ===');
-    for (var shop in shops.take(3)) { // Only show first 3 to avoid spam
-      print('Shop: ${shop['name']}');
-      print('Business Type: ${shop['business_type']}');
-      print('Categories: ${shop['categories']}');
-      print('Raw Cover Image: ${shop['cover_image']}');
-      print('Raw Avatar Image: ${shop['image']}');
-      print('Full Cover URL: ${ImageHelper.getImageUrl(shop['cover_image'])}');
-      print('Full Avatar URL: ${ImageHelper.getImageUrl(shop['image'])}');
-      print('Opening Time: ${shop['opening_time']}');
-      print('Closing Time: ${shop['closing_time']}');
-      print('Is Open: ${shop['isOpen']}');
+    for (var shop in shops.take(3)) {
+      print('Shop: ${shop.name}');
+      print('Business Type: ${shop.businessType}');
+      print('Categories: ${shop.categories}');
+      print('Raw Cover Image: ${shop.coverImage}');
+      print('Raw Avatar Image: ${shop.image}');
+      print('Full Cover URL: ${ImageHelper.getImageUrl(shop.coverImage)}');
+      print('Full Avatar URL: ${ImageHelper.getImageUrl(shop.image)}');
+      print('Opening Time: ${shop.openingTime}');
+      print('Closing Time: ${shop.closingTime}');
+      print('Is Open: ${shop.isOpen}');
       print('---');
     }
     print('=== END DEBUG ===');
   }
 
-  Widget _buildTopShopsSection(BuildContext context, List<Map<String, dynamic>> shops) {
+  Widget _buildTopShopsSection(BuildContext context, List<Shop> shops) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -197,17 +128,18 @@ class ShopsList extends ConsumerWidget {
     );
   }
 
-  Widget _buildShopsList(BuildContext context, List<Map<String, dynamic>> shops) {
-    return Column(
-      children: shops.map((shop) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: ShopCard(
-          shop: shop,
-          onTap: () => _navigateToShopPage(context, shop),
-        ),
-      )).toList(),
-    );
-  }
+// In ShopsList widget, update the _buildShopsList method:
+Widget _buildShopsList(BuildContext context, List<Shop> shops) {
+  return Column(
+    children: shops.map((shop) => Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: ShopCard(
+        shop: shop, // Pass the Shop model directly
+        onTap: () => _navigateToShopPage(context, shop),
+      ),
+    )).toList(),
+  );
+}
 
   Widget _buildLoadingState() {
     return Container(

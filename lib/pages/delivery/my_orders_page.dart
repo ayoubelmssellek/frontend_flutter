@@ -1,4 +1,4 @@
-// pages/delivery/my_orders_page.dart (Updated for multiple businesses)
+// pages/delivery/my_orders_page.dart (Updated with extras display)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/order_model.dart';
@@ -121,10 +121,10 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     }
   }
 
-  // ✅ NEW: Get unique businesses from order items
+  // ✅ Get unique businesses from order items
   List<String> _getUniqueBusinesses(Order order) {
     final businesses = <String>{};
-    for (final item in order.items) {
+    for (final item in order.itemsList) {
       if (item.businessName.isNotEmpty && item.businessName != 'unknown') {
         businesses.add(item.businessName);
       }
@@ -132,7 +132,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     return businesses.toList();
   }
 
-  // ✅ NEW: Get display text for businesses
+  // ✅ Get display text for businesses
   String _getBusinessesText(Order order) {
     final businesses = _getUniqueBusinesses(order);
     
@@ -140,6 +140,15 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     if (businesses.length == 1) return businesses.first;
     
     return '${businesses.length} Stores';
+  }
+
+  // ✅ NEW: Calculate total extras count for an order
+  int _getTotalExtrasCount(Order order) {
+    int totalExtras = 0;
+    for (final item in order.itemsList) {
+      totalExtras += item.extras?.length ?? 0;
+    }
+    return totalExtras;
   }
 
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
@@ -226,6 +235,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
 
   Widget _buildOrderCard(Order order) {
     final businesses = _getUniqueBusinesses(order);
+    final totalExtrasCount = _getTotalExtrasCount(order);
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -435,7 +445,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
               ),
               const SizedBox(height: 12),
               
-              // Order Items Preview
+              // ✅ UPDATED: Order Items Preview with Extras
               _buildOrderItemsPreview(order),
               const SizedBox(height: 12),
               
@@ -443,13 +453,31 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${order.totalPrice.toStringAsFixed(2)} MAD',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.deepOrange,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${order.totalPrice.toStringAsFixed(2)} MAD',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.deepOrange,
+                        ),
+                      ),
+                      // ✅ NEW: Show extras count if any
+                      if (totalExtrasCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'Includes $totalExtrasCount extras',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.green,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   _buildActionButton(order),
                 ],
@@ -462,70 +490,181 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   }
 
   Widget _buildOrderItemsPreview(Order order) {
-    final totalItems = order.items.length;
-    final previewItems = order.items.take(2).toList();
+    final totalItems = order.itemsList.length;
+    final previewItems = order.itemsList.take(2).toList();
+    final totalExtrasCount = _getTotalExtrasCount(order);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...previewItems.map((item) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 4,
-                decoration: const BoxDecoration(
-                  color: Colors.grey,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        ...previewItems.map((item) {
+          final hasExtras = item.extras != null && item.extras!.isNotEmpty;
+          
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Main Item
+                Row(
                   children: [
-                    Text(
-                      '${item.quantity}x ${item.productName}',
-                      style: const TextStyle(fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    // ✅ NEW: Show business name for each item
-                    if (item.businessName.isNotEmpty && item.businessName != 'unknown')
-                      Text(
-                        'From: ${item.businessName}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: Colors.grey,
+                        shape: BoxShape.circle,
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${item.quantity}x ${item.productName}',
+                            style: const TextStyle(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          // ✅ NEW: Show business name for each item
+                          if (item.businessName.isNotEmpty && item.businessName != 'unknown')
+                            Text(
+                              'From: ${item.businessName}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${item.price.toStringAsFixed(2)} MAD',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        // ✅ NEW: Show extras indicator
+                        if (hasExtras)
+                          Text(
+                            '+${item.extras!.length} extras',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Colors.green,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
-              ),
-              Text(
-                '${(item.quantity * item.price).toStringAsFixed(2)} MAD',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        )),
+                
+                // ✅ NEW: Show extras preview for this item
+                if (hasExtras) ...[
+                  const SizedBox(height: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Wrap(
+                      spacing: 4,
+                      runSpacing: 2,
+                      children: item.extras!.values.take(2).map((extra) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.green.shade100, width: 0.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 3,
+                                height: 3,
+                                decoration: const BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${extra.quantity}x ${extra.productName}',
+                                style: const TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  if (item.extras!.length > 2)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, top: 2),
+                      child: Text(
+                        '+ ${item.extras!.length - 2} more extras',
+                        style: const TextStyle(
+                          fontSize: 8,
+                          color: Colors.green,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          );
+        }).toList(),
+        
         if (totalItems > 2)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              '+ ${totalItems - 2} more items',
-              style: const TextStyle(
-                fontSize: 11,
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
-              ),
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: Colors.grey,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '+ ${totalItems - 2} more items',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                // ✅ NEW: Show total extras count
+                if (totalExtrasCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      '• $totalExtrasCount extras total',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
       ],

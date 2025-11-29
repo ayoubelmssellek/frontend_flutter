@@ -1,9 +1,14 @@
+// lib/pages/cart/checkout_page.dart
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/models/delivery_driver_model.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/cart/services/cart_service.dart';
+import 'package:food_app/pages/home/client_home_page.dart';
+import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
+import 'package:food_app/pages/home/search_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/cart/cart_provider.dart';
 import 'package:food_app/providers/order_providers.dart';
@@ -13,8 +18,9 @@ import 'package:food_app/widgets/checkout/order_summary_widget.dart';
 import 'package:food_app/widgets/checkout/user_info_widget.dart';
 import 'package:food_app/widgets/checkout/guest_warning_widget.dart';
 import 'package:food_app/widgets/checkout/order_processing_widget.dart';
-import 'package:food_app/widgets/checkout/order_confirmation_widget.dart';
+import 'package:food_app/widgets/checkout/order_confirmation_full_page.dart';
 import 'package:food_app/widgets/checkout/delivery_man_selection_widget.dart';
+import 'package:food_app/widgets/checkout/order_loading_widget.dart';
 
 class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({super.key});
@@ -26,7 +32,7 @@ class CheckoutPage extends ConsumerStatefulWidget {
 class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   bool _isSubmittingOrder = false;
   String _selectedDeliveryOption = 'all';
-  DeliveryDriver? _selectedDeliveryDriver; // Changed from String to DeliveryDriver
+  DeliveryDriver? _selectedDeliveryDriver;
   bool _isInitializing = true;
 
   @override
@@ -39,6 +45,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     try {
       final cartService = ref.read(cartServiceProvider);
       await cartService.initializeCart();
+      
+      // ✅ NEW: Debug cart contents on initialization
+      if (kDebugMode) {
+        print('🛒 CHECKOUT PAGE INITIALIZED');
+        cartService.debugCartContents();
+      }
     } catch (e) {
       print('Error initializing cart: $e');
     } finally {
@@ -66,6 +78,70 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       ),
       body: _buildBody(userAsync, cartService),
       bottomSheet: _buildBottomSheet(cartService, userAsync),
+      bottomNavigationBar: _buildBottomNavigationBar(2),
+    );
+  }
+
+  Widget _buildBottomNavigationBar(int currentIndex) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 20,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => ClientHomePage()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => SearchPage(businesses: [])),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => CheckoutPage()),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => ProfilePage()),
+            );
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.deepOrange,
+        unselectedItemColor: Colors.grey.shade600,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: 'Cart',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 
@@ -107,6 +183,20 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       data: (userData) {
         final isLoggedIn = userData['success'] == true;
         
+        // ✅ FIXED: Calculate totals including extras
+        final double subtotal = cartService.subtotal; // This now includes extras
+        final double deliveryFee = 2.99;
+        final double serviceFee = 1.50;
+        final double total = subtotal + deliveryFee + serviceFee;
+
+        if (kDebugMode) {
+          print('💰 CHECKOUT TOTALS:');
+          print('   Subtotal (with extras): $subtotal');
+          print('   Delivery Fee: $deliveryFee');
+          print('   Service Fee: $serviceFee');
+          print('   Total: $total');
+        }
+        
         return Column(
           children: [
             if (!isLoggedIn) const GuestWarningWidget(),
@@ -119,11 +209,11 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     const CartItemsWidget(),
                     const SizedBox(height: 16),
                     OrderSummaryWidget(
-                      subtotal: cartService.subtotal,
-                      deliveryFee: 2.99,
-                      serviceFee: 1.50,
+                      subtotal: subtotal, // ✅ Now includes extras
+                      deliveryFee: deliveryFee,
+                      serviceFee: serviceFee,
                       selectedDeliveryOption: _selectedDeliveryOption,
-                      selectedDeliveryMan: _selectedDeliveryDriver?.name, // Pass the name
+                      selectedDeliveryMan: _selectedDeliveryDriver?.name,
                       onDeliveryOptionChanged: (option) {
                         setState(() => _selectedDeliveryOption = option);
                       },
@@ -146,18 +236,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cart items skeleton
           _buildCartItemSkeleton(),
           const SizedBox(height: 16),
           _buildCartItemSkeleton(),
           const SizedBox(height: 16),
           _buildCartItemSkeleton(),
-          
           const SizedBox(height: 24),
-          
-          // Order summary skeleton
           _buildOrderSummarySkeleton(),
-          
           const SizedBox(height: 100),
         ],
       ),
@@ -180,7 +265,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       ),
       child: Row(
         children: [
-          // Image skeleton
           Container(
             width: 80,
             height: 80,
@@ -194,7 +278,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title skeleton
                 Container(
                   width: 120,
                   height: 16,
@@ -204,7 +287,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Description skeleton
                 Container(
                   width: double.infinity,
                   height: 12,
@@ -223,7 +305,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Price and quantity skeleton
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -270,7 +351,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title skeleton
           Container(
             width: 120,
             height: 20,
@@ -280,23 +360,17 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             ),
           ),
           const SizedBox(height: 16),
-          
-          // Summary items skeleton
           _buildSummaryLineSkeleton(),
           const SizedBox(height: 12),
           _buildSummaryLineSkeleton(),
           const SizedBox(height: 12),
           _buildSummaryLineSkeleton(),
           const SizedBox(height: 16),
-          
-          // Divider
           Container(
             height: 1,
             color: Colors.grey.shade300,
           ),
           const SizedBox(height: 16),
-          
-          // Total skeleton
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -352,20 +426,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // User info skeleton
           _buildUserInfoSkeleton(),
           const SizedBox(height: 16),
-          
-          // Cart items skeleton
           _buildCartItemSkeleton(),
           const SizedBox(height: 16),
           _buildCartItemSkeleton(),
-          
           const SizedBox(height: 24),
-          
-          // Order summary skeleton
           _buildOrderSummarySkeleton(),
-          
           const SizedBox(height: 100),
         ],
       ),
@@ -388,7 +455,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       ),
       child: Row(
         children: [
-          // Avatar skeleton
           Container(
             width: 50,
             height: 50,
@@ -402,7 +468,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name skeleton
                 Container(
                   width: 120,
                   height: 16,
@@ -412,7 +477,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Phone skeleton
                 Container(
                   width: 100,
                   height: 14,
@@ -422,7 +486,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                // Address skeleton
                 Container(
                   width: double.infinity,
                   height: 12,
@@ -434,7 +497,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               ],
             ),
           ),
-          // Edit button skeleton
           Container(
             width: 24,
             height: 24,
@@ -451,7 +513,15 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   Widget _buildBottomSheet(CartService cartService, AsyncValue<dynamic> userAsync) {
     if (cartService.isEmpty) return const SizedBox.shrink();
 
-    final total = cartService.subtotal + 2.99 + 1.50;
+    // ✅ FIXED: Calculate total including extras
+    final double subtotal = cartService.subtotal; // This includes extras
+    final double total = subtotal + 2.99 + 1.50;
+
+    if (kDebugMode) {
+      print('💰 BOTTOM SHEET TOTALS:');
+      print('   Subtotal (with extras): $subtotal');
+      print('   Total: $total');
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -468,17 +538,17 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       child: SafeArea(
         child: userAsync.when(
           loading: () => _buildBottomSheetSkeleton(),
-          error: (error, stack) => _buildGuestOrderWidget(),
+          error: (error, stack) => _buildGuestOrderWidget(total),
           data: (userData) {
             final isLoggedIn = userData['success'] == true;
             
             return isLoggedIn
                 ? OrderProcessingWidget(
                     isSubmitting: _isSubmittingOrder,
-                    total: total,
+                    total: total, // ✅ Now includes extras
                     onProcessOrder: _processOrder,
                   )
-                : _buildGuestOrderWidget();
+                : _buildGuestOrderWidget(total);
           },
         ),
       ),
@@ -490,7 +560,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          // Total price skeleton
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,7 +584,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               ],
             ),
           ),
-          // Button skeleton
           Container(
             width: 120,
             height: 48,
@@ -529,7 +597,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     );
   }
 
-  Widget _buildGuestOrderWidget() {
+  Widget _buildGuestOrderWidget(double total) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -539,6 +607,15 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.grey[700],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Total: ${total.toStringAsFixed(2)} MAD',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepOrange,
           ),
         ),
         const SizedBox(height: 12),
@@ -561,7 +638,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   context,
                   MaterialPageRoute(builder: (_) => const LoginPage()),
                 ).then((_) {
-                  // ignore: unused_result
                   ref.refresh(currentUserProvider);
                 }),
                 style: ElevatedButton.styleFrom(
@@ -583,6 +659,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   Future<void> _processOrder() async {
     final cartService = ref.read(cartServiceProvider);
     final userAsync = ref.read(currentUserProvider);
+
+    // ✅ NEW: Debug cart contents before processing
+    if (kDebugMode) {
+      print('🛒 PROCESSING ORDER - CART CONTENTS:');
+      cartService.debugCartContents();
+    }
 
     // Check if user is logged in
     final userData = userAsync.value;
@@ -619,11 +701,29 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     setState(() => _isSubmittingOrder = true);
 
     try {
-      // Build order data - now await since it's async
+      // Show loading page first
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const OrderLoadingWidget(
+            duration: Duration(seconds: 3),
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
+      );
+
+      // Wait for the loading animation to complete
+      await Future.delayed(const Duration(seconds: 3));
+
+      // ✅ UPDATED: Build order data using new format
       final orderData = await _buildOrderData(user, cartService);
       
       print('📦 Sending Order Data to Laravel:');
-      print(orderData);
+      print(jsonEncode(orderData));
 
       // Use the createOrderProvider to send the request
       final orderResult = await ref.read(createOrderProvider(orderData).future);
@@ -634,16 +734,18 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         // Order created successfully
         await cartService.clearCart();
         
-        // The response structure is: {'success': true, 'data': {'message': '...', 'order': {...}}}
-        // OR: {'success': true, 'data': {'order': {...}}}
         final apiResponse = orderResult['data'] ?? orderResult;
         
         print('🎯 API Response: $apiResponse');
         
+        // Remove loading page and show full page confirmation
+        Navigator.of(context).pop();
+        
         // Pass the actual API response to show real data
-        _showOrderConfirmation(apiResponse);
+        _showOrderConfirmation(apiResponse, cartService.subtotal);
       } else {
         // Handle error from API
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${orderResult['message']}'),
@@ -652,6 +754,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         );
       }
     } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error processing order: $e'),
@@ -665,11 +770,11 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
   }
 
+  // ✅ UPDATED: Build order data with proper extras format
   Future<Map<String, dynamic>> _buildOrderData(
     Map<String, dynamic> user, 
     CartService cartService,
   ) async {
-    // ✅ FIXED: Get stored location using the new LocationManager API
     final location = await LocationManager().getStoredLocation();
     String city = 'Unknown City';
     String street = 'Unknown Street';
@@ -679,10 +784,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       street = location.street;
     }
     
-    // Build the full address
     final String fullAddress = '$street, $city';
 
-    // ✅ FIXED: Use the actual selected driver ID instead of hardcoded 1
     final deliveryDriverId = _selectedDeliveryOption == 'choose' && _selectedDeliveryDriver != null 
         ? _selectedDeliveryDriver!.id 
         : null;
@@ -690,15 +793,14 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     print('🚚 Selected Delivery Driver ID: $deliveryDriverId');
     print('🚚 Selected Delivery Driver Name: ${_selectedDeliveryDriver?.name}');
 
+    // ✅ UPDATED: Use the new order format that includes extras
+    final orderFormat = cartService.toOrderFormat();
+    
     return {
       "client_id": user['client_id'],
-      "delivery_driver_id": deliveryDriverId, // Now using the actual driver ID
-      "address": fullAddress, // Now using the actual stored location
-      "products": cartService.cartItems.values.map((item) => {
-        "product_id": int.tryParse(item['id'].toString()) ?? 0,
-        "quantity": item['quantity'],
-        "business_owner_id": item['business_owner_id'] ?? 1, // fallback to 1 if not available
-      }).toList(),
+      "delivery_driver_id": deliveryDriverId,
+      "address": fullAddress,
+      "products": orderFormat['products'], // This now includes extras properly
     };
   }
 
@@ -718,7 +820,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()))
                 .then((_) {
-                  // ignore: unused_result
                   ref.refresh(currentUserProvider);
                 });
             },
@@ -729,16 +830,17 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     );
   }
 
-  void _showOrderConfirmation(Map<String, dynamic> orderResponse) {
+  void _showOrderConfirmation(Map<String, dynamic> orderResponse, double cartSubtotal) {
     final cartService = ref.read(cartServiceProvider);
     
     print('🎯 Raw Order Response: $orderResponse');
     
-    // The response structure is: {'message': '...', 'order': {...}}
-    // Extract the actual order data from the 'order' key
     final orderData = orderResponse['order'] ?? orderResponse;
     final orderId = orderData['id']?.toString() ?? 'N/A';
-    final totalPrice = orderData['total_price']?.toDouble() ?? (cartService.subtotal + 2.99 + 1.50);
+    
+    // ✅ FIXED: Use the actual cart subtotal that includes extras
+    final double totalPrice = orderData['total_price']?.toDouble() ?? (cartSubtotal + 2.99 + 1.50);
+    
     final address = orderData['address'] ?? 'User Address';
     final status = orderData['status'] ?? 'pending';
     final clientId = orderData['client_id']?.toString() ?? 'N/A';
@@ -751,25 +853,23 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
     print('   - ID: $orderId');
     print('   - Total: $totalPrice');
+    print('   - Cart Subtotal (with extras): $cartSubtotal');
     print('   - Address: $address');
     print('   - Status: $status');
     print('   - Items: ${items.length}');
     print('   - Item Count: $realItemCount');
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => OrderConfirmationWidget(
-        orderData: orderData, // Pass the actual order data from API
-        deliveryOption: _selectedDeliveryOption,
-        selectedDeliveryMan: _selectedDeliveryDriver?.name, // Pass the actual driver name
-        total: totalPrice,
-        itemCount: realItemCount, // Use real item count from API
-        orderId: orderId, // Pass the actual order ID from API
-        onContinue: () {
-          Navigator.pop(context); // Close dialog
-          Navigator.pop(context); // Go back to previous screen
-        },
+    // Navigate to full page order confirmation
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => OrderConfirmationFullPage(
+          orderData: orderData,
+          deliveryOption: _selectedDeliveryOption,
+          selectedDeliveryMan: _selectedDeliveryDriver?.name,
+          total: totalPrice,
+          itemCount: realItemCount,
+          orderId: orderId,
+        ),
       ),
     );
   }
@@ -781,7 +881,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       isScrollControlled: true,
       builder: (context) {
         return DeliveryManSelectionWidget(
-          onDeliveryManSelected: (deliveryDriver) { // Now receives DeliveryDriver object
+          onDeliveryManSelected: (deliveryDriver) {
             setState(() {
               _selectedDeliveryDriver = deliveryDriver;
             });

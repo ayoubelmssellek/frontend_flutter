@@ -1,21 +1,24 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/services/location_manager.dart';
 import 'package:food_app/services/location_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:food_app/providers/auth_providers.dart';
+import 'verification_dialog.dart';
 
-class UserInfoWidget extends StatefulWidget {
+class UserInfoWidget extends ConsumerStatefulWidget {
   final Map<String, dynamic> userData;
 
   const UserInfoWidget({super.key, required this.userData});
 
   @override
-  State<UserInfoWidget> createState() => _UserInfoWidgetState();
+  ConsumerState<UserInfoWidget> createState() => _UserInfoWidgetState();
 }
 
-class _UserInfoWidgetState extends State<UserInfoWidget> {
+class _UserInfoWidgetState extends ConsumerState<UserInfoWidget> {
   final LocationService _locationService = LocationService();
   final LocationManager _locationManager = LocationManager();
 
@@ -24,20 +27,61 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
   bool _isLoadingLocation = false;
   StreamSubscription? _locationSub;
   LocationError? _currentError;
+  Map<String, dynamic>? _currentUserData;
+  Timer? _verificationDialogTimer;
+  bool _hasAutoDialogBeenShown = false;
 
   @override
   void initState() {
     super.initState();
+    _currentUserData = widget.userData;
     _initializeLocation();
+    
+    // Show verification dialog if user is unverified after 2-second delay
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final status = _currentUserData?['status']?.toString() ?? 'unverified';
+      if ((status == 'unverified' || status == 'pending') && !_hasAutoDialogBeenShown) {
+        _verificationDialogTimer = Timer(const Duration(seconds: 2), () {
+          if (mounted && !_hasAutoDialogBeenShown) {
+            _showVerificationDialog(autoShow: true);
+            _hasAutoDialogBeenShown = true;
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshUserDataOnReturn();
+    });
+  }
+
+  Future<void> _refreshUserDataOnReturn() async {
+    try {
+      final currentStatus = _currentUserData?['status']?.toString() ?? 'unverified';
+      if (currentStatus == 'unverified' || currentStatus == 'pending') {
+        final freshUserData = await ref.refresh(currentUserProvider.future);
+        
+        if (freshUserData != null && freshUserData['success'] == true) {
+          setState(() {
+            _currentUserData = freshUserData['data'];
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ Error refreshing user data on return: $e');
+    }
   }
 
   void _initializeLocation() async {
-    // Listen for location updates
     _locationSub = _locationManager.locationStream.listen(
       _updateLocationFromStream,
     );
 
-    // Always refresh location when entering checkout
     await _refreshLocationOnEntry();
   }
 
@@ -46,7 +90,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
       setState(() {
         _city = location.city;
         _street = location.street;
-        _currentError = null; // Clear any previous errors
+        _currentError = null;
       });
     }
   }
@@ -58,7 +102,6 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
 
     try {
       await _locationService.refreshAndStoreLocation();
-      // Stream will update the UI automatically via _updateLocationFromStream
     } on LocationException catch (e) {
       _handleLocationException(e);
     } catch (e) {
@@ -77,7 +120,6 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
 
     try {
       await _locationService.refreshAndStoreLocation();
-      // Stream will update the UI automatically via _updateLocationFromStream
     } on LocationException catch (e) {
       _handleLocationException(e);
     } catch (e) {
@@ -99,7 +141,6 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
       });
     }
 
-    // Show appropriate dialog based on error type
     switch (exception.error) {
       case LocationError.serviceDisabled:
         _showEnableLocationDialog();
@@ -133,8 +174,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
         street: _street,
         isLoading: _isLoadingLocation,
         onRefresh: _refreshLocation,
-        hasPermanentError:
-            _currentError == LocationError.permissionPermanentlyDenied,
+        hasPermanentError: _currentError == LocationError.permissionPermanentlyDenied,
         onOpenSettings: _showLocationSettingsDialog,
       ),
     );
@@ -225,6 +265,23 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
     );
   }
 
+  void _showVerificationDialog({bool autoShow = false}) {
+    final status = _currentUserData?['status']?.toString() ?? 'unverified';
+    
+    if (status == 'approved') {
+      return;
+    }
+    
+    if (autoShow) {
+      _hasAutoDialogBeenShown = true;
+    }
+    
+    if (_currentUserData != null && mounted) {
+      _verificationDialogTimer?.cancel();
+      VerificationDialog.showVerificationRequiredDialog(context, _currentUserData!, ref);
+    }
+  }
+
   Widget _buildEnableLocationDialog() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -277,12 +334,9 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
                     onPressed: () async {
                       Navigator.pop(context);
                       await Geolocator.openLocationSettings();
-                      // Wait and check if GPS is now enabled
                       await Future.delayed(const Duration(seconds: 2));
-                      final serviceEnabled =
-                          await Geolocator.isLocationServiceEnabled();
+                      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
                       if (serviceEnabled && mounted) {
-                        // GPS is enabled, try to get location
                         await _refreshLocation();
                       }
                     },
@@ -424,13 +478,15 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
   @override
   void dispose() {
     _locationSub?.cancel();
+    _verificationDialogTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final userName = widget.userData['name']?.toString() ?? 'User';
-    final userPhone = widget.userData['number_phone']?.toString() ?? 'Phone not available';
+    final userName = _currentUserData?['name']?.toString() ?? 'User';
+    final userPhone = _currentUserData?['number_phone']?.toString() ?? 'Phone not available';
+    final status = _currentUserData?['status']?.toString() ?? 'not available';
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -476,6 +532,7 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
           Row(
             children: [
               Expanded(
+                flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -485,6 +542,8 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -493,22 +552,40 @@ class _UserInfoWidgetState extends State<UserInfoWidget> {
                         color: Colors.grey[600],
                         fontSize: 12,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Verified',
-                  style: TextStyle(
-                    color: Colors.green[700],
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+                constraints: const BoxConstraints(maxWidth: 80),
+                child: GestureDetector(
+                  onTap: () {
+                    if (status == 'unverified' || status == 'pending') {
+                      _showVerificationDialog(autoShow: false);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: status == 'approved' 
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      status == 'approved' ? 'verified' : status,
+                      style: TextStyle(
+                        color: status == 'approved' ? Colors.green[700] : Colors.orange[700],
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),

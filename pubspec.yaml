@@ -46,7 +46,6 @@ dependencies:
   url_launcher: ^6.3.2
   easy_localization: ^3.0.8
 
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -60,7 +59,7 @@ dev_dependencies:
 
   # Package to generate app icons
   flutter_launcher_icons: 0.14.4
-
+  android_notification_icons: ^0.0.1
   # Package to generate native splash screen
   flutter_native_splash: ^2.3.2
 
@@ -107,10 +106,15 @@ flutter:
   # For details regarding fonts from package dependencies, see https://flutter.dev/to/font-from-package
 
 # Configuration for app icons
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/splash_img.png"
+
+# ADD THIS for notification icons
+android_notification_icons:
+  image_path: "assets/images/notification_icon.png"
+  icon_name: "ic_notification"  # Optional - this will be the name
 
 # Configuration for splash screen
 flutter_native_splash:

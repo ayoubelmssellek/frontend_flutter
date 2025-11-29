@@ -23,28 +23,30 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
       _loadOrders();
     });
   }
-Future<void> _loadOrders() async {
-  if (_isLoading) return;
-  
-  setState(() => _isLoading = true);
-  try {
-    final clientId = ref.read(clientIdProvider);
-    print('🔄 [ClientOrdersPage] Loading orders for client ID: $clientId');
+
+  Future<void> _loadOrders() async {
+    if (_isLoading) return;
     
-    if (clientId != 0) {
-      await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
-      print('✅ [ClientOrdersPage] Orders loaded successfully');
-    } else {
-      print('❌ [ClientOrdersPage] No client ID found');
-    }
-  } catch (e) {
-    print('❌ [ClientOrdersPage] Error loading orders: $e');
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
+    setState(() => _isLoading = true);
+    try {
+      final clientId = ref.read(clientIdProvider);
+      print('🔄 [ClientOrdersPage] Loading orders for client ID: $clientId');
+      
+      if (clientId != 0) {
+        await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
+        print('✅ [ClientOrdersPage] Orders loaded successfully');
+      } else {
+        print('❌ [ClientOrdersPage] No client ID found');
+      }
+    } catch (e) {
+      print('❌ [ClientOrdersPage] Error loading orders: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-}
+
   Future<void> _refreshOrders() async {
     try {
       final clientId = ref.read(clientIdProvider);
@@ -193,6 +195,9 @@ Future<void> _loadOrders() async {
   }
 
   Widget _buildOrderCard(ClientOrder order) {
+    // Get first item for display
+    final firstItem = order.items.isNotEmpty ? order.items.values.first : null;
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 3,
@@ -323,7 +328,8 @@ Future<void> _loadOrders() async {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      order.items.map((item) => item.productName).join(', '),
+                      // Get first few item names for display
+                      _getItemsPreview(order),
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
@@ -553,8 +559,8 @@ Future<void> _loadOrders() async {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Items List
-                    ...order.items.map((item) => _buildOrderItem(item)).toList(),
+                    // Items List - UPDATED: Use items.values instead of items
+                    ...order.items.values.map((item) => _buildOrderItem(item)).toList(),
                     
                     const SizedBox(height: 16),
                     
@@ -637,34 +643,121 @@ Future<void> _loadOrders() async {
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main Item
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.productName,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${item.quantity}x • ${item.unitPrice.toStringAsFixed(2)} ${tr('currency.mad')}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    if (item.businessName.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          item.businessName,
+                          style: const TextStyle(
+                            color: Colors.blueGrey,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                '${item.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepOrange,
+                ),
+              ),
+            ],
+          ),
+          
+          // Extras - NEW: Show extras if they exist
+          if (item.extras != null && item.extras!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr('order.extras'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...item.extras!.values.map((extra) => _buildOrderExtra(extra)).toList(),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // NEW: Widget to display order extras
+  Widget _buildOrderExtra(ClientOrderExtra extra) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              color: Colors.deepOrange,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.productName,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item.quantity}x • ${item.price.toStringAsFixed(2)} ${tr('currency.mad')}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
+            child: Text(
+              '${extra.quantity}x ${extra.productName}',
+              style: const TextStyle(fontSize: 12),
             ),
           ),
           Text(
-            '${item.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
+            '+${extra.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.deepOrange,
+              fontSize: 12,
+              color: Colors.green,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
       ),
     );
+  }
+
+  // NEW: Helper method to get items preview text
+  String _getItemsPreview(ClientOrder order) {
+    final itemNames = order.items.values.take(2).map((item) => item.productName).toList();
+    final preview = itemNames.join(', ');
+    
+    if (order.items.length > 2) {
+      return '$preview, +${order.items.length - 2} more';
+    }
+    
+    return preview;
   }
 
   Widget _buildLoadingState() {

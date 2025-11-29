@@ -1,9 +1,8 @@
 // pages/auth/token_expired_page.dart
 import 'package:flutter/material.dart';
+import 'package:food_app/core/secure_storage.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/home/client_home_page.dart';
-import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
-import 'package:food_app/pages/home/profile_page/widgets/guest_profile.dart';
 
 class TokenExpiredPage extends StatelessWidget {
   final String message;
@@ -211,28 +210,49 @@ class TokenExpiredPage extends StatelessWidget {
     );
   }
 
+  Future<void> _clearAuthData() async {
+    try {
+      await SecureStorage.deleteToken();
+      print('Auth data cleared from secure storage');
+    } catch (e) {
+      print('Error clearing auth data: $e');
+      // Continue with navigation even if clearing fails
+    }
+  }
+
   void _navigateToLogin(BuildContext context) {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
-    );
+    // Use a flag to prevent multiple navigations
+    _clearAuthData().then((_) {
+      // Navigate to login without waiting for async operations
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    });
   }
 
   void _continueAsGuest(BuildContext context) {
-    // Navigate to GuestProfile page
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const ClientHomePage()),
-      (route) => false,
-    );
-    
-    // Show confirmation message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Continuing as guest'),
-        backgroundColor: Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    // Use a flag to prevent multiple navigations
+    _clearAuthData().then((_) {
+      // Navigate to guest mode without waiting for async operations
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const ClientHomePage()),
+        (route) => false,
+      );
+      
+      // Show confirmation message with a delay to ensure navigation completes
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (Navigator.of(context).canPop()) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Continuing as guest'),
+              backgroundColor: Colors.green.shade600,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      });
+    });
   }
 }

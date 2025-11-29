@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/pages/auth/login_page.dart';
+import 'package:food_app/pages/cart/checkout_page.dart';
+import 'package:food_app/pages/home/client_home_page.dart';
 import 'package:food_app/pages/home/profile_page/widgets/client_profile.dart';
 import 'package:food_app/pages/home/profile_page/widgets/guest_profile.dart';
+import 'package:food_app/pages/home/search_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/services/error_handler_service.dart';
 
@@ -243,9 +246,75 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         color: Colors.deepOrange,
         backgroundColor: Colors.white,
         child: _buildContent(profileState),
+        
       ),
+                bottomNavigationBar: _buildBottomNavigationBar(3), // 3= profile tab in
     );
   }
+  // ADD THIS METHOD TO EVERY PAGE
+Widget _buildBottomNavigationBar(int currentIndex) {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.shade300,
+          blurRadius: 20,
+          offset: const Offset(0, -2),
+        ),
+      ],
+    ),
+    child: BottomNavigationBar(
+      currentIndex: currentIndex,
+      onTap: (index) {
+        // Handle navigation based on index
+        if (index == 0) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => ClientHomePage()),
+          );
+        } else if (index == 1) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => SearchPage(businesses: [],)),
+          );
+        } else if (index == 2) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => CheckoutPage()),
+          );
+        } else if (index == 3) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => ProfilePage()),
+          );
+        }
+      },
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: Colors.deepOrange,
+      unselectedItemColor: Colors.grey.shade600,
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+      items: [
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.home),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.search),
+          label: 'Search',
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.shopping_cart),
+          label: 'Cart',
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildContent(ProfileState profileState) {
     if (profileState.isLoading) {

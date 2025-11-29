@@ -64,14 +64,14 @@ class _OrdersSectionState extends ConsumerState<OrdersSection> {
       data: (orders) {
         print('✅ [OrdersSection] Received ${orders.length} orders');
         
-        // Show only pending and accepted orders in horizontal scroll
+        // Filter out empty orders and show only pending/accepted
         final activeOrders = orders.where((order) => 
-          order.status == OrderStatus.pending || order.status == OrderStatus.accepted
+          !order.isEmpty && 
+          (order.status == OrderStatus.pending || order.status == OrderStatus.accepted)
         ).toList();
 
         print('📦 [OrdersSection] Active orders: ${activeOrders.length}');
 
-        // Only show section if there are active orders
         if (activeOrders.isEmpty) {
           return const SizedBox.shrink();
         }
@@ -114,9 +114,9 @@ class _OrdersSectionState extends ConsumerState<OrdersSection> {
               
               const SizedBox(height: 8),
               
-              // Horizontal Scroll for Active Orders - FIXED HEIGHT
+              // Horizontal Scroll for Active Orders
               SizedBox(
-                height: 200, // Increased height to prevent overflow
+                height: 200,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: activeOrders.length,
@@ -140,31 +140,29 @@ class _OrdersSectionState extends ConsumerState<OrdersSection> {
     );
   }
 
-
-
-
-Widget _buildOrderCard(ClientOrder order) {
-  return Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(
-        color: Colors.deepOrange.withOpacity(0.2),
-        width: 1,
+  Widget _buildOrderCard(ClientOrder order) {
+    // Get first item for display
+    final firstItem = order.items.isNotEmpty ? order.items.values.first : null;
+    
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.deepOrange.withOpacity(0.2),
+          width: 1,
+        ),
       ),
-    ),
-    child: InkWell(
-      onTap: () {
-        _showOrderDetails(order);
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 300,
-        height: 190, // Increased height to be safe
-        child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(), // Disable scrolling
+      child: InkWell(
+        onTap: () {
+          _showOrderDetails(order);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 300,
+          height: 190,
           child: Padding(
-            padding: const EdgeInsets.all(12), // Even smaller padding
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -181,7 +179,7 @@ Widget _buildOrderCard(ClientOrder order) {
                           Text(
                             '${tr('order.order')} #${order.id}',
                             style: const TextStyle(
-                              fontSize: 14, // Even smaller
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                             maxLines: 1,
@@ -272,13 +270,13 @@ Widget _buildOrderCard(ClientOrder order) {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (order.items.isNotEmpty)
+                    if (firstItem != null)
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            order.items.first.productName,
+                            firstItem.productName,
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -298,6 +296,14 @@ Widget _buildOrderCard(ClientOrder order) {
                               ),
                             ),
                         ],
+                      ),
+                    if (firstItem == null)
+                      Text(
+                        tr('order.no_items'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                   ],
                 ),
@@ -366,9 +372,8 @@ Widget _buildOrderCard(ClientOrder order) {
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _showOrderDetails(ClientOrder order) {
     showModalBottomSheet(
@@ -507,8 +512,21 @@ Widget _buildOrderCard(ClientOrder order) {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Items List with product images
-                    ...order.items.map((item) => _buildOrderItem(item)).toList(),
+                    // Items List
+                    if (order.items.isNotEmpty)
+                      ...order.items.values.map((item) => _buildOrderItem(item)).toList()
+                    else
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          tr('order.no_items'),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     
                     const SizedBox(height: 16),
                     
@@ -591,62 +609,124 @@ Widget _buildOrderCard(ClientOrder order) {
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product Image - USING CustomNetworkImage
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.grey[100],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CustomNetworkImage(
-                imageUrl: item.productImage,
+          // Main Item
+          Row(
+            children: [
+              // Product Image
+              Container(
                 width: 50,
                 height: 50,
-                fit: BoxFit.cover,
-                placeholder: 'default',
-                borderRadius: BorderRadius.circular(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[100],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CustomNetworkImage(
+                    imageUrl: item.productImage,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                    placeholder: 'default',
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.productName,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item.quantity}x • ${item.price.toStringAsFixed(2)} ${tr('currency.mad')}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                if (item.businessName.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      item.businessName,
-                      style: const TextStyle(
-                        color: Colors.blueGrey,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.productName,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${item.quantity}x • ${item.unitPrice.toStringAsFixed(2)} ${tr('currency.mad')}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    if (item.businessName.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          item.businessName,
+                          style: const TextStyle(
+                            color: Colors.blueGrey,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
+                  ],
+                ),
+              ),
+              Text(
+                '${item.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepOrange,
+                ),
+              ),
+            ],
+          ),
+          
+          // Extras
+          if (item.extras != null && item.extras!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 62),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr('order.extras'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
                     ),
                   ),
-              ],
+                  const SizedBox(height: 4),
+                  ...item.extras!.values.map((extra) => _buildOrderExtra(extra)).toList(),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderExtra(ClientOrderExtra extra) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              color: Colors.deepOrange,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${extra.quantity}x ${extra.productName}',
+              style: const TextStyle(fontSize: 12),
             ),
           ),
           Text(
-            '${item.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
+            '+${extra.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.deepOrange,
+              fontSize: 12,
+              color: Colors.green,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -654,7 +734,7 @@ Widget _buildOrderCard(ClientOrder order) {
     );
   }
 
-  // ... (Keep all the helper methods the same: _getStatusIcon, _formatDetailedTime, etc.)
+  // Helper methods
   IconData _getStatusIcon(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:

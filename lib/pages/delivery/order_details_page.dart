@@ -1,4 +1,4 @@
-// pages/delivery/order_details_page.dart (Updated - Handles multiple businesses)
+// pages/delivery/order_details_page.dart (Updated - Handles extras display)
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/order_model.dart';
@@ -120,10 +120,10 @@ class OrderDetailsPage extends StatelessWidget {
     }
   }
 
-  // ✅ NEW: Get unique businesses from order items
+  // ✅ Get unique businesses from order items
   List<String> _getUniqueBusinesses() {
     final businesses = <String>{};
-    for (final item in order.items) {
+    for (final item in order.itemsList) {
       if (item.businessName.isNotEmpty) {
         businesses.add(item.businessName);
       }
@@ -131,7 +131,7 @@ class OrderDetailsPage extends StatelessWidget {
     return businesses.toList();
   }
 
-  // ✅ NEW: Show business selection dialog for multiple businesses
+  // ✅ Show business selection dialog for multiple businesses
   Future<void> _showBusinessSelectionDialog(BuildContext context, String title) async {
     final businesses = _getUniqueBusinesses();
     
@@ -223,9 +223,198 @@ class OrderDetailsPage extends StatelessWidget {
     }
   }
 
+  // ✅ UPDATED: Build order item with extras displayed in compact format
+Widget _buildOrderItem(OrderItem item) {
+  final hasExtras = item.extras != null && item.extras!.isNotEmpty;
+  
+  return Container(
+    margin: const EdgeInsets.symmetric(vertical: 8),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.grey[50],
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.grey[200]!),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Main Item Row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.productName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item.quantity}x ${item.unitPrice.toStringAsFixed(2)} MAD',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                  if (item.businessName.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.blue.shade100),
+                      ),
+                      child: Text(
+                        item.businessName,
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            
+            // Item Total
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${item.price.toStringAsFixed(2)} MAD',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepOrange,
+                    fontSize: 14,
+                  ),
+                ),
+                if (hasExtras)
+                  Text(
+                    '+ ${item.extras!.length} extras',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+
+        // ✅ UPDATED: Extras displayed in compact format (like OrdersSection)
+        if (hasExtras) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 0), // No extra indentation
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Extras',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ...item.extras!.values.map((extra) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      // Small dot indicator
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Colors.deepOrange,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${extra.quantity}x ${extra.productName}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      Text(
+                        '+${extra.price.toStringAsFixed(2)} MAD',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+        ],
+
+        // Item Subtotal (including extras)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Item Subtotal:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '${item.subtotal.toStringAsFixed(2)} MAD',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepOrange,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+  // ✅ NEW: Calculate total for extras
+  double _calculateExtrasTotal(Map<String, OrderExtra> extras) {
+    double total = 0.0;
+    extras.forEach((key, extra) {
+      total += extra.price;
+    });
+    return total;
+  }
+
+  // ✅ NEW: Calculate order subtotal (items + extras)
+  double get _orderSubtotal {
+    double subtotal = 0.0;
+    for (final item in order.itemsList) {
+      subtotal += item.subtotal;
+    }
+    return subtotal;
+  }
+
   @override
   Widget build(BuildContext context) {
     final uniqueBusinesses = _getUniqueBusinesses();
+    final totalExtrasCount = order.itemsList.fold(0, (sum, item) => sum + (item.extras?.length ?? 0));
     
     return Scaffold(
       appBar: AppBar(
@@ -283,6 +472,8 @@ class OrderDetailsPage extends StatelessWidget {
                 _buildInfoRow('Total Amount', '${order.totalPrice.toStringAsFixed(2)} MAD'),
                 _buildInfoRow('Status', _getStatusText(order.status)),
                 _buildInfoRow('Items Count', order.itemCount.toString()),
+                if (totalExtrasCount > 0)
+                  _buildInfoRow('Extras Count', '$totalExtrasCount extras'),
                 _buildInfoRow('Stores', uniqueBusinesses.length.toString()),
                 if (order.deliveryDriverId != null)
                   _buildInfoRow('Delivery Driver ID', order.deliveryDriverId.toString()),
@@ -319,7 +510,6 @@ class OrderDetailsPage extends StatelessWidget {
               title: 'Store Information',
               icon: Icons.store,
               children: [
-                // ✅ FIXED: Show all unique businesses
                 if (uniqueBusinesses.isNotEmpty) ...[
                   _buildInfoRow('Number of Stores', uniqueBusinesses.length.toString()),
                   const SizedBox(height: 8),
@@ -363,7 +553,6 @@ class OrderDetailsPage extends StatelessWidget {
                   }).toList(),
                   const SizedBox(height: 8),
                   
-                  // ✅ FIXED: Show appropriate button based on number of businesses
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -389,105 +578,65 @@ class OrderDetailsPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Order Items
+            // Order Items with Extras
             _buildSection(
-              title: 'Order Items (${order.itemCount})',
+              title: 'Order Items (${order.itemCount})${totalExtrasCount > 0 ? ' + $totalExtrasCount extras' : ''}',
               icon: Icons.shopping_bag,
               children: [
-                ...order.items.map((item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Product Details - Full width
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.productName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${item.quantity}x ${item.price.toStringAsFixed(2)} MAD',
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                            if (item.businessName.isNotEmpty)
-                              Container(
-                                margin: const EdgeInsets.only(top: 2),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.blue.shade100),
-                                ),
-                                child: Text(
-                                  item.businessName,
-                                  style: const TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            if (item.productId != null || item.businessOwnerId != null)
-                              Text(
-                                'IDs: ${item.productId != null ? 'Product #${item.productId}' : ''}${item.productId != null && item.businessOwnerId != null ? ', ' : ''}${item.businessOwnerId != null ? 'Business #${item.businessOwnerId}' : ''}',
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 10,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      
-                      // Total for this item
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${item.totalPrice.toStringAsFixed(2)} MAD',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepOrange,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                )).toList(),
+                // Items List
+                ...order.itemsList.map((item) => _buildOrderItem(item)).toList(),
                 
                 const Divider(),
                 
-                // Total Amount
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Order Totals Breakdown
+                Column(
                   children: [
-                    const Text(
-                      'Total Amount',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    // Subtotal
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Subtotal:'),
+                          Text('${_orderSubtotal.toStringAsFixed(2)} MAD'),
+                        ],
                       ),
                     ),
-                    Text(
-                      '${order.totalPrice.toStringAsFixed(2)} MAD',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.deepOrange,
+                    
+                    // Delivery Fee (if applicable)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Delivery Fee:'),
+                          Text('${(order.totalPrice - _orderSubtotal).toStringAsFixed(2)} MAD'),
+                        ],
+                      ),
+                    ),
+                    
+                    // Total Amount
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total Amount:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '${order.totalPrice.toStringAsFixed(2)} MAD',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.deepOrange,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

@@ -2,21 +2,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/image_helper.dart';
+import 'package:food_app/models/shop_model.dart';
 import 'package:food_app/providers/cart/cart_provider.dart';
 import 'package:food_app/widgets/bussness_profile/product_card.dart';
 
 class ProductsSection extends ConsumerStatefulWidget {
   final List<dynamic> products;
   final String selectedCategory;
-  final ScrollController scrollController;
   final Function(String) onCategoryChanged;
-  final Map<String, dynamic> shop;
+  final Shop shop;
 
   const ProductsSection({
     super.key,
     required this.products,
     required this.selectedCategory,
-    required this.scrollController,
     required this.onCategoryChanged,
     required this.shop,
   });
@@ -26,6 +25,8 @@ class ProductsSection extends ConsumerStatefulWidget {
 }
 
 class _ProductsSectionState extends ConsumerState<ProductsSection> {
+  final ScrollController _scrollController = ScrollController();
+
   List<String> _getCategories(List<dynamic> products) {
     final categories = ['All'];
     final uniqueCategories = products
@@ -52,6 +53,12 @@ class _ProductsSectionState extends ConsumerState<ProductsSection> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final filtered = _getFilteredProducts(widget.products);
     final grouped = _groupProductsByCategory(filtered);
@@ -62,7 +69,13 @@ class _ProductsSectionState extends ConsumerState<ProductsSection> {
 
     return Column(
       children: [
-        _buildCategoriesRow(),
+        // Categories Row - Fixed height
+        SizedBox(
+          height: 100, // Fixed height to prevent layout issues
+          child: _buildCategoriesRow(),
+        ),
+        
+        // Products List - Takes remaining space
         Expanded(
           child: _buildProductsList(grouped, filtered),
         ),
@@ -71,58 +84,86 @@ class _ProductsSectionState extends ConsumerState<ProductsSection> {
   }
 
   Widget _buildProductsList(Map<String, List<dynamic>> grouped, List<dynamic> filtered) {
-    return ListView(
-      controller: widget.scrollController,
-      padding: const EdgeInsets.only(bottom: 20), // Remove top padding
-      children: [
-        const SizedBox(height: 16), // Add some space at top instead
-        if (widget.selectedCategory == 'All')
-          ...grouped.entries
-              .map((e) => _buildProductCategorySection(e.key, e.value))
-              .toList()
-        else
-          _buildProductCategorySection(widget.selectedCategory, filtered),
-      ],
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.only(bottom: 100),
+      physics: const BouncingScrollPhysics(),
+      itemCount: widget.selectedCategory == 'All' 
+          ? grouped.length 
+          : 1,
+      itemBuilder: (context, index) {
+        if (widget.selectedCategory == 'All') {
+          final category = grouped.keys.elementAt(index);
+          final products = grouped[category]!;
+          return _buildProductCategorySection(category, products);
+        } else {
+          return _buildProductCategorySection(widget.selectedCategory, filtered);
+        }
+      },
     );
   }
 
   Widget _buildCategoriesRow() {
     final categories = _getCategories(widget.products);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade100,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Categories',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              color: Colors.grey.shade800,
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 40,
+          Expanded(
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: categories.length,
               itemBuilder: (context, index) {
                 final cat = categories[index];
                 final sel = widget.selectedCategory == cat;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(cat),
-                    selected: sel,
-                    onSelected: (_) => widget.onCategoryChanged(cat),
-                    selectedColor: Colors.deepOrange,
-                    labelStyle: TextStyle(
-                      color: sel ? Colors.white : Colors.grey.shade700,
-                      fontWeight: FontWeight.w500,
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: Material(
+                    color: sel ? Colors.deepOrange : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => widget.onCategoryChanged(cat),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: sel ? Colors.deepOrange : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          color: sel ? Colors.deepOrange : Colors.transparent,
+                        ),
+                        child: Text(
+                          cat,
+                          style: TextStyle(
+                            color: sel ? Colors.white : Colors.grey.shade700,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ),
-                    backgroundColor: Colors.grey.shade100,
                   ),
                 );
               },
@@ -136,31 +177,52 @@ class _ProductsSectionState extends ConsumerState<ProductsSection> {
   Widget _buildProductCategorySection(String category, List<dynamic> products) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            category,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.deepOrange,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                category,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${products.length} items',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
         Column(
           children: products
               .map<Widget>((p) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     child: ProductCard(
                       product: p,
-                      shop: widget.shop,
+                      shop: widget.shop, // Convert Shop model to JSON for ProductCard
                     ),
                   ))
               .toList(),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -171,34 +233,47 @@ class _ProductsSectionState extends ConsumerState<ProductsSection> {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 10,
+            color: Colors.grey.shade100,
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.fastfood_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.fastfood_outlined,
+              size: 40,
+              color: Colors.grey.shade400,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text(
             'No products found',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: Colors.grey.shade700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Try selecting a different category',
-            style: TextStyle(color: Colors.grey.shade500),
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 14,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
