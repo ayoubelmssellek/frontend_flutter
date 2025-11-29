@@ -1,4 +1,3 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,21 +10,15 @@ import 'package:food_app/widgets/main_file_widgets/app_initialization_service.da
 import 'package:food_app/widgets/main_file_widgets/fcm_service.dart';
 import 'package:food_app/widgets/main_file_widgets/loading_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-// Provider for notification count
-final notificationCountProvider = StateProvider<int>((ref) => 0);
+import 'package:food_app/widgets/main_file_widgets/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize easy_localization first
   await EasyLocalization.ensureInitialized();
 
-  // قراءة اللغة المخزنة من SharedPreferences
   final prefs = await SharedPreferences.getInstance();
-  final String? savedLangCode = prefs.getString('locale'); // 'ar', 'en', 'fr'
-
-  // إذا ما كانتش مخزنة، نستعمل default locale
+  final String? savedLangCode = prefs.getString('locale');
   final Locale startLocale = savedLangCode != null ? Locale(savedLangCode) : const Locale('ar');
 
   // Initialize Firebase
@@ -34,16 +27,11 @@ void main() async {
   // Initialize ApiClient
   ApiClient.init();
 
-  // Setup Firebase Messaging background handler
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  // NO FCM setup here - handled by FCMManager
 
   runApp(
     EasyLocalization(
-      supportedLocales: const [
-        Locale('ar'),
-        Locale('en'),
-        Locale('fr'),
-      ],
+      supportedLocales: const [Locale('ar'), Locale('en'), Locale('fr')],
       path: 'assets/translations',
       fallbackLocale: const Locale('ar'),
       startLocale: startLocale,
@@ -75,7 +63,17 @@ class _MyAppState extends ConsumerState<MyApp> {
     try {
       print("🚀 Starting app initialization...");
       
-      // Initialize the app service
+      // 1. Initialize Notification Service FIRST
+      final notificationService = ref.read(notificationServiceProvider);
+      await notificationService.initialize();
+      print("✅ Notification Service ready");
+
+      // 2. Initialize FCM Manager SECOND
+      final fcmManager = ref.read(fcmManagerProvider);
+      await fcmManager.initialize();
+      print("✅ FCM Manager ready");
+
+      // 3. Initialize App Service
       final appInitService = AppInitializationService(ref);
       final result = await appInitService.initializeApp(navKey: _navigatorKey);
       
@@ -87,8 +85,11 @@ class _MyAppState extends ConsumerState<MyApp> {
       print("✅ App initialization complete!");
 
       // Send FCM token to server if user is logged in
-      if (result.fcmToken != null && result.userData != null) {
-        _sendFcmTokenToServer(result.fcmToken!, result.userData!);
+      if (result.userData != null) {
+        final token = await fcmManager.getToken();
+        if (token != null) {
+          _sendFcmTokenToServer(token, result.userData!);
+        }
       }
 
     } catch (e) {
@@ -124,7 +125,6 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading screen while initializing
     if (_isInitializing) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
