@@ -346,7 +346,7 @@ Future<void> _register() async {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "التسجيل كموصل",
+          "auth_page.delivery_register_title".tr(),
           style: TextStyle(
             color: Colors.grey.shade800,
             fontWeight: FontWeight.w700,
@@ -368,10 +368,10 @@ Future<void> _register() async {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
-                      Text("انضم كموصل توصيل",
+                      Text("auth_page.join_as_delivery".tr(),
                           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.grey.shade900)),
                       const SizedBox(height: 8),
-                      Text("سجل الآن لبدء توصيل الطلبات",
+                      Text("auth_page.register_delivery_subtitle".tr(),
                           style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                       const SizedBox(height: 32),
 
@@ -411,13 +411,13 @@ Future<void> _register() async {
                       const SizedBox(height: 20),
                       Center(
                         child: Text(
-                          "انقر لرفع صورة الملف الشخصي",
+                          "auth_page.upload_profile_photo".tr(),
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                       ),
                       Center(
                         child: Text(
-                          "يمكنك التقاط صورة أو اختيارها من المعرض",
+                          "auth_page.photo_hint".tr(),
                           style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                         ),
                       ),
@@ -426,8 +426,8 @@ Future<void> _register() async {
                       // Full Name
                       TextFormField(
                         controller: _nameController,
-                        decoration: _inputDecoration('الاسم الكامل', Icons.person),
-                        validator: (val) => val!.isEmpty ? 'الاسم مطلوب' : null,
+                        decoration: _inputDecoration('auth_page.full_name'.tr(), Icons.person),
+                        validator: (val) => val!.isEmpty ? 'auth_page.name_required'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -435,8 +435,8 @@ Future<void> _register() async {
                       TextFormField(
                         controller: _whatsappController,
                         keyboardType: TextInputType.phone,
-                        decoration: _inputDecoration('رقم الواتساب', Icons.phone),
-                        validator: (val) => val!.isEmpty ? 'رقم الواتساب مطلوب' : null,
+                        decoration: _inputDecoration('auth_page.whatsapp_number'.tr(), Icons.phone),
+                        validator: (val) => val!.isEmpty ? 'auth_page.whatsapp_required'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -444,7 +444,7 @@ Future<void> _register() async {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        decoration: _inputDecoration('كلمة المرور', Icons.lock).copyWith(
+                        decoration: _inputDecoration('auth_page.password'.tr(), Icons.lock).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -453,7 +453,7 @@ Future<void> _register() async {
                             onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
                         ),
-                        validator: (val) => val!.length < 8 ? 'يجب أن تكون كلمة المرور 8 أحرف على الأقل' : null,
+                        validator: (val) => val!.length < 8 ? 'auth_page.password_min_8'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -461,7 +461,7 @@ Future<void> _register() async {
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirmPassword,
-                        decoration: _inputDecoration('تأكيد كلمة المرور', Icons.lock_outline).copyWith(
+                        decoration: _inputDecoration('auth_page.confirm_password'.tr(), Icons.lock_outline).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
@@ -470,7 +470,7 @@ Future<void> _register() async {
                             onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                           ),
                         ),
-                        validator: (val) => val != _passwordController.text ? 'كلمات المرور غير متطابقة' : null,
+                        validator: (val) => val != _passwordController.text ? 'auth_page.passwords_not_match'.tr() : null,
                       ),
                       const SizedBox(height: 40),
 
@@ -486,7 +486,7 @@ Future<void> _register() async {
                           onPressed: _isLoading ? null : _register,
                           child: _isLoading
                               ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text("التسجيل كموصل", style: TextStyle(fontSize: 18)),
+                              : Text("auth_page.delivery_register_title".tr(), style: const TextStyle(fontSize: 18)),
                         ),
                       ),
                       const SizedBox(height: 24),
