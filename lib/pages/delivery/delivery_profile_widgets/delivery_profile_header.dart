@@ -16,15 +16,50 @@ class DeliveryProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = userData['data'] ?? {};
     final deliveryDriver = user['delivery_driver'] ?? {};
-    
-    final userName = user['name'] ?? 'delivery_profile_page.driver'.tr();
+
+    final userName = user['name'] ?? 'delivery_profile_header.driver'.tr();
     final userStatus = user['status'] ?? 'unknown';
     final roleName = user['role_name'] ?? 'delivery_driver';
-    
+
     final avatarPath = deliveryDriver['avatar'];
-    final avatarUrl = avatarPath != null 
+    final avatarUrl = avatarPath != null
         ? ImageHelper.getImageUrl(avatarPath)
         : _getDefaultAvatar(userName);
+
+    // Traduction du rôle
+    final roleKey = 'delivery_profile_header.role_$roleName';
+    final roleText = roleKey.tr();
+
+    // Traduction du status
+    String statusKey;
+    switch (userStatus) {
+      case 'approved':
+        statusKey = 'delivery_profile_header.status_approved';
+        break;
+      case 'pending':
+        statusKey = 'delivery_profile_header.status_pending';
+        break;
+      case 'rejected':
+        statusKey = 'delivery_profile_header.status_rejected';
+        break;
+      default:
+        statusKey = userStatus; // texte par défaut
+    }
+    final statusText = statusKey.tr();
+
+    // Couleur selon status
+    Color getStatusColor() {
+      switch (userStatus) {
+        case 'approved':
+          return Colors.green;
+        case 'pending':
+          return Colors.orange;
+        case 'rejected':
+          return Colors.red;
+        default:
+          return Colors.grey;
+      }
+    }
 
     return Card(
       child: Padding(
@@ -75,7 +110,7 @@ class DeliveryProfileHeader extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              roleName.replaceAll('_', ' ').toUpperCase(),
+              roleText,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade600,
@@ -86,30 +121,18 @@ class DeliveryProfileHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: userStatus == 'approved' 
-                    ? Colors.green.shade50 
-                    : userStatus == 'pending'
-                      ? Colors.orange.shade50
-                      : Colors.red.shade50,
+                color: getStatusColor().withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: userStatus == 'approved' 
-                      ? Colors.green 
-                      : userStatus == 'pending'
-                        ? Colors.orange
-                        : Colors.red,
+                  color: getStatusColor(),
                 ),
               ),
               child: Text(
-                userStatus.toUpperCase(),
+                statusText,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: userStatus == 'approved'
-                      ? Colors.green
-                      : userStatus == 'pending'
-                          ? Colors.orange
-                          : Colors.red,
+                  color: getStatusColor(),
                 ),
               ),
             ),

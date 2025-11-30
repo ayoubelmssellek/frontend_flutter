@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/services/error_handler_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 final deliveryProfileStateProvider = StateNotifierProvider<DeliveryProfileStateNotifier, DeliveryProfileState>((ref) {
   return DeliveryProfileStateNotifier(ref);
@@ -80,7 +81,7 @@ class DeliveryProfileStateNotifier extends StateNotifier<DeliveryProfileState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to check authentication status',
+        errorMessage: 'delivery_profile_state.check_auth_error'.tr(),
         hasTokenError: false,
       );
     }
@@ -116,13 +117,13 @@ class DeliveryProfileStateNotifier extends StateNotifier<DeliveryProfileState> {
           state = state.copyWith(
             isLoading: false,
             isLoggedIn: false,
-            errorMessage: result['message'] ?? 'Failed to load user data',
+            errorMessage: 'delivery_profile_state.load_user_error'.tr(args: [result['message'] ?? '']),
             hasTokenError: false,
           );
         }
       }
     } catch (e) {
-      print('❌ Error loading delivery user data: $e');
+      print('❌ ${'delivery_profile_state.load_user_exception'.tr(args: [e.toString()])}');
       
       if (ErrorHandlerService.isTokenError(e)) {
         state = state.copyWith(
@@ -151,14 +152,14 @@ class DeliveryProfileStateNotifier extends StateNotifier<DeliveryProfileState> {
   }
 
   void updateUserData(Map<String, dynamic> newUserData) {
-    print('🔄 [DeliveryProfileStateNotifier] Updating user data with: $newUserData');
+    print('🔄 ${'delivery_profile_state.updating_user'.tr(args: [newUserData.toString()])}');
     
     if (state.userData != null) {
       final updatedUserData = Map<String, dynamic>.from(state.userData!);
       updatedUserData.addAll(newUserData);
       
       state = state.copyWith(userData: updatedUserData);
-      print('✅ [DeliveryProfileStateNotifier] User data updated successfully in state');
+      print('✅ ${'delivery_profile_state.user_updated'.tr()}');
     } else {
       state = state.copyWith(userData: newUserData);
     }

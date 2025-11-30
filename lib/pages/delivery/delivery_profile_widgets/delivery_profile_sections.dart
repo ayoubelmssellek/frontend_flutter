@@ -45,7 +45,7 @@ class DeliveryProfileSections extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'delivery_profile_page.profile_management'.tr(),
+              'delivery_profile_sections.profile_management'.tr(),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -55,18 +55,18 @@ class DeliveryProfileSections extends StatelessWidget {
           ),
           const Divider(height: 1),
           _buildMenuButton(
-            'delivery_profile_page.update_profile_info'.tr(),
+            'delivery_profile_sections.update_profile_info'.tr(),
             Icons.person_outline,
             Colors.blue,
             () => ProfileDialogs.showUpdateProfileDialog(context, userData, ref),
           ),
-          _buildInfoItem('delivery_profile_page.full_name'.tr(), user['name'] ?? 'delivery_profile_page.not_provided'.tr()),
-          _buildInfoItem('delivery_profile_page.phone'.tr(), user['number_phone'] ?? 'delivery_profile_page.not_provided'.tr()),
+          _buildInfoItem('delivery_profile_sections.full_name'.tr(), user['name'] ?? 'delivery_profile_sections.not_provided'.tr()),
+          _buildInfoItem('delivery_profile_sections.phone'.tr(), user['number_phone'] ?? 'delivery_profile_sections.not_provided'.tr()),
           if (deliveryDriver.isNotEmpty) ...[
             if (deliveryDriver['vehicle_type'] != null)
-              _buildInfoItem('delivery_profile_page.vehicle_type'.tr(), deliveryDriver['vehicle_type'].toString()),
+              _buildInfoItem('delivery_profile_sections.vehicle_type'.tr(), deliveryDriver['vehicle_type'].toString()),
             if (deliveryDriver['vehicle_number'] != null)
-              _buildInfoItem('delivery_profile_page.vehicle_number'.tr(), deliveryDriver['vehicle_number'].toString()),
+              _buildInfoItem('delivery_profile_sections.vehicle_number'.tr(), deliveryDriver['vehicle_number'].toString()),
           ],
         ],
       ),
@@ -82,7 +82,7 @@ class DeliveryProfileSections extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'delivery_profile_page.security'.tr(),
+              'delivery_profile_sections.security'.tr(),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -91,19 +91,18 @@ class DeliveryProfileSections extends StatelessWidget {
             ),
           ),
           const Divider(height: 1),
-                      _buildMenuButton(
-                  'delivery_profile_page.change_password'.tr(),
-                  Icons.lock_outline,
-                  Colors.orange,
-                  () => ProfileDialogs.navigateToChangePasswordPage(context), // Direct navigation, no dialog
-                ),
-                          _buildMenuButton(
-            'delivery_profile_page.change_phone'.tr(),
+          _buildMenuButton(
+            'delivery_profile_sections.change_password'.tr(),
+            Icons.lock_outline,
+            Colors.orange,
+            () => ProfileDialogs.navigateToChangePasswordPage(context),
+          ),
+          _buildMenuButton(
+            'delivery_profile_sections.change_phone'.tr(),
             Icons.phone_android,
             Colors.green,
             () => ProfileDialogs.showChangePhoneDialog(context, user, ref),
           ),
-       
         ],
       ),
     );
@@ -118,7 +117,7 @@ class DeliveryProfileSections extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'delivery_profile_page.settings'.tr(),
+              'delivery_profile_sections.settings'.tr(),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -128,25 +127,25 @@ class DeliveryProfileSections extends StatelessWidget {
           ),
           const Divider(height: 1),
           _buildMenuButton(
-            'delivery_profile_page.language'.tr(),
+            'delivery_profile_sections.language'.tr(),
             Icons.language,
             Colors.deepOrange,
             () => ProfileDialogs.showLanguageDialog(context),
           ),
           _buildMenuButton(
-            'delivery_profile_page.contact_support'.tr(),
+            'delivery_profile_sections.contact_support'.tr(),
             Icons.support_agent,
             Colors.blue,
             () => ProfileDialogs.showContactSupport(context),
           ),
           _buildMenuButton(
-            'delivery_profile_page.send_feedback'.tr(),
+            'delivery_profile_sections.send_feedback'.tr(),
             Icons.feedback,
             Colors.grey,
             () => ProfileDialogs.showFeedback(context),
           ),
           _buildMenuButton(
-            'delivery_profile_page.privacy_policy'.tr(),
+            'delivery_profile_sections.privacy_policy'.tr(),
             Icons.privacy_tip,
             Colors.green,
             () => ProfileDialogs.showPrivacyPolicy(context),

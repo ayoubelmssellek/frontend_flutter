@@ -1,6 +1,7 @@
 // pages/delivery/my_orders_page.dart (Updated with extras display)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../models/order_model.dart';
 import '../../providers/delivery_providers.dart';
 import '../../services/error_handler_service.dart';
@@ -27,13 +28,14 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
 
   void _navigateToTokenExpiredPage([String? customMessage]) {
     if (_hasHandledTokenNavigation || !mounted) return;
-    
+
     _hasHandledTokenNavigation = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => TokenExpiredPage(
-            message: customMessage ?? 'Your session has expired. Please login again to continue.',
+            message:
+                customMessage ?? 'my_orders_page.session_expired_message'.tr(),
             allowGuestMode: false,
           ),
         ),
@@ -45,32 +47,40 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   void _handleTokenError(dynamic error) {
     if (ErrorHandlerService.isTokenError(error)) {
       print('🔐 Token error detected in MyOrdersPage');
-      _navigateToTokenExpiredPage('Your session has expired while loading orders.');
+      _navigateToTokenExpiredPage(
+        'Your session has expired while loading orders.',
+      );
     }
   }
 
   Future<void> _loadMyOrders() async {
     if (_isLoading) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
-      
+
       // ✅ FIXED: No need to send any ID - backend uses authenticated user
       final orders = await deliveryRepo.getMyOrders();
       ref.read(myOrdersProvider.notifier).state = orders;
-      
-      print('✅ Loaded ${orders.length} orders for authenticated delivery driver');
+
+      print(
+        '✅ Loaded ${orders.length} orders for authenticated delivery driver',
+      );
     } catch (e) {
       print('❌ Error loading my orders: $e');
-      
+
       _handleTokenError(e);
-      
+
       if (mounted && !ErrorHandlerService.isTokenError(e)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load orders: ${ErrorHandlerService.getErrorMessage(e)}'),
+            content: Text(
+              'my_orders_page.failed_load_orders'.tr(
+                namedArgs: {'error': ErrorHandlerService.getErrorMessage(e)},
+              ),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -98,13 +108,13 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   String _getStatusText(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
-        return 'Pending';
+        return 'my_orders_page.status_pending'.tr();
       case OrderStatus.accepted:
-        return 'Accepted';
+        return 'my_orders_page.status_accepted'.tr();
       case OrderStatus.delivered:
-        return 'Delivered';
+        return 'my_orders_page.status_delivered'.tr();
       case OrderStatus.cancelled:
-        return 'Cancelled';
+        return 'my_orders_page.status_cancelled'.tr();
     }
   }
 
@@ -135,11 +145,11 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   // ✅ Get display text for businesses
   String _getBusinessesText(Order order) {
     final businesses = _getUniqueBusinesses(order);
-    
-    if (businesses.isEmpty) return 'Multiple Stores';
+
+    if (businesses.isEmpty) return 'my_orders_page.multiple_stores'.tr();
     if (businesses.length == 1) return businesses.first;
-    
-    return '${businesses.length} Stores';
+
+    return '${businesses.length} ${'my_orders_page.stores'.tr()}';
   }
 
   // ✅ NEW: Calculate total extras count for an order
@@ -153,11 +163,11 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
 
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
     setState(() => _updatingOrderIds.add(order.id));
-    
+
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
       final success = await deliveryRepo.updateOrderStatus(order.id, newStatus);
-      
+
       if (success && mounted) {
         final myOrders = ref.read(myOrdersProvider);
         final updatedOrders = myOrders.map((o) {
@@ -166,28 +176,41 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
           }
           return o;
         }).toList();
-        
+
         ref.read(myOrdersProvider.notifier).state = updatedOrders;
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Order #${order.id} marked as ${_getStatusText(newStatus)}'),
+            content: Text(
+              'my_orders_page.order_marked'.tr(
+                namedArgs: {
+                  'id': order.id.toString(),
+                  'status': _getStatusText(newStatus),
+                },
+              ),
+            ),
             backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
       print('❌ Error updating order status: $e');
-      
+
       if (ErrorHandlerService.isTokenError(e)) {
-        _navigateToTokenExpiredPage('Your session has expired while updating order status.');
+        _navigateToTokenExpiredPage(
+          'Your session has expired while updating order status.',
+        );
         return;
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update order status: ${ErrorHandlerService.getErrorMessage(e)}'),
+            content: Text(
+              'my_orders_page.failed_update_status'.tr(
+                namedArgs: {'error': ErrorHandlerService.getErrorMessage(e)},
+              ),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -202,9 +225,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   void _showOrderDetails(Order order) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => OrderDetailsPage(order: order),
-      ),
+      MaterialPageRoute(builder: (context) => OrderDetailsPage(order: order)),
     );
   }
 
@@ -236,13 +257,11 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   Widget _buildOrderCard(Order order) {
     final businesses = _getUniqueBusinesses(order);
     final totalExtrasCount = _getTotalExtrasCount(order);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => _showOrderDetails(order),
         borderRadius: BorderRadius.circular(12),
@@ -278,7 +297,10 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: _getStatusColor(order.status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -310,7 +332,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Customer Info
               Row(
                 children: [
@@ -331,15 +353,12 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                   const SizedBox(width: 4),
                   Text(
                     order.clientPhone,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               // ✅ FIXED: Store Information - Shows multiple businesses
               Row(
                 children: [
@@ -350,7 +369,11 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.store, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.store,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
@@ -373,11 +396,17 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                             runSpacing: 2,
                             children: businesses.take(3).map((business) {
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.blue.shade50,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.blue.shade100, width: 0.5),
+                                  border: Border.all(
+                                    color: Colors.blue.shade100,
+                                    width: 0.5,
+                                  ),
                                 ),
                                 child: Text(
                                   business,
@@ -409,7 +438,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Delivery Address
                   Expanded(
                     child: Column(
@@ -417,7 +446,11 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               'Delivery',
@@ -444,11 +477,11 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // ✅ UPDATED: Order Items Preview with Extras
               _buildOrderItemsPreview(order),
               const SizedBox(height: 12),
-              
+
               // Order Total and Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -469,7 +502,9 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            'Includes $totalExtrasCount extras',
+                            'my_orders_page.includes_extras'.tr(
+                              namedArgs: {'count': totalExtrasCount.toString()},
+                            ),
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.green,
@@ -493,13 +528,13 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     final totalItems = order.itemsList.length;
     final previewItems = order.itemsList.take(2).toList();
     final totalExtrasCount = _getTotalExtrasCount(order);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...previewItems.map((item) {
           final hasExtras = item.extras != null && item.extras!.isNotEmpty;
-          
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Column(
@@ -528,7 +563,8 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           // ✅ NEW: Show business name for each item
-                          if (item.businessName.isNotEmpty && item.businessName != 'unknown')
+                          if (item.businessName.isNotEmpty &&
+                              item.businessName != 'unknown')
                             Text(
                               'From: ${item.businessName}',
                               style: const TextStyle(
@@ -566,7 +602,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                     ),
                   ],
                 ),
-                
+
                 // ✅ NEW: Show extras preview for this item
                 if (hasExtras) ...[
                   const SizedBox(height: 2),
@@ -577,11 +613,17 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
                       runSpacing: 2,
                       children: item.extras!.values.take(2).map((extra) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.green.shade100, width: 0.5),
+                            border: Border.all(
+                              color: Colors.green.shade100,
+                              width: 0.5,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -628,7 +670,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
             ),
           );
         }).toList(),
-        
+
         if (totalItems > 2)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -693,12 +735,12 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Text(
-            'Mark as Delivered',
-            style: TextStyle(fontSize: 12),
+          child: Text(
+            'my_orders_page.mark_delivered'.tr(),
+            style: const TextStyle(fontSize: 12),
           ),
         );
-    
+
       default:
         return const SizedBox();
     }
@@ -708,12 +750,16 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Delivery'),
-        content: Text('Are you sure you want to mark Order #${order.id} as delivered?'),
+        title: Text('my_orders_page.confirm_delivery'.tr()),
+        content: Text(
+          'my_orders_page.confirm_delivery_msg'.tr(
+            namedArgs: {'id': order.id.toString()},
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text('common.cancel'.tr()),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -721,7 +767,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Mark Delivered'),
+            child: Text('my_orders_page.mark_delivered'.tr()),
           ),
         ],
       ),
@@ -733,30 +779,36 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
   }
 
   String _formatOrderTime(DateTime? orderTime) {
-    if (orderTime == null) return 'Unknown time';
-    
+    if (orderTime == null) return 'my_orders_page.unknown_time'.tr();
+
     final now = DateTime.now();
     final difference = now.difference(orderTime);
-    
+
     if (difference.inMinutes < 1) {
-      return 'Just now';
+      return 'my_orders_page.just_now'.tr();
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} min ago';
+      return 'my_orders_page.minutes_ago'.tr(
+        namedArgs: {'count': difference.inMinutes.toString()},
+      );
     } else if (difference.inHours < 24) {
-      return '${difference.inHours} hours ago';
+      return 'my_orders_page.hours_ago'.tr(
+        namedArgs: {'count': difference.inHours.toString()},
+      );
     } else {
-      return '${difference.inDays} days ago';
+      return 'my_orders_page.days_ago'.tr(
+        namedArgs: {'count': difference.inDays.toString()},
+      );
     }
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Loading your orders...'),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text('my_orders_page.loading_orders'.tr()),
         ],
       ),
     );
@@ -792,38 +844,42 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Orders you accept will appear here',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+            Text(
+              'my_orders_page.no_active_orders_desc1'.tr(),
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Go to Available Orders tab to find new delivery requests',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
+            Text(
+              'my_orders_page.no_active_orders_desc2'.tr(),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _isLoading ? null : _loadMyOrders,
-              icon: _isLoading 
+              icon: _isLoading
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Icon(Icons.refresh, size: 18),
-              label: Text(_isLoading ? 'Loading...' : 'Refresh Orders'),
+              label: Text(
+                _isLoading
+                    ? 'my_orders_page.loading_dot'.tr()
+                    : 'my_orders_page.refresh_orders'.tr(),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepOrange,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
               ),
             ),
           ],

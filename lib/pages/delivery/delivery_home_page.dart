@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/pages/auth/token_expired_page.dart';
 import 'package:food_app/services/error_handler_service.dart';
 import '../../providers/delivery_providers.dart';
@@ -10,9 +11,10 @@ import 'delivery_profile_page.dart';
 import 'not_approved_page.dart';
 
 // Delivery Home State Provider
-final deliveryHomeStateProvider = StateNotifierProvider<DeliveryHomeStateNotifier, DeliveryHomeState>((ref) {
-  return DeliveryHomeStateNotifier(ref);
-});
+final deliveryHomeStateProvider =
+    StateNotifierProvider<DeliveryHomeStateNotifier, DeliveryHomeState>((ref) {
+      return DeliveryHomeStateNotifier(ref);
+    });
 
 class DeliveryHomeState {
   final bool isLoading;
@@ -78,7 +80,7 @@ class DeliveryHomeStateNotifier extends StateNotifier<DeliveryHomeState> {
   Future<void> _checkAuthStatus() async {
     try {
       final isLogged = ref.read(authStateProvider);
-      
+
       state = state.copyWith(
         isLoading: true,
         isLoggedIn: isLogged,
@@ -93,7 +95,7 @@ class DeliveryHomeStateNotifier extends StateNotifier<DeliveryHomeState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to check authentication status',
+        errorMessage: 'delivery_home_page.failed_to_check_auth'.tr(),
         hasTokenError: false,
       );
     }
@@ -101,13 +103,10 @@ class DeliveryHomeStateNotifier extends StateNotifier<DeliveryHomeState> {
 
   Future<void> _loadUserData() async {
     try {
-      state = state.copyWith(
-        isLoading: true,
-        hasTokenError: false,
-      );
-      
+      state = state.copyWith(isLoading: true, hasTokenError: false);
+
       final result = await ref.read(currentUserProvider.future);
-      
+
       if (result['success'] == true && result['data'] != null) {
         state = state.copyWith(
           userData: result,
@@ -136,7 +135,7 @@ class DeliveryHomeStateNotifier extends StateNotifier<DeliveryHomeState> {
       }
     } catch (e) {
       print('❌ Error loading delivery user data: $e');
-      
+
       if (ErrorHandlerService.isTokenError(e)) {
         state = state.copyWith(
           isLoading: false,
@@ -164,10 +163,7 @@ class DeliveryHomeStateNotifier extends StateNotifier<DeliveryHomeState> {
   }
 
   void clearError() {
-    state = state.copyWith(
-      errorMessage: null,
-      hasTokenError: false,
-    );
+    state = state.copyWith(errorMessage: null, hasTokenError: false);
   }
 
   void setInitialStatusCompleted() {
@@ -176,7 +172,11 @@ class DeliveryHomeStateNotifier extends StateNotifier<DeliveryHomeState> {
 }
 
 class DeliveryHomePage extends ConsumerStatefulWidget {
-  const DeliveryHomePage({super.key, this.initialTab = 0, this.fromNotApproved = false});
+  const DeliveryHomePage({
+    super.key,
+    this.initialTab = 0,
+    this.fromNotApproved = false,
+  });
   final int initialTab;
   final bool fromNotApproved;
 
@@ -189,7 +189,8 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
   bool _isTogglingStatus = false;
   bool _hasHandledTokenNavigation = false;
   bool _isCheckingStatus = false;
-  bool _hasProcessedFromNotApproved = false; // ✅ ADDED: Prevent multiple processing
+  bool _hasProcessedFromNotApproved =
+      false; // ✅ ADDED: Prevent multiple processing
 
   final List<Widget> _pages = [
     const AvailableOrdersPage(),
@@ -201,8 +202,10 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialTab;
-    print('🏠 DeliveryHomePage initialized - fromNotApproved: ${widget.fromNotApproved}');
-    
+    print(
+      '🏠 DeliveryHomePage initialized - fromNotApproved: ${widget.fromNotApproved}',
+    );
+
     if (widget.fromNotApproved) {
       _checkStatusAfterVerification();
     }
@@ -218,28 +221,30 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
 
   Future<void> _checkStatusAfterVerification() async {
     if (_isCheckingStatus || _hasProcessedFromNotApproved) return;
-    
+
     setState(() => _isCheckingStatus = true);
-    
+
     try {
       print('🔄 Checking status after verification...');
-      
+
       ref.invalidate(currentUserProvider);
       final result = await ref.read(currentUserProvider.future);
-      
+
       if (result['success'] == true && result['data'] != null) {
         final userData = result['data'];
         final newStatus = userData['status']?.toString().toLowerCase();
-        
+
         print('🔄 Latest status after verification: $newStatus');
-        
+
         if (newStatus != 'approved') {
-          print('❌ Status is still $newStatus after verification - redirecting to NotApprovedPage');
+          print(
+            '❌ Status is still $newStatus after verification - redirecting to NotApprovedPage',
+          );
           if (mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => NotApprovedPage(
-                  status: newStatus ?? 'unknown', 
+                  status: newStatus ?? 'unknown',
                   user: userData,
                 ),
               ),
@@ -274,14 +279,16 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
           final isActive = deliveryDriver['is_active'] == 1;
 
           print('🎯 Setting initial status - is_active: $isActive');
-          
-          ref.read(deliveryManStatusProvider.notifier).state =
-              isActive ? DeliveryManStatus.online : DeliveryManStatus.offline;
 
-          ref.read(deliveryHomeStateProvider.notifier).setInitialStatusCompleted();
-          
+          ref.read(deliveryManStatusProvider.notifier).state = isActive
+              ? DeliveryManStatus.online
+              : DeliveryManStatus.offline;
+
+          ref
+              .read(deliveryHomeStateProvider.notifier)
+              .setInitialStatusCompleted();
+
           print('🎯 Initial status set to: ${isActive ? 'Online' : 'Offline'}');
-          
         } catch (e) {
           print('❌ Error setting initial status: $e');
         }
@@ -292,11 +299,12 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
   int? _getDeliveryManId(Map<String, dynamic> userData) {
     final userDataMap = userData['data'] as Map<String, dynamic>?;
     final deliveryDriverId = userDataMap?['delivery_driver_id'];
-    
+
     if (deliveryDriverId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ref.read(currentDeliveryManIdProvider.notifier).state = deliveryDriverId;
+          ref.read(currentDeliveryManIdProvider.notifier).state =
+              deliveryDriverId;
         }
       });
       return deliveryDriverId;
@@ -310,11 +318,12 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     final userData = ref.read(currentUserProvider);
     final userDataMap = userData.value?['data'] as Map<String, dynamic>?;
     var userId = userDataMap?['id'] as int?;
-    
+
     if (userId == null) {
       final adminState = ref.read(deliveryHomeStateProvider);
       if (adminState.userData != null) {
-        final stateUserDataMap = adminState.userData!['data'] as Map<String, dynamic>?;
+        final stateUserDataMap =
+            adminState.userData!['data'] as Map<String, dynamic>?;
         userId = stateUserDataMap?['id'] as int?;
       }
     }
@@ -322,8 +331,8 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User ID not found'),
+          SnackBar(
+            content: Text('delivery_home_page.user_id_not_found'.tr()),
             backgroundColor: Colors.red,
           ),
         );
@@ -338,27 +347,38 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
       final repo = ref.read(deliveryRepositoryProvider);
       final isActive = await repo.toggleDeliveryManStatus(userId);
 
-      ref.read(deliveryManStatusProvider.notifier).state =
-          isActive ? DeliveryManStatus.online : DeliveryManStatus.offline;
+      ref.read(deliveryManStatusProvider.notifier).state = isActive
+          ? DeliveryManStatus.online
+          : DeliveryManStatus.offline;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isActive ? 'You are now online' : 'You are now offline'),
+            content: Text(
+              isActive
+                  ? 'delivery_home_page.now_online'.tr()
+                  : 'delivery_home_page.now_offline'.tr(),
+            ),
             backgroundColor: isActive ? Colors.green : Colors.grey,
           ),
         );
       }
     } catch (e) {
       if (ErrorHandlerService.isTokenError(e)) {
-        _navigateToTokenExpiredPage('Failed to toggle status due to session expiration.');
+        _navigateToTokenExpiredPage(
+          'Failed to toggle status due to session expiration.',
+        );
         return;
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to toggle status: ${ErrorHandlerService.getErrorMessage(e)}'),
+            content: Text(
+              'delivery_home_page.failed_toggle_status'.tr(
+                namedArgs: {'error': ErrorHandlerService.getErrorMessage(e)},
+              ),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -375,7 +395,9 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => TokenExpiredPage(
-            message: customMessage ?? 'Your session has expired. Please login again to continue.',
+            message:
+                customMessage ??
+                'delivery_home_page.session_expired_message'.tr(),
             allowGuestMode: false,
           ),
         ),
@@ -400,7 +422,7 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
   @override
   Widget build(BuildContext context) {
     print('🏠 DeliveryHomePage building...');
-    
+
     final userAsync = ref.watch(currentUserProvider);
     final homeState = ref.watch(deliveryHomeStateProvider);
 
@@ -410,7 +432,9 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
 
     // ✅ FIXED: Simplified logic to prevent infinite loop
     // Directly use the main content without separate _buildWithUserData method
-    if (widget.fromNotApproved && userAsync.hasValue && userAsync.value != null) {
+    if (widget.fromNotApproved &&
+        userAsync.hasValue &&
+        userAsync.value != null) {
       final userData = userAsync.value!;
       if (userData['success'] == true && userData['data'] != null) {
         print('🎯 Using fresh user data from currentUserProvider');
@@ -431,13 +455,16 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     return homeState.isLoading
         ? _buildLoadingState()
         : homeState.errorMessage != null
-            ? _buildErrorState(homeState, context)
-            : homeState.isLoggedIn && homeState.userData != null
-                ? _buildMainContent(homeState.userData!, homeState)
-                : _buildTokenExpiredState();
+        ? _buildErrorState(homeState, context)
+        : homeState.isLoggedIn && homeState.userData != null
+        ? _buildMainContent(homeState.userData!, homeState)
+        : _buildTokenExpiredState();
   }
 
-  Widget _buildMainContent(Map<String, dynamic> userData, DeliveryHomeState state) {
+  Widget _buildMainContent(
+    Map<String, dynamic> userData,
+    DeliveryHomeState state,
+  ) {
     // Set initial status if not set yet
     if (!state.hasSetInitialStatus) {
       _setInitialStatus(userData);
@@ -447,21 +474,28 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     final deliveryManId = _getDeliveryManId(userData);
 
     String? status;
-    
+
     final userDataMap = userData['data'] as Map<String, dynamic>?;
     status = userDataMap?['status']?.toString().toLowerCase();
-    
-    print('🔍 DeliveryHomePage - Status from userData: $status, fromNotApproved: ${widget.fromNotApproved}');
+
+    print(
+      '🔍 DeliveryHomePage - Status from userData: $status, fromNotApproved: ${widget.fromNotApproved}',
+    );
 
     if (status != 'approved') {
       final freshUserAsync = ref.read(currentUserProvider);
       if (freshUserAsync.hasValue && freshUserAsync.value != null) {
         final freshUserData = freshUserAsync.value!;
         if (freshUserData['success'] == true && freshUserData['data'] != null) {
-          final freshUserDataMap = freshUserData['data'] as Map<String, dynamic>?;
-          final freshStatus = freshUserDataMap?['status']?.toString().toLowerCase();
-          print('🔍 DeliveryHomePage - Fresh status from currentUserProvider: $freshStatus');
-          
+          final freshUserDataMap =
+              freshUserData['data'] as Map<String, dynamic>?;
+          final freshStatus = freshUserDataMap?['status']
+              ?.toString()
+              .toLowerCase();
+          print(
+            '🔍 DeliveryHomePage - Fresh status from currentUserProvider: $freshStatus',
+          );
+
           if (freshStatus != status) {
             status = freshStatus;
             print('🔄 Using fresh status from currentUserProvider: $status');
@@ -473,8 +507,10 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     if (status != 'approved' && state.userData != null) {
       final stateUserDataMap = state.userData!['data'] as Map<String, dynamic>?;
       final stateStatus = stateUserDataMap?['status']?.toString().toLowerCase();
-      print('🔍 DeliveryHomePage - Status from deliveryHomeState: $stateStatus');
-      
+      print(
+        '🔍 DeliveryHomePage - Status from deliveryHomeState: $stateStatus',
+      );
+
       if (stateStatus != status) {
         status = stateStatus;
         print('🔄 Using status from deliveryHomeState: $status');
@@ -484,11 +520,18 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     print('🎯 Final status being used: $status');
 
     if (status != 'approved') {
-      final unapprovedStatuses = ['pending', 'rejected', 'unverified','banned'];
+      final unapprovedStatuses = [
+        'pending',
+        'rejected',
+        'unverified',
+        'banned',
+      ];
       if (unapprovedStatuses.contains(status)) {
-        print('🔍 User status is unapproved: $status - Redirecting to NotApprovedPage');
+        print(
+          '🔍 User status is unapproved: $status - Redirecting to NotApprovedPage',
+        );
         return NotApprovedPage(
-          status: status ?? 'unknown', 
+          status: status ?? 'unknown',
           user: userDataMap ?? {},
         );
       } else {
@@ -523,12 +566,17 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     );
   }
 
-  Widget _buildOnlineState(DeliveryManStatus deliveryStatus, int deliveryManId) {
-    print('🎯 Building online state - Status: $deliveryStatus, DeliveryManId: $deliveryManId');
+  Widget _buildOnlineState(
+    DeliveryManStatus deliveryStatus,
+    int deliveryManId,
+  ) {
+    print(
+      '🎯 Building online state - Status: $deliveryStatus, DeliveryManId: $deliveryManId',
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery Partner'),
+        title: Text('delivery_home_page.delivery_partner'.tr()),
         backgroundColor: Colors.deepOrange,
         foregroundColor: Colors.white,
         actions: [
@@ -552,10 +600,7 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
           const SizedBox(width: 16),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -563,18 +608,18 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
             setState(() => _currentIndex = index);
           }
         },
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt),
-            label: 'Available',
+            icon: const Icon(Icons.list_alt),
+            label: 'delivery_home_page.available'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.delivery_dining),
-            label: 'My Orders',
+            icon: const Icon(Icons.delivery_dining),
+            label: 'delivery_home_page.my_orders'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: const Icon(Icons.person),
+            label: 'delivery_home_page.profile'.tr(),
           ),
         ],
       ),
@@ -585,17 +630,17 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
   Widget _buildLoadingState() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery Partner'),
+        title: Text('delivery_home_page.delivery_partner'.tr()),
         backgroundColor: Colors.deepOrange,
         foregroundColor: Colors.white,
       ),
-      body: const Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading your profile...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('delivery_home_page.loading_profile'.tr()),
           ],
         ),
       ),
@@ -604,10 +649,10 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
 
   Widget _buildErrorState(DeliveryHomeState state, BuildContext context) {
     final homeNotifier = ref.read(deliveryHomeStateProvider.notifier);
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery Partner - Error'),
+        title: Text('delivery_home_page.error_loading_profile'.tr()),
         backgroundColor: Colors.red,
         foregroundColor: Colors.white,
       ),
@@ -619,13 +664,16 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
             children: [
               const Icon(Icons.error_outline, size: 80, color: Colors.red),
               const SizedBox(height: 24),
-              const Text(
-                'Error Loading Profile',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              Text(
+                'delivery_home_page.error_title'.tr(),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
-                state.errorMessage ?? 'Unknown error occurred',
+                state.errorMessage ?? 'delivery_home_page.unknown_error'.tr(),
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
@@ -636,7 +684,7 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
                   backgroundColor: Colors.deepOrange,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Retry'),
+                child: Text('common.retry'.tr()),
               ),
             ],
           ),
@@ -650,7 +698,7 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery Partner - Offline'),
+        title: Text('delivery_home_page.offline_title'.tr()),
         backgroundColor: Colors.grey,
         foregroundColor: Colors.white,
         actions: [
@@ -682,14 +730,21 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
             children: [
               const Icon(Icons.offline_bolt, size: 100, color: Colors.grey),
               const SizedBox(height: 24),
-              const Text(
-                'You are offline',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              Text(
+                'delivery_home_page.you_are_offline'.tr(),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Go online to start receiving delivery orders and manage your deliveries',
-                style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+              Text(
+                'delivery_home_page.offline_description'.tr(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                  height: 1.5,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -714,9 +769,12 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Go Online',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      : Text(
+                          'delivery_home_page.go_online'.tr(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),
@@ -736,17 +794,17 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
       case DeliveryManStatus.offline:
         color = Colors.grey;
         icon = Icons.offline_bolt;
-        text = 'Offline';
+        text = 'delivery_home_page.offline'.tr();
         break;
       case DeliveryManStatus.online:
         color = Colors.green;
         icon = Icons.online_prediction;
-        text = 'Online';
+        text = 'delivery_home_page.online'.tr();
         break;
       case DeliveryManStatus.busy:
         color = Colors.orange;
         icon = Icons.directions_bike;
-        text = 'Busy';
+        text = 'delivery_home_page.busy'.tr();
         break;
     }
 
@@ -764,23 +822,27 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delivery Status'),
+        title: Text('delivery_home_page.delivery_status'.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Current Status: ${_getStatusText(currentStatus)}'),
+            Text(
+              'delivery_home_page.current_status'.tr(
+                namedArgs: {'status': _getStatusText(currentStatus)},
+              ),
+            ),
             const SizedBox(height: 16),
-            const Text(
-              'Toggle the switch in the app bar to go online and start receiving delivery requests.',
-              style: TextStyle(fontSize: 14),
+            Text(
+              'delivery_home_page.status_dialog_description'.tr(),
+              style: const TextStyle(fontSize: 14),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text('common.ok'.tr()),
           ),
           if (currentStatus == DeliveryManStatus.offline)
             TextButton(
@@ -788,7 +850,7 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
                 Navigator.pop(context);
                 await _toggleStatus();
               },
-              child: const Text('Go Online'),
+              child: Text('delivery_home_page.go_online'.tr()),
             ),
         ],
       ),
@@ -798,11 +860,11 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
   String _getStatusText(DeliveryManStatus status) {
     switch (status) {
       case DeliveryManStatus.offline:
-        return 'Offline';
+        return 'delivery_home_page.offline'.tr();
       case DeliveryManStatus.online:
-        return 'Online - Available for orders';
+        return 'delivery_home_page.online_available'.tr();
       case DeliveryManStatus.busy:
-        return 'Online - Currently delivering';
+        return 'delivery_home_page.online_delivering'.tr();
     }
   }
 }

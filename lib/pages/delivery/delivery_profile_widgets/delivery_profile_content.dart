@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/delivery/delivery_profile_widgets/delivery_profile_header.dart';
 import 'package:food_app/pages/delivery/delivery_profile_widgets/delivery_profile_sections.dart';
-import 'package:food_app/pages/delivery/delivery_profile_widgets/profile_dialogs.dart';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/providers/auth_providers.dart';
@@ -24,54 +23,58 @@ class DeliveryProfileContent extends StatelessWidget {
 
   void _logout(BuildContext context) {
     bool isLoading = false;
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Logout'),
-            content: isLoading 
-                ? const Column(
+            title: Text('delivery_profile_page.logout'.tr()),
+            content: isLoading
+                ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('Logging out...'),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text('delivery_profile_page.logging_out'.tr()),
                     ],
                   )
-                : const Text('Are you sure you want to logout?'),
-            actions: isLoading 
+                : Text('delivery_profile_page.logout_confirmation'.tr()),
+            actions: isLoading
                 ? []
                 : [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text('common.cancel'.tr()),
                     ),
                     TextButton(
                       onPressed: () async {
                         setState(() => isLoading = true);
-                        
+
                         try {
                           final authRepo = ref.read(authRepositoryProvider);
                           await authRepo.logout();
-                          
+
                           if (context.mounted) {
                             Navigator.pop(context); // Close dialog
                             Navigator.pushAndRemoveUntil(
                               context,
-                              MaterialPageRoute(builder: (_) => const LoginPage()),
+                              MaterialPageRoute(
+                                builder: (_) => const LoginPage(),
+                              ),
                               (route) => false,
                             );
                           }
-                          
+
                           print('🎯 Logout process completed');
                         } catch (e) {
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Logout error: $e'),
+                                content: Text(
+                                  '${'delivery_profile_page.logout_error'.tr()}: $e',
+                                ),
                                 backgroundColor: Colors.red,
                               ),
                             );
@@ -79,7 +82,7 @@ class DeliveryProfileContent extends StatelessWidget {
                           print('❌ Logout error: $e');
                         }
                       },
-                      child: const Text('Logout'),
+                      child: Text('delivery_profile_page.logout'.tr()),
                     ),
                   ],
           );
@@ -87,7 +90,6 @@ class DeliveryProfileContent extends StatelessWidget {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +102,6 @@ class DeliveryProfileContent extends StatelessWidget {
           SliverToBoxAdapter(
             child: Column(
               children: [
-             
                 // Profile Header
                 DeliveryProfileHeader(userData: userData),
                 const SizedBox(height: 16),
@@ -127,12 +128,12 @@ class DeliveryProfileContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Pull to refresh hint
                 if (isRefreshing)
-                  const Center(
+                  Center(
                     child: Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -143,8 +144,8 @@ class DeliveryProfileContent extends StatelessWidget {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'Refreshing...',
-                            style: TextStyle(
+                            'delivery_profile_page.refreshing'.tr(),
+                            style: const TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
                             ),
@@ -159,11 +160,15 @@ class DeliveryProfileContent extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.arrow_downward, size: 16, color: Colors.grey),
+                        Icon(
+                          Icons.arrow_downward,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
                         SizedBox(width: 8),
                         Text(
-                          'Pull down to refresh',
-                          style: TextStyle(
+                          'delivery_profile_page.pull_to_refresh'.tr(),
+                          style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
                             fontStyle: FontStyle.italic,

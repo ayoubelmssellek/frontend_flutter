@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/pages/delivery_admin_pages/admin_profile_widgets/admin_profile_content.dart';
 import 'package:food_app/providers/delivery_admin_providers/admin_profile_state.dart';
 import 'package:food_app/services/error_handler_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../auth/login_page.dart';
 
 class AdminProfilePage extends ConsumerStatefulWidget {
@@ -173,7 +174,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Error',
+                'admin_profile_page.error_loading_profile'.tr(),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -182,7 +183,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
               ),
               const SizedBox(height: 8),
               Text(
-                state.errorMessage ?? 'Unknown error occurred',
+                state.errorMessage ?? 'admin_profile_page.unknown_error'.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.grey.shade600,

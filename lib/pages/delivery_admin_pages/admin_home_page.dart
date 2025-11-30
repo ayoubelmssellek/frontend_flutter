@@ -6,6 +6,7 @@ import 'package:food_app/pages/auth/token_expired_page.dart';
 import 'package:food_app/providers/delivery_providers.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/services/error_handler_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'pending_delivery_men_page.dart';
 import 'approved_delivery_men_page.dart';
 import 'admin_profile_page.dart';
@@ -96,7 +97,7 @@ class AdminHomeStateNotifier extends StateNotifier<AdminHomeState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to check authentication status',
+        errorMessage: 'admin_home_page.failed_to_check_auth'.tr(),
         hasTokenError: false,
       );
     }
@@ -132,7 +133,7 @@ class AdminHomeStateNotifier extends StateNotifier<AdminHomeState> {
           state = state.copyWith(
             isLoading: false,
             isLoggedIn: false,
-            errorMessage: result['message'] ?? 'Failed to load user data',
+            errorMessage: result['message'] ?? 'admin_home_page.failed_load_user_data'.tr(),
             hasTokenError: false,
           );
         }
@@ -192,14 +193,14 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
 
   final List<Widget> _pages = [
     // Admin Management Section
-    _buildAdminSection(),
+    _AdminSectionWidget(),
     // Delivery Operations Section
-    _buildDeliverySection(),
+    _DeliverySectionWidget(),
     // Profile Section
     const AdminProfilePage(),
   ];
 
-  static Widget _buildAdminSection() {
+  static Widget _AdminSectionWidget() {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -207,13 +208,19 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
           children: [
             Container(
               color: Colors.blue.shade700,
-              child: const TabBar(
+              child: TabBar(
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white70,
                 indicatorColor: Colors.white,
                 tabs: [
-                  Tab(icon: Icon(Icons.pending_actions), text: 'Pending'),
-                  Tab(icon: Icon(Icons.verified_user), text: 'Approved'),
+                  Tab(
+                    icon: const Icon(Icons.pending_actions),
+                    text: 'admin_home_page.pending'.tr(),
+                  ),
+                  Tab(
+                    icon: const Icon(Icons.verified_user),
+                    text: 'admin_home_page.approved'.tr(),
+                  ),
                 ],
               ),
             ),
@@ -231,7 +238,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
     );
   }
 
-  static Widget _buildDeliverySection() {
+  static Widget _DeliverySectionWidget() {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -239,13 +246,19 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
           children: [
             Container(
               color: Colors.deepOrange,
-              child: const TabBar(
+              child: TabBar(
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white70,
                 indicatorColor: Colors.white,
                 tabs: [
-                  Tab(icon: Icon(Icons.local_shipping), text: 'Available'),
-                  Tab(icon: Icon(Icons.list_alt), text: 'My Orders'),
+                  Tab(
+                    icon: const Icon(Icons.local_shipping),
+                    text: 'admin_home_page.available'.tr(),
+                  ),
+                  Tab(
+                    icon: const Icon(Icons.list_alt),
+                    text: 'admin_home_page.my_orders'.tr(),
+                  ),
                 ],
               ),
             ),
@@ -358,7 +371,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isActive ? 'You are now online' : 'You are now offline'),
+            content: Text(isActive ? 'admin_home_page.you_are_now_online'.tr() : 'admin_home_page.you_are_now_offline'.tr()),
             backgroundColor: isActive ? Colors.green : Colors.grey,
           ),
         );
@@ -484,7 +497,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
               : Row(
                   children: [
                     Text(
-                      deliveryStatus == DeliveryManStatus.online ? 'Online' : 'Offline',
+                      deliveryStatus == DeliveryManStatus.online ? 'admin_home_page.online'.tr() : 'admin_home_page.offline'.tr(),
                       style: const TextStyle(fontSize: 14),
                     ),
                     const SizedBox(width: 8),
@@ -509,18 +522,18 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
             setState(() => _currentIndex = index);
           }
         },
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.admin_panel_settings),
-            label: 'Admin',
+            icon: const Icon(Icons.admin_panel_settings),
+            label: 'admin_home_page.admin'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.delivery_dining),
-            label: 'Delivery',
+            icon: const Icon(Icons.delivery_dining),
+            label: 'admin_home_page.delivery'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: const Icon(Icons.person),
+            label: 'admin_home_page.profile'.tr(),
           ),
         ],
       ),
@@ -531,17 +544,17 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   Widget _buildLoadingState() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Panel'),
+        title: Text('admin_home_page.admin_panel'.tr()),
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
       ),
-      body: const Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading admin profile...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('admin_home_page.loading_admin_profile'.tr()),
           ],
         ),
       ),
@@ -553,7 +566,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Panel - Error'),
+        title: Text('admin_home_page.admin_panel_error'.tr()),
         backgroundColor: Colors.red,
         foregroundColor: Colors.white,
       ),
@@ -565,13 +578,13 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
             children: [
               const Icon(Icons.error_outline, size: 80, color: Colors.red),
               const SizedBox(height: 24),
-              const Text(
-                'Error Loading Profile',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              Text(
+                'admin_home_page.error_loading_profile'.tr(),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Text(
-                state.errorMessage ?? 'Unknown error occurred',
+                state.errorMessage ?? 'admin_home_page.error_loading_profile'.tr(),
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
@@ -582,7 +595,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                   backgroundColor: Colors.blue.shade700,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Retry'),
+                child: Text('common.retry'.tr()),
               ),
             ],
           ),
@@ -607,17 +620,17 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
       case DeliveryManStatus.offline:
         color = Colors.grey;
         icon = Icons.offline_bolt;
-        text = 'Offline';
+        text = 'admin_home_page.offline'.tr();
         break;
       case DeliveryManStatus.online:
         color = Colors.green;
         icon = Icons.online_prediction;
-        text = 'Online';
+        text = 'admin_home_page.online'.tr();
         break;
       case DeliveryManStatus.busy:
         color = Colors.orange;
         icon = Icons.directions_bike;
-        text = 'Busy';
+        text = 'admin_home_page.busy'.tr();
         break;
     }
 
@@ -635,23 +648,23 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Admin Status'),
+        title: Text('admin_home_page.admin_status'.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Current Status: ${_getStatusText(currentStatus)}'),
+            Text('admin_home_page.current_status'.tr(namedArgs: {'status': _getStatusText(currentStatus)})),
             const SizedBox(height: 16),
-            const Text(
-              'Toggle the switch in the app bar to change your online status.',
-              style: TextStyle(fontSize: 14),
+            Text(
+              'admin_home_page.toggle_status_message'.tr(),
+              style: const TextStyle(fontSize: 14),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text('admin_home_page.ok'.tr()),
           ),
           if (currentStatus == DeliveryManStatus.offline)
             TextButton(
@@ -659,7 +672,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                 Navigator.pop(context);
                 await _toggleStatus();
               },
-              child: const Text('Go Online'),
+              child: Text('admin_home_page.go_online'.tr()),
             ),
         ],
       ),
@@ -669,24 +682,24 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   String _getStatusText(DeliveryManStatus status) {
     switch (status) {
       case DeliveryManStatus.offline:
-        return 'Offline';
+        return 'admin_home_page.offline'.tr();
       case DeliveryManStatus.online:
-        return 'Online - Managing operations';
+        return 'admin_home_page.online_managing'.tr();
       case DeliveryManStatus.busy:
-        return 'Online - Active';
+        return 'admin_home_page.online_active'.tr();
     }
   }
 
   String _getAppBarTitle(int index) {
     switch (index) {
       case 0:
-        return 'Admin Management';
+        return 'admin_home_page.admin_management'.tr();
       case 1:
-        return 'Delivery Operations';
+        return 'admin_home_page.delivery_operations'.tr();
       case 2:
-        return 'Admin Profile';
+        return 'admin_home_page.admin_profile'.tr();
       default:
-        return 'Admin Panel';
+        return 'admin_home_page.admin_panel'.tr();
     }
   }
 
