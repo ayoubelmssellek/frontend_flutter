@@ -790,6 +790,10 @@
     "pending_delivery_men": "عمال التوصيل في الانتظار",
     "loading_men": "جاري تحميل عمال التوصيل...",
     "no_pending_men": "لا يوجد عمال توصيل في الانتظار",
+    "retry": "إعادة محاولة",
+    "all_clear": "تم إنجاز الكل!",
+    "no_pending_drivers": "لا يوجد عمال توصيل في انتظار الموافقة",
+    "refresh": "تحديث",
     "approve": "وافق",
     "reject": "رفض",
     "view_documents": "عرض المستندات",
@@ -797,30 +801,16 @@
   },
   "approved_delivery_men_page": {
     "approved_delivery_men": "عمال التوصيل الموافق عليهم",
-    "loading_men": "جاري تحميل عمال التوصيل...",
+    "loading_men": "جاري تحميل عمال التوصيل الموافق عليهم...",
     "no_approved_men": "لا يوجد عمال توصيل موافق عليهم",
+    "unable_to_load": "غير قادر على تحميل عمال التوصيل",
+    "retry": "إعادة محاولة",
+    "approved_drivers_message": "سيظهر عمال التوصيل الموافق عليهم هنا",
+    "no_image_available": "لا توجد صورة متاحة",
     "view_profile": "عرض الملف الشخصي",
     "status": "الحالة",
     "active": "نشط",
     "inactive": "غير نشط"
-  }
-=======
-    "send_code": "إرسال الرمز",
-    "Failed_to_check_authentication_status": "فشل التحقق من حالة المصادقة",
-    "Failed_to_load_user_data": "فشل تحميل بيانات المستخدم",
-    "session_expired_message": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى للمتابعة.",
-    "go_to_login": "الانتقال إلى تسجيل الدخول",
-    "profile": "الملف الشخصي",
-    "home": "الرئيسية",
-    "search": "بحث",
-    "cart": "السلة",
-    "profile_load_error": "خطأ في تحميل الملف الشخصي",
-    "continue_as_guest": "المتابعة كضيف",
-    "retry": "إعادة المحاولة",
-    "logout_error": "خطأ أثناء تسجيل الخروج",
-    "logging_out": "جاري تسجيل الخروج...",
-    "logout_confirmation": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
-    "cancel": "إلغاء"
   },
   "checkout_page": {
   "checkout": "الدفع",
@@ -930,5 +920,5 @@
 
 
 
->>>>>>> 2512089149a017a11a0a69360649994bc2867d1a
+
 }

@@ -545,13 +545,27 @@
     "pending_delivery_men": "Pending Delivery Men",
     "loading_men": "Loading delivery men...",
     "no_pending_men": "No pending delivery men",
+    "retry": "Retry",
+    "all_clear": "All Clear!",
+    "no_pending_drivers": "No pending delivery drivers to review",
+    "refresh": "Refresh",
     "approve": "Approve",
     "reject": "Reject",
     "view_documents": "View Documents",
     "personal_info": "Personal Information"
-  }
-=======
-    "send_code": "Send Code"
+  },
+  "approved_delivery_men_page": {
+    "no_image_available": "No image available",
+    "loading_men": "Loading approved drivers...",
+    "unable_to_load": "Unable to load drivers",
+    "retry": "Retry",
+    "no_approved_men": "No Approved Drivers",
+    "approved_drivers_message": "Approved delivery drivers will appear here",
+    "approved_delivery_men": "Approved Delivery Men",
+    "view_profile": "View Profile",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "checkout_page": {
     "checkout": "Checkout",
@@ -701,6 +715,4 @@
     "register_button":"Register",
     "footer_text":"Fast • Reliable • Delicious"
   }
-
->>>>>>> 2512089149a017a11a0a69360649994bc2867d1a
 }

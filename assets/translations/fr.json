@@ -193,7 +193,6 @@
     "error_loading_profile": "Erreur de chargement du profil",
     "retry": "Réessayer",
     "yes": "Oui",
-<<<<<<< HEAD
     "no": "Non",
     "name_required": "Le nom est requis",
     "phone_required": "Le numéro de téléphone est requis",
@@ -487,6 +486,10 @@
     "pending_delivery_men": "Livreurs en attente",
     "loading_men": "Chargement des livreurs...",
     "no_pending_men": "Aucun livreur en attente",
+    "retry": "Réessayer",
+    "all_clear": "Tout est clair !",
+    "no_pending_drivers": "Aucun livreur en attente d'approbation",
+    "refresh": "Actualiser",
     "approve": "Approuver",
     "reject": "Rejeter",
     "view_documents": "Afficher les documents",
@@ -494,14 +497,16 @@
   },
   "approved_delivery_men_page": {
     "approved_delivery_men": "Livreurs approuvés",
-    "loading_men": "Chargement des livreurs...",
+    "loading_men": "Chargement des livreurs approuvés...",
     "no_approved_men": "Aucun livreur approuvé",
+    "unable_to_load": "Impossible de charger les livreurs",
+    "retry": "Réessayer",
+    "approved_drivers_message": "Les livreurs approuvés apparaîtront ici",
+    "no_image_available": "Aucune image disponible",
     "view_profile": "Afficher le profil",
     "status": "Statut",
     "active": "Actif",
     "inactive": "Inactif"
-=======
-    "no": "Non"
   },
   "checkout_page": {
   "checkout": "Paiement",
@@ -657,10 +662,7 @@
   "welcome_page": {
     "tagline": "Nourriture délicieuse livrée\nrapidement à votre porte",
     "login_button": "Connexion",
-    "register_button": "S’inscrire",
+    "register_button": "S'inscrire",
     "footer_text": "Rapide • Fiable • Délicieux"
->>>>>>> 2512089149a017a11a0a69360649994bc2867d1a
   }
-
-
 }
