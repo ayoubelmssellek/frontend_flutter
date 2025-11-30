@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/providers/delivery_admin_providers/admin_providers.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../models/delivery_man_model.dart';
 
 class PendingDeliveryMenPage extends ConsumerStatefulWidget {
@@ -28,7 +29,7 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
         ref.invalidate(pendingDeliveryMenProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${deliveryMan.name} approved successfully!'),
+            content: Text('pending_delivery_men_page.approved_successfully'.tr(namedArgs: {'name': deliveryMan.name})),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -38,7 +39,7 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to approve: $e'),
+            content: Text('pending_delivery_men_page.failed_approve'.tr(namedArgs: {'error': e.toString()})),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -66,7 +67,7 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
         ref.invalidate(pendingDeliveryMenProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${deliveryMan.name} rejected.'),
+            content: Text('pending_delivery_men_page.rejected'.tr(namedArgs: {'name': deliveryMan.name})),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
           ),
@@ -76,7 +77,7 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to reject: $e'),
+            content: Text('pending_delivery_men_page.failed_reject'.tr(namedArgs: {'error': e.toString()})),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -96,8 +97,8 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
     
     if (!ImageHelper.isValidUrl(fullUrl)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No image available'),
+        SnackBar(
+          content: Text('pending_delivery_men_page.no_image_available'.tr()),
           backgroundColor: Colors.grey,
           behavior: SnackBarBehavior.floating,
         ),
@@ -656,15 +657,15 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
       //   ],
       // ),
       body: pendingDeliveryMenAsync.when(
-        loading: () => const Center(
+        loading: () => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
               Text(
-                'Loading drivers...',
-                style: TextStyle(
+                'pending_delivery_men_page.loading_men'.tr(),
+                style: const TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
                 ),
@@ -691,9 +692,9 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Unable to load drivers',
-                  style: TextStyle(
+                Text(
+                  'pending_delivery_men_page.no_pending_men'.tr(),
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.red,
@@ -712,7 +713,7 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
                 ElevatedButton.icon(
                   onPressed: () => ref.invalidate(pendingDeliveryMenProvider),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Try Again'),
+                  label: Text('pending_delivery_men_page.retry'.tr()),
                 ),
               ],
             ),
@@ -738,18 +739,18 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'All Clear!',
-                    style: TextStyle(
+                  Text(
+                    'pending_delivery_men_page.all_clear'.tr(),
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'No pending delivery drivers to review',
-                    style: TextStyle(
+                  Text(
+                    'pending_delivery_men_page.no_pending_drivers'.tr(),
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.grey,
                     ),
@@ -758,7 +759,7 @@ class _PendingDeliveryMenPageState extends ConsumerState<PendingDeliveryMenPage>
                   ElevatedButton.icon(
                     onPressed: () => ref.invalidate(pendingDeliveryMenProvider),
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Refresh'),
+                    label: Text('pending_delivery_men_page.refresh'.tr()),
                   ),
                 ],
               ),

@@ -1,6 +1,7 @@
 // pages/admin/approved_delivery_men_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/providers/delivery_admin_providers/admin_providers.dart';
 import '../../models/delivery_man_model.dart';
@@ -13,8 +14,8 @@ class ApprovedDeliveryMenPage extends ConsumerWidget {
     
     if (!ImageHelper.isValidUrl(fullUrl)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No image available'),
+        SnackBar(
+          content: Text('approved_delivery_men_page.no_image_available'.tr()),
           backgroundColor: Colors.grey,
           behavior: SnackBarBehavior.floating,
         ),
@@ -100,15 +101,15 @@ class ApprovedDeliveryMenPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: approvedDeliveryMenAsync.when(
-        loading: () => const Center(
+        loading: () => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
               Text(
-                'Loading approved drivers...',
-                style: TextStyle(
+                'approved_delivery_men_page.loading_men'.tr(),
+                style: const TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
                 ),
@@ -135,9 +136,9 @@ class ApprovedDeliveryMenPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Unable to load drivers',
-                  style: TextStyle(
+                Text(
+                  'approved_delivery_men_page.unable_to_load'.tr(),
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.red,
@@ -156,7 +157,7 @@ class ApprovedDeliveryMenPage extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () => ref.invalidate(approvedDeliveryMenProvider),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Try Again'),
+                  label: Text('approved_delivery_men_page.retry'.tr()),
                 ),
               ],
             ),
@@ -182,18 +183,18 @@ class ApprovedDeliveryMenPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'No Approved Drivers',
-                    style: TextStyle(
+                  Text(
+                    'approved_delivery_men_page.no_approved_men'.tr(),
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Approved delivery drivers will appear here',
-                    style: TextStyle(
+                  Text(
+                    'approved_delivery_men_page.approved_drivers_message'.tr(),
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.grey,
                     ),
