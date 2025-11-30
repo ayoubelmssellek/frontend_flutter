@@ -217,6 +217,7 @@
     "new_password_required": "New password is required",
     "password_min_length": "Password must be at least 6 characters",
     "confirm_password": "Confirm Password",
+    "forgot_password": "Forgot Password?",
     "change_phone": "Change Phone Number",
     "current": "Current",
     "new_phone": "New Phone Number",
@@ -297,7 +298,7 @@
     "camera": "Camera",
     "current": "Current",
     "new_phone": "New Phone Number",
-<<<<<<< HEAD
+
     "send_code": "Send Code",
     "error_loading_profile": "Error Loading Profile",
     "unknown_error": "Unknown error occurred",

@@ -175,6 +175,7 @@
     "new_password_required": "كلمة المرور الجديدة مطلوبة",
     "password_min_length": "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
     "confirm_password": "تأكيد كلمة المرور",
+    "forgot_password": "هل نسيت كلمة المرور؟",
     "change_phone": "تغيير رقم الهاتف",
     "current": "الحالي",
     "new_phone": "رقم الهاتف الجديد",

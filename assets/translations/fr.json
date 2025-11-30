@@ -217,6 +217,7 @@
     "new_password_required": "Le nouveau mot de passe est requis",
     "password_min_length": "Le mot de passe doit faire au moins 6 caractères",
     "confirm_password": "Confirmer le mot de passe",
+    "forgot_password": "Mot de passe oublié ?",
     "change_phone": "Changer le numéro de téléphone",
     "current": "Actuel",
     "new_phone": "Nouveau numéro de téléphone",
