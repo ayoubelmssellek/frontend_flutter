@@ -29,7 +29,6 @@ final clientIdProvider = Provider<int>((ref) {
       final clientId = userDataMap['client_id'];
       
       if (clientId != null && clientId is int && clientId != 0) {
-        print('✅ [clientIdProvider] Using client ID from currentUserProvider: $clientId');
         return clientId;
       }
     }
@@ -41,7 +40,6 @@ final clientIdProvider = Provider<int>((ref) {
     final clientId = userDataMap?['client_id'];
     
     if (clientId != null && clientId is int && clientId != 0) {
-      print('✅ [clientIdProvider] Using client ID from clientHomeStateProvider: $clientId');
       return clientId;
     }
   }
@@ -53,13 +51,11 @@ final clientIdProvider = Provider<int>((ref) {
       final userDataMap = userData['data'] as Map<String, dynamic>;
       final userId = userDataMap['id'];
       if (userId != null && userId is int) {
-        print('⚠️ [clientIdProvider] No client_id found, using user ID: $userId');
         return userId;
       }
     }
   }
 
-  print('❌ [clientIdProvider] No client ID found');
   return 0;
 });
 
@@ -82,28 +78,22 @@ class ClientOrdersNotifier extends StateNotifier<AsyncValue<List<ClientOrder>>> 
   ClientOrdersNotifier(this.ref) : super(const AsyncValue.loading());
 
   Future<void> loadClientOrders(int clientId) async {
-    print('🔄 [ClientOrdersNotifier] loadClientOrders() called with clientId: $clientId');
     state = const AsyncValue.loading();
     try {
       final orderRepo = ref.read(orderRepositoryProvider);
       final orders = await orderRepo.getClientOrders(clientId);
-      print('✅ [ClientOrdersNotifier] Successfully loaded ${orders.length} orders');
       state = AsyncValue.data(orders);
     } catch (e, stack) {
-      print('❌ [ClientOrdersNotifier] Error loading orders: $e');
       state = AsyncValue.data([]);
     }
   }
 
   Future<void> refreshClientOrders(int clientId) async {
-    print('🔄 [ClientOrdersNotifier] refreshClientOrders() called with clientId: $clientId');
     try {
       final orderRepo = ref.read(orderRepositoryProvider);
       final orders = await orderRepo.getClientOrders(clientId);
-      print('✅ [ClientOrdersNotifier] Successfully refreshed ${orders.length} orders');
       state = AsyncValue.data(orders);
     } catch (e, stack) {
-      print('❌ [ClientOrdersNotifier] Error refreshing orders: $e');
     }
   }
 

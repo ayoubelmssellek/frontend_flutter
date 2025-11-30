@@ -10,12 +10,23 @@ import 'package:food_app/pages/home/search_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/services/error_handler_service.dart';
 
+
 // Profile state provider to manage profile data
 final profileStateProvider = StateNotifierProvider<ProfileStateNotifier, ProfileState>((ref) {
   return ProfileStateNotifier(ref);
 });
 
+    String _tr(String key, String fallback) {
+      try {
+        final translation = key.tr();
+        return translation == key ? fallback : translation;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
 class ProfileState {
+
   final bool isLoading;
   final bool isLoggedIn;
   final Map<String, dynamic>? userData;
@@ -48,6 +59,7 @@ class ProfileState {
 }
 
 class ProfileStateNotifier extends StateNotifier<ProfileState> {
+
   final Ref ref;
 
   ProfileStateNotifier(this.ref) : super(const ProfileState()) {
@@ -89,7 +101,7 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to check authentication status',
+        errorMessage: _tr("profile_page.Failed_to_check_authentication_status","Failed to check authentication status"),
         hasTokenError: false,
       );
     }
@@ -112,7 +124,6 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
           isLoggedIn: true,
           hasTokenError: false,
         );
-        print('✅ [ProfileStateNotifier] User data loaded: ${result['data']}');
       } else {
         final message = result['message'] ?? '';
         if (ErrorHandlerService.isTokenError(message)) {
@@ -126,13 +137,12 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
           state = state.copyWith(
             isLoading: false,
             isLoggedIn: false,
-            errorMessage: result['message'] ?? 'Failed to load user data',
+            errorMessage: _tr("profile_page.Failed_to_load_user_data","Failed to load user data"),
             hasTokenError: false,
           );
         }
       }
     } catch (e) {
-      print('❌ Error loading user data: $e');
       
       if (ErrorHandlerService.isTokenError(e)) {
         state = state.copyWith(
@@ -153,7 +163,6 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
   }
 
   Future<void> refreshProfile() async {
-    print('🔄 [ProfileStateNotifier] Refreshing profile...');
     if (state.isLoggedIn) {
       await _loadUserData();
     } else {
@@ -162,21 +171,14 @@ class ProfileStateNotifier extends StateNotifier<ProfileState> {
   }
 
   void updateUserData(Map<String, dynamic> newUserData) {
-    print('🔄 [ProfileStateNotifier] Updating user data with: $newUserData');
-    print('🔄 [ProfileStateNotifier] Current state before update: ${state.userData}');
     
     if (state.userData != null) {
       // Create a deep copy and merge the data
       final updatedUserData = Map<String, dynamic>.from(state.userData!);
       updatedUserData.addAll(newUserData);
-      
-      print('✅ [ProfileStateNotifier] Merged user data: $updatedUserData');
-      
+            
       state = state.copyWith(userData: updatedUserData);
-      print('✅ [ProfileStateNotifier] User data updated successfully in state');
-      print('🔄 [ProfileStateNotifier] New state after update: ${state.userData}');
     } else {
-      print('⚠️ [ProfileStateNotifier] No existing user data to update');
       state = state.copyWith(userData: newUserData);
     }
   }
@@ -231,15 +233,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileStateProvider);
 
-    print('🏠 [ProfilePage] Building with isLoggedIn: ${profileState.isLoggedIn}');
-    print('🏠 [ProfilePage] User name: ${profileState.userData?['name']}');
-
     _handleTokenErrors(profileState, context);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('profile_page.profile'.tr()),
+        title: Text(_tr("profile_page.profile","Profile")),
       ),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
@@ -297,19 +296,19 @@ Widget _buildBottomNavigationBar(int currentIndex) {
       items: [
         BottomNavigationBarItem(
           icon: const Icon(Icons.home),
-          label: 'Home',
+          label: _tr("home_page.home","Home"),
         ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.search),
-          label: 'Search',
+          label: _tr("home_page.search","Search"),
         ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.shopping_cart),
-          label: 'Cart',
+          label: _tr("home_page.cart","Cart"),
         ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.person),
-          label: 'Profile',
+          label: _tr("home_page.profile","Profile"),
         ),
       ],
     ),
@@ -344,7 +343,7 @@ Widget _buildBottomNavigationBar(int currentIndex) {
       _hasHandledTokenNavigation = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ErrorHandlerService.handleApiError(
-          error: 'Your session has expired. Please login again.',
+          error: _tr("profile_page.session_expired_message","Your session has expired. Please login again."),
           context: context,
         );
       });
@@ -524,7 +523,7 @@ Widget _buildBottomNavigationBar(int currentIndex) {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Error',
+                    _tr("profile_page.profile_load_error","Profile Load Error"),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -533,7 +532,7 @@ Widget _buildBottomNavigationBar(int currentIndex) {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    state.errorMessage ?? 'Unknown error occurred',
+                    state.errorMessage ?? _tr("profile_page.Failed_to_load_user_data","Failed to load user data"),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.grey.shade600,
@@ -549,14 +548,14 @@ Widget _buildBottomNavigationBar(int currentIndex) {
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text('Retry'),
+                        child: Text(_tr("profile_page.retry","Retry")),
                       ),
                       const SizedBox(width: 12),
                       TextButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => GuestProfile()),
-            ),               child: const Text('Continue as Guest'),
+            ),               child:  Text(_tr("profile_page.continue_as_guest","Continue as Guest")),
                       ),
                     ],
                   ),
@@ -577,23 +576,23 @@ Widget _buildBottomNavigationBar(int currentIndex) {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Logout'),
+            title:  Text(_tr("profile_page.logout","Logout")),
             content: isLoading 
-                ? const Column(
+                ?  Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(height: 16),
-                      Text('Logging out...'),
+                      Text(_tr("profile_page.logging_out","Logging out...")),
                     ],
                   )
-                : const Text('Are you sure you want to logout?'),
+                : Text(_tr("profile_page.logout_confirmation","Are you sure you want to logout?")),
             actions: isLoading 
                 ? []
                 : [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child:  Text(_tr("profile_page.cancel","Cancel")),
                     ),
                     TextButton(
                       onPressed: () async {
@@ -615,29 +614,27 @@ Widget _buildBottomNavigationBar(int currentIndex) {
                             );
                           }
                           
-                          print('🎯 Logout process completed');
                         } catch (e) {
                           if (context.mounted) {
                             Navigator.pop(context);
                             if (ErrorHandlerService.handleApiError(
                               error: e,
                               context: context,
-                              customMessage: 'Session expired during logout.',
+                              customMessage: _tr("profile_page.session_expired_message","Session expired during logout."),
                             )) {
                               return;
                             }
                             
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Logout error: $e'),
+                                content: Text(_tr("profile_page.logout_error : $e","Logout error: $e")),
                                 backgroundColor: Colors.red,
                               ),
                             );
                           }
-                          print('❌ Logout error: $e');
                         }
                       },
-                      child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                      child:  Text(_tr("profile_page.logout","Logout"), style: TextStyle(color: Colors.red)),
                     ),
                   ],
           );

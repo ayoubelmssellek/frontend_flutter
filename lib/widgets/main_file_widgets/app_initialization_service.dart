@@ -24,16 +24,11 @@ class AppInitializationService {
       // Store navigator key
       if (navKey != null) {
         AppInitializationService.navigatorKey = navKey;
-        print("🎯 Navigator key stored");
       }
 
-      // NO FCM initialization here - handled by separate service in main.dart
-      print("ℹ️ FCM handled by separate service to prevent duplicates");
 
       // Check authentication
-      print("🔐 Checking authentication...");
       final authResult = await _checkAuthenticationStatus();
-      print("✅ Authentication check complete");
       
       return AppInitializationResult(
         fcmToken: null, // No longer handled here
@@ -42,7 +37,6 @@ class AppInitializationService {
         isLoading: false,
       );
     } catch (e) {
-      print("❌ Error initializing app: $e");
       return AppInitializationResult(
         fcmToken: null,
         initialPage: const ClientHomePage(),
@@ -54,13 +48,11 @@ class AppInitializationService {
 
   Future<AuthenticationResult> _checkAuthenticationStatus() async {
     try {
-      print("🔄 Waiting for app start authentication...");
       // Wait for app start authentication check
       await ref.read(appStartProvider.future);
       
       // Check if user is logged in
       final isLogged = await _secureStorage.read(key: 'isLogged');
-      print("🔐 User logged in: $isLogged");
       
       if (isLogged == 'true') {
         return await _loadUserAndDetermineRoute();
@@ -71,7 +63,6 @@ class AppInitializationService {
         );
       }
     } catch (e) {
-      print("❌ Authentication check error: $e");
       return AuthenticationResult(
         initialPage: const ClientHomePage(),
         userData: null,
@@ -81,14 +72,12 @@ class AppInitializationService {
 
   Future<AuthenticationResult> _loadUserAndDetermineRoute() async {
     try {
-      print("👤 Loading user data...");
       final authRepo = ref.read(authRepositoryProvider);
       final userResult = await authRepo.getCurrentUser();
       
       if (userResult['success'] == true) {
         final userData = userResult['data'];
         final role = userData['role_name']?.toString().toLowerCase();
-        print("🎯 User role detected: $role");
         
         final targetPage = _getPageForRole(role);
         
@@ -105,14 +94,12 @@ class AppInitializationService {
           userData: userData,
         );
       } else {
-        print("❌ User data load failed");
         return AuthenticationResult(
           initialPage: const ClientHomePage(),
           userData: null,
         );
       }
     } catch (e) {
-      print("❌ Load user error: $e");
       return AuthenticationResult(
         initialPage: const ClientHomePage(),
         userData: null,
@@ -128,9 +115,7 @@ class AppInitializationService {
         value: json.encode(userData)
       );
       await _secureStorage.write(key: 'isLogged', value: 'true');
-      print("✅ User data stored");
     } catch (e) {
-      print("❌ Error storing user data: $e");
     }
   }
 
@@ -156,16 +141,13 @@ class AppInitializationService {
     final deliveryDriverId = userData['delivery_driver_id'];
     if (deliveryDriverId != null) {
       ref.read(currentDeliveryManIdProvider.notifier).state = deliveryDriverId;
-      print('👤 Set delivery man ID: $deliveryDriverId');
     } else {
-      print('⚠️ delivery_driver_id not found in user data');
     }
   }
 
   // Method to handle navigation from main app
   static void handleNavigation() {
     if (navigatorKey?.currentState?.mounted == true) {
-      print("🔄 Navigation handler ready");
     }
   }
 }

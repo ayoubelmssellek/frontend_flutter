@@ -4,6 +4,7 @@ import 'package:food_app/models/shop_model.dart';
 import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
 import 'package:food_app/widgets/home_page/ShopCard.dart';
 import 'package:food_app/providers/auth_providers.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CategoryDetailsPage extends ConsumerStatefulWidget {
   final String categoryName;
@@ -18,7 +19,17 @@ class CategoryDetailsPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CategoryDetailsPage> createState() => _CategoryDetailsPageState();
+  ConsumerState<CategoryDetailsPage> createState() =>
+      _CategoryDetailsPageState();
+}
+
+String _tr(String key, String fallback) {
+  try {
+    final translation = key.tr();
+    return translation == key ? fallback : translation;
+  } catch (e) {
+    return fallback;
+  }
 }
 
 class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
@@ -70,17 +81,24 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
       ),
       body: businessOwnersAsync.when(
         loading: () => _buildModernLoadingState(),
-        error: (err, stack) => _buildModernErrorState('Error loading businesses: $err'),
+        error: (err, stack) => _buildModernErrorState(
+          _tr(
+            "category_details_page.Failed_to_load_businesses : $err",
+            "Failed to load businesses : $err",
+          ),
+        ),
         data: (result) {
           if (result['success'] != true) {
-            return _buildModernErrorState('Failed to load businesses');
+            return _buildModernErrorState(
+              _tr(
+                "category_details_page.Failed_to_load_businesses",
+                "Failed to load businesses",
+              ),
+            );
           }
 
           final backendBusinessOwners = result['data'] as List<dynamic>;
           final shops = _getBusinessesByType(backendBusinessOwners);
-
-          // ✅ DEBUG: Print business status for verification
-          _debugBusinessStatus(shops);
 
           if (shops.isEmpty) {
             return _buildModernEmptyState();
@@ -90,20 +108,6 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
         },
       ),
     );
-  }
-
-  // ✅ DEBUG: Method to check business status
-  void _debugBusinessStatus(List<Shop> shops) {
-    print('=== DEBUG: CategoryDetails Business Status ===');
-    for (var shop in shops.take(3)) {
-      print('Business: ${shop.name}');
-      print('Opening: ${shop.openingTime}');
-      print('Closing: ${shop.closingTime}');
-      print('Is Active: ${shop.isActive}');
-      print('Is Open: ${shop.isOpen}');
-      print('---');
-    }
-    print('=== END DEBUG ===');
   }
 
   Widget _buildModernBusinessesList(BuildContext context, List<Shop> shops) {
@@ -126,11 +130,16 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: widget.categoryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: widget.categoryColor.withOpacity(0.2)),
+                  border: Border.all(
+                    color: widget.categoryColor.withOpacity(0.2),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -141,7 +150,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${shops.length} ${shops.length == 1 ? 'Business' : 'Businesses'}',
+                      '${shops.length} ${shops.length == 1 ? _tr("category_details_page.Business", "Business") : _tr("category_details_page.Businesses", "Businesses")}',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -160,7 +169,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             ],
           ),
         ),
-        
+
         // Businesses list
         Expanded(
           child: ListView.builder(
@@ -221,7 +230,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             ],
           ),
         ),
-        
+
         // Businesses list skeleton
         Expanded(
           child: ListView.builder(
@@ -345,8 +354,8 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Something went wrong',
+             Text(
+              _tr("category_details_page.Something_went_wrong", "Something went wrong"),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -376,13 +385,14 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-              ),
-              child: const Text(
-                'Try Again',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 14,
                 ),
+              ),
+              child: Text(
+                _tr("category_details_page.Try_Again", "Try Again"),
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -413,7 +423,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No ${widget.categoryName} Found',
+              _tr("category_details_page.No ${widget.categoryName} found", "No ${widget.categoryName} found"),
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
@@ -422,7 +432,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'We couldn\'t find any businesses in this category at the moment.',
+              _tr("category_details_page.We_couldn't_find_any_businesses_in_this_category", "We couldn't find any businesses in this category."),
               style: TextStyle(
                 fontSize: 15,
                 color: Colors.grey.shade600,
@@ -432,11 +442,8 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Please check back later for updates.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              _tr("category_details_page.Please_check_back_later", "Please check back later."),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ],
         ),

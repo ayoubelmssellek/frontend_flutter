@@ -23,10 +23,6 @@ class BusinessTypesSection extends ConsumerWidget {
     return businessTypesAsync.when(
       loading: () => _buildBusinessTypesSkeleton(),
       error: (error, stack) {
-        if (kDebugMode) {
-          print('❌ BUSINESS TYPES PROVIDER ERROR: $error');
-          print('Stack: $stack');
-        }
         return SizedBox(
           height: 120,
           child: Center(
@@ -35,20 +31,10 @@ class BusinessTypesSection extends ConsumerWidget {
         );
       },
       data: (businessTypesResult) {
-        if (kDebugMode) {
-          print('📊 BUSINESS TYPES RESULT: $businessTypesResult');
-          if (businessTypesResult['success'] == false) {
-            print('❌ BUSINESS TYPES ERROR MESSAGE: ${businessTypesResult['message']}');
-          }
-        }
 
         return businessOwnersAsync.when(
           loading: () => _buildBusinessTypesSkeleton(),
           error: (error, stack) {
-            if (kDebugMode) {
-              print('❌ BUSINESS OWNERS PROVIDER ERROR: $error');
-              print('Stack: $stack');
-            }
             return SizedBox(
               height: 120,
               child: Center(
@@ -57,20 +43,9 @@ class BusinessTypesSection extends ConsumerWidget {
             );
           },
           data: (businessOwnersResult) {
-            if (kDebugMode) {
-              print('📊 BUSINESS OWNERS RESULT: $businessOwnersResult');
-              if (businessOwnersResult['success'] == false) {
-                print('❌ BUSINESS OWNERS ERROR MESSAGE: ${businessOwnersResult['message']}');
-              }
-            }
 
             // Check if both requests were successful
             if (businessTypesResult['success'] != true || businessOwnersResult['success'] != true) {
-              if (kDebugMode) {
-                print('❌ ONE OR BOTH REQUESTS FAILED');
-                print('Business Types Success: ${businessTypesResult['success']}');
-                print('Business Owners Success: ${businessOwnersResult['success']}');
-              }
               return SizedBox(
                 height: 120,
                 child: Center(child: Text('Failed to load data', style: TextStyle(color: Colors.red))),
@@ -82,28 +57,10 @@ class BusinessTypesSection extends ConsumerWidget {
             final backendBusinessOwners = businessOwnersResult['data'] as List<dynamic>?;
 
             if (backendBusinessTypes == null || backendBusinessOwners == null) {
-              if (kDebugMode) {
-                print('❌ DATA IS NULL');
-                print('Business Types Data: $backendBusinessTypes');
-                print('Business Owners Data: $backendBusinessOwners');
-              }
               return SizedBox(
                 height: 120,
                 child: Center(child: Text('No data available', style: TextStyle(color: Colors.grey))),
               );
-            }
-
-            if (kDebugMode) {
-              print('✅ BACKEND BUSINESS TYPES COUNT: ${backendBusinessTypes.length}');
-              print('✅ BACKEND BUSINESS OWNERS COUNT: ${backendBusinessOwners.length}');
-              
-              // Print first few items to see structure
-              if (backendBusinessTypes.isNotEmpty) {
-                print('📝 FIRST BUSINESS TYPE: ${backendBusinessTypes.first}');
-              }
-              if (backendBusinessOwners.isNotEmpty) {
-                print('📝 FIRST BUSINESS OWNER: ${backendBusinessOwners.first}');
-              }
             }
 
             if (backendBusinessTypes.isEmpty) {
@@ -125,9 +82,6 @@ class BusinessTypesSection extends ConsumerWidget {
                   final isSelected = selectedBusinessType == typeName;
 
                   if (typeId == null) {
-                    if (kDebugMode) {
-                      print('❌ BUSINESS TYPE HAS NO ID: $businessType');
-                    }
                     return const SizedBox(); // Skip this item
                   }
 
@@ -135,10 +89,6 @@ class BusinessTypesSection extends ConsumerWidget {
                   final businessCount = backendBusinessOwners
                       .where((business) => business['business_type'] == typeName)
                       .length;
-
-                  if (kDebugMode) {
-                    print('🏷️ Business Type: "$typeName" (ID: $typeId) - Count: $businessCount');
-                  }
 
                   return GestureDetector(
                     onTap: () {

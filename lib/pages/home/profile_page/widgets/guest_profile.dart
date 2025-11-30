@@ -91,7 +91,7 @@ class GuestProfile extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Register to have access to more features',
+            _tr('guest_profile_page.Please_login_or_register','Please login or register to access more features.'),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
@@ -112,8 +112,8 @@ class GuestProfile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Login',
+                  child: Text(
+                    _tr('guest_profile_page.Login','Login'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -133,8 +133,8 @@ class GuestProfile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Register',
+                  child: Text(
+                    _tr("guest_profile_page.Register","Register"),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -152,19 +152,19 @@ class GuestProfile extends StatelessWidget {
 
   Widget _buildSettingsSection(BuildContext context) {
     return SectionWidget(
-      title: 'Settings',
+      title: _tr("guest_profile_page.Settings","Settings"),
       features: [
         LanguageSelector.build(context),
         FeatureItem(
           icon: Icons.notifications_rounded,
-          title: 'Notifications',
-          subtitle: 'Manage your notifications',
+          title: _tr("guest_profile_page.Notifications","Notifications"),
+          subtitle: _tr("guest_profile_page.Manage_notification_preferences","Manage notification preferences"),
           onTap: () {},
         ),
         FeatureItem(
           icon: Icons.location_on_rounded,
-          title: 'Location',
-          subtitle: 'Set your delivery location',
+          title: _tr("guest_profile_page.Location","Location"),
+          subtitle: _tr("guest_profile_page.Set_your_delivery_location","Set your delivery location"),
           onTap: () {},
         ),
       ],
@@ -173,50 +173,50 @@ class GuestProfile extends StatelessWidget {
 
   Widget _buildEarnMoneySection(BuildContext context) {
     return SectionWidget(
-      title: 'Earn Money',
+      title: _tr("guest_profile_page.Earn_Money","Earn Money"),
       features: [
         FeatureItem(
           icon: Icons.delivery_dining_rounded,
-          title: 'Become Delivery Man',
-          subtitle: 'Deliver food and earn money',
+          title: _tr("guest_profile_page.Become_Delivery_Man","Become Delivery Man"),
+          subtitle: _tr("guest_profile_page.Deliver_food_and_earn_money","Deliver food and earn money"),
           onTap: () => _showDeliveryRegistration(context),
         ),
-        FeatureItem(
-          icon: Icons.restaurant_rounded,
-          title: 'Open Your Shop',
-          subtitle: 'Sell your food to customers',
-          onTap: () => _showShopRegistration(context),
-        ),
+        // FeatureItem(
+        //   icon: Icons.restaurant_rounded,
+        //   title: _tr("guest_profile_page.Open_Your_Shop","Open Your Shop"),
+        //   subtitle: _tr("guest_profile_page.Sell_your_food_to_customers","Sell your food to customers"),
+        //   onTap: () => _showShopRegistration(context),
+        // ),
       ],
     );
   }
 
   Widget _buildSupportSection(BuildContext context) {
     return SectionWidget(
-      title: 'Support',
+      title: _tr("guest_profile_page.Support","Support"),
       features: [
         FeatureItem(
           icon: Icons.help_center_rounded,
-          title: 'Help Center',
-          subtitle: 'Get help and FAQs',
+          title: _tr("guest_profile_page.Help_Center","Help Center"),
+          subtitle: _tr("guest_profile_page.Get_help_and_FAQs","Get help and FAQs"),
           onTap: () => _showHelpCenter(context),
         ),
         FeatureItem(
           icon: Icons.support_agent_rounded,
-          title: 'Contact Support',
-          subtitle: '24/7 customer support',
+          title: _tr("guest_profile_page.Contact_Support","Contact Support"),
+          subtitle: _tr("guest_profile_page.Customer_Support","24/7 customer support"),
           onTap: () => _showContactSupport(context),
         ),
         FeatureItem(
           icon: Icons.privacy_tip_rounded,
-          title: 'Privacy Policy',
-          subtitle: 'Read our privacy policy',
+          title: _tr("guest_profile_page.Privacy_Policy","Privacy Policy"),
+          subtitle: _tr("guest_profile_page.Read_our_privacy_policy","Read our privacy policy"),
           onTap: () => _showPrivacyPolicy(context),
         ),
         FeatureItem(
           icon: Icons.description_rounded,
-          title: 'Terms of Service',
-          subtitle: 'Read our terms and conditions',
+          title: _tr("guest_profile_page.Terms_of_Service","Terms of Service"),
+          subtitle: _tr("guest_profile_page.Read_our_terms_and_conditions","Read our terms and conditions"),
           onTap: () => _showTermsOfService(context),
         ),
       ],
@@ -236,7 +236,7 @@ class GuestProfile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Benefits of Registering',
+            _tr("guest_profile_page.Benefits_of_registering","Benefits of registering"),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -244,11 +244,11 @@ class GuestProfile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _buildBenefitItem('✓ Save favorite restaurants'),
-          _buildBenefitItem('✓ Fast checkout with saved addresses'),
-          _buildBenefitItem('✓ Track order history'),
-          _buildBenefitItem('✓ Exclusive offers and discounts'),
-          _buildBenefitItem('✓ Earn loyalty points'),
+          _buildBenefitItem(_tr("guest_profile_page.Save_favorite_restaurants","✓ Save favorite restaurants")),
+          _buildBenefitItem(_tr("guest_profile_page.Fast_checkout_with_saved_addresses","✓ Fast checkout with saved addresses")),
+          _buildBenefitItem(_tr("guest_profile_page.Track_order_history","✓ Track order history")),
+          _buildBenefitItem(_tr("guest_profile_page.Exclusive_offers_and_discounts","✓ Exclusive offers and discounts")),
+          _buildBenefitItem(_tr("guest_profile_page.Earn_loyalty_points","✓ Earn loyalty points")),
         ],
       ),
     );
@@ -281,58 +281,60 @@ class GuestProfile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Become a Delivery Partner'),
-        content: const Text('Register as a delivery partner to start earning money by delivering food to customers.'),
+        title:  Text(_tr("guest_profile_page.Become_a_Delivery_Driver","Become a Delivery Driver")),
+        content:  Text(_tr("guest_profile_page.Register_as_a_delivery_driver","Register as a delivery partner to start earning money by delivering food to customers.")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child:  Text(_tr("guest_profile_page.Cancel","Cancel")),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const DeliveryDriverRegisterPage()));
             },
-            child: const Text('Register Now'),
+            child:  Text(_tr("guest_profile_page.Register_Now","Register Now")),
           ),
         ],
       ),
     );
   }
 
-  void _showShopRegistration(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Open Your Shop'),
-        content: const Text('Register your restaurant or shop to start selling your food to customers.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
-            },
-            child: const Text('Register Now'),
-          ),
-        ],
-      ),
-    );
-  }
+
+ // this part not for now 
+  // void _showShopRegistration(BuildContext context) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Open Your Shop'),
+  //       content: const Text('Register your restaurant or shop to start selling your food to customers.'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () {
+  //             Navigator.pop(context);
+  //             Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
+  //           },
+  //           child: const Text('Register Now'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   void _showHelpCenter(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Help Center'),
-        content: const Text('Find answers to frequently asked questions and get help with common issues.'),
+        title:  Text(_tr("guest_profile_page.Help_Center","Help Center")),
+        content:  Text(_tr("guest_profile_page.Find_answers_to_frequently_asked_questions_and_get_help_with_common_issues","Find answers to frequently asked questions and get help with common issues.")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child:  Text(_tr("guest_profile_page.Close","Close")),
           ),
         ],
       ),
@@ -343,12 +345,12 @@ class GuestProfile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Contact Support'),
-        content: const Text('Our support team is available 24/7 to help you with any issues or questions.'),
+        title:  Text(_tr("guest_profile_page.Contact_Support","Contact Support")),
+        content:  Text(_tr("guest_profile_page.Our_support_team_is_available_24_7_to_help_you_with_any_issues_or_questions","Our support team is available 24/7 to help you with any issues or questions.")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child:  Text(_tr("guest_profile_page.Close","Close")),
           ),
         ],
       ),
@@ -359,12 +361,12 @@ class GuestProfile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Privacy Policy'),
-        content: const Text('Read our privacy policy to understand how we protect and use your data.'),
+        title:  Text(_tr("guest_profile_page.Privacy_Policy","Privacy Policy")),
+        content:  Text(_tr("guest_profile_page.Read_our_privacy_policy_to_understand_how_we_protect_and_use_your_data","Read our privacy policy to understand how we protect and use your data.")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child:  Text(_tr("guest_profile_page.Close","Close")),
           ),
         ],
       ),
@@ -375,12 +377,12 @@ class GuestProfile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Terms of Service'),
-        content: const Text('Read our terms and conditions to understand the rules and guidelines for using our app.'),
+        title:  Text(_tr("guest_profile_page.Terms_of_Service","Terms of Service")),
+        content:  Text(_tr("guest_profile_page.Read_our_terms_and_conditions_to_understand_the_rules_and_guidelines_for_using_our_app","Read our terms and conditions to understand the rules and guidelines for using our app.")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child:  Text(_tr("guest_profile_page.Close","Close")),
           ),
         ],
       ),

@@ -6,6 +6,8 @@ import 'package:food_app/pages/home/client_home_page.dart';
 import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
 import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
 import 'package:food_app/widgets/home_page/ShopCard.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 
 class SearchPage extends StatefulWidget {
   final List<dynamic> businesses;
@@ -15,6 +17,15 @@ class SearchPage extends StatefulWidget {
   @override
   State<SearchPage> createState() => _SearchPageState();
 }
+
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
@@ -40,7 +51,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Businesses'),
+        title: Text(_tr('search_page.title', 'Search Businesses')),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -105,19 +116,19 @@ class _SearchPageState extends State<SearchPage> {
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.home),
-            label: 'Home',
+            label: _tr('home_page.home', 'Home'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.search),
-            label: 'Search',
+            label: _tr('search_page.title', 'Search'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.shopping_cart),
-            label: 'Cart',
+            label: _tr('home_page.cart', 'Cart'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person),
-            label: 'Profile',
+            label: _tr('home_page.profile', 'Profile'),
           ),
         ],
       ),
@@ -142,7 +153,7 @@ class _SearchPageState extends State<SearchPage> {
         child: TextField(
           controller: _searchController,
           decoration: InputDecoration(
-            hintText: 'Search for businesses, categories...',
+            hintText: _tr('search_page.hint', 'Search for businesses, categories...'),
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
@@ -176,10 +187,10 @@ class _SearchPageState extends State<SearchPage> {
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               selected: _selectedCategory == 'All',
-              label: const Text('All'),
+              label:  Text(_tr('search_page.all_categories', 'All')),
               onSelected: (selected) {
                 setState(() {
-                  _selectedCategory = 'All';
+                  _selectedCategory = _tr('search_page.all_categories', 'All');
                   _filterShops();
                 });
               },
@@ -219,7 +230,7 @@ class _SearchPageState extends State<SearchPage> {
       child: Row(
         children: [
           Text(
-            '${_filteredShops.length} businesses found',
+            '${_filteredShops.length}${_tr("search_page.businesses_found", " businesses found")}',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,
@@ -245,7 +256,7 @@ class _SearchPageState extends State<SearchPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'No businesses found',
+                _tr('search_page.no_businesses_found', 'No businesses found'),
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.grey.shade600,
@@ -254,7 +265,7 @@ class _SearchPageState extends State<SearchPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Try different keywords or categories',
+                _tr('search_page.try_different_keywords', 'Try different keywords or categories'),
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade500,

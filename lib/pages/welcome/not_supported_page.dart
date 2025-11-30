@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 
 class NotSupportedPage extends StatelessWidget {
   final String? detectedLocation;
+
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
   
   const NotSupportedPage({super.key, this.detectedLocation});
 
@@ -17,8 +28,8 @@ class NotSupportedPage extends StatelessWidget {
             children: [
               Icon(Icons.location_off, size: 100, color: Colors.red.shade600),
               const SizedBox(height: 30),
-              const Text(
-                "Service Not Available",
+               Text(
+                _tr("not_supported_page.not_available", "Service Not Available Here"),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
@@ -45,7 +56,7 @@ class NotSupportedPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Your Location:",
+                              _tr("not_supported_page.detect_location", "Your Location:"),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -71,8 +82,8 @@ class NotSupportedPage extends StatelessWidget {
               
               Text(
                 detectedLocation != null 
-                  ? "Sorry! Our food delivery service is currently only available in Dakhla. We detected that you're in $detectedLocation."
-                  : "Sorry! Our food delivery service is currently only available in Dakhla.",
+                  ? _tr("not_supported_page.description", "We're sorry, but our delivery services are not available in your current location.")
+                  : _tr("not_supported_page.description", "Sorry! Our food delivery service is currently only available in Dakhla."),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 18,
@@ -82,7 +93,7 @@ class NotSupportedPage extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               Text(
-                "We're expanding soon!",
+                _tr("not_supported_page.were_expansig_soon", "We're expanding soon! Stay tuned for updates."),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,

@@ -21,6 +21,8 @@ import 'package:food_app/widgets/checkout/order_processing_widget.dart';
 import 'package:food_app/widgets/checkout/order_confirmation_full_page.dart';
 import 'package:food_app/widgets/checkout/delivery_man_selection_widget.dart';
 import 'package:food_app/widgets/checkout/order_loading_widget.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 
 class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({super.key});
@@ -30,6 +32,14 @@ class CheckoutPage extends ConsumerStatefulWidget {
 }
 
 class _CheckoutPageState extends ConsumerState<CheckoutPage> {
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
   bool _isSubmittingOrder = false;
   String _selectedDeliveryOption = 'all';
   DeliveryDriver? _selectedDeliveryDriver;
@@ -48,11 +58,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       
       // ✅ NEW: Debug cart contents on initialization
       if (kDebugMode) {
-        print('🛒 CHECKOUT PAGE INITIALIZED');
         cartService.debugCartContents();
       }
     } catch (e) {
-      print('Error initializing cart: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -70,7 +78,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Checkout'),
+        title: Text(_tr('checkout_page.checkout', 'Checkout')),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -123,22 +131,22 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         selectedItemColor: Colors.deepOrange,
         unselectedItemColor: Colors.grey.shade600,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        items: const [
+        items:  [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Home',
+            label: _tr('checkout_page.home', 'Home'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
-            label: 'Search',
+            label: _tr('checkout_page.search', 'Search'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
-            label: 'Cart',
+            label: _tr('checkout_page.cart', 'Cart'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Profile',
+            label: _tr('checkout_page.profile', 'Profile'),
           ),
         ],
       ),
@@ -151,19 +159,19 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
 
     if (cartService.isEmpty) {
-      return const Center(
+      return  Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.shopping_cart_outlined, size: 70, color: Colors.grey),
             SizedBox(height: 12),
             Text(
-              'Your cart is empty',
+              _tr('checkout_page.cart_empty' , 'Your cart is empty'),
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             SizedBox(height: 16),
             Text(
-              'Add some items from restaurants to continue',
+                _tr('checkout_page.add_items_message', 'Add some items from restaurants to continue'),
               style: TextStyle(fontSize: 14, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
@@ -189,13 +197,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         final double serviceFee = 1.50;
         final double total = subtotal + deliveryFee + serviceFee;
 
-        if (kDebugMode) {
-          print('💰 CHECKOUT TOTALS:');
-          print('   Subtotal (with extras): $subtotal');
-          print('   Delivery Fee: $deliveryFee');
-          print('   Service Fee: $serviceFee');
-          print('   Total: $total');
-        }
         
         return Column(
           children: [
@@ -517,12 +518,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final double subtotal = cartService.subtotal; // This includes extras
     final double total = subtotal + 2.99 + 1.50;
 
-    if (kDebugMode) {
-      print('💰 BOTTOM SHEET TOTALS:');
-      print('   Subtotal (with extras): $subtotal');
-      print('   Total: $total');
-    }
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -602,7 +597,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Login to place order',
+          _tr('checkout_page.login_to_place_order', 'Login to place order'),
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -611,7 +606,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Total: ${total.toStringAsFixed(2)} MAD',
+          _tr('checkout_page.total_label: ${total.toStringAsFixed(2)} MAD', 'Total: ${total.toStringAsFixed(2)} MAD'),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -628,7 +623,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   side: BorderSide(color: Colors.grey.shade300),
                 ),
-                child: const Text('Continue Browsing'),
+                child:  Text(_tr('checkout_page.continue_browsing', 'Continue Browsing')),
               ),
             ),
             const SizedBox(width: 12),
@@ -644,8 +639,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   backgroundColor: Colors.deepOrange,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Text(
-                  'Login Now',
+                child:  Text(
+                  _tr('checkout_page.login_now' , 'Login Now'),
                   style: TextStyle(color: Colors.white),
                 ),
               ),
@@ -662,7 +657,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
     // ✅ NEW: Debug cart contents before processing
     if (kDebugMode) {
-      print('🛒 PROCESSING ORDER - CART CONTENTS:');
       cartService.debugCartContents();
     }
 
@@ -679,8 +673,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     // Validate user ID
     if (clientId == null || clientId == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid user account. Please login again.'),
+        SnackBar(
+          content: Text(_tr('checkout_page.invalid_user_account_message', 'Invalid user account. Please login again')),
           backgroundColor: Colors.red,
         ),
       );
@@ -690,8 +684,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     // Validate delivery option
     if (_selectedDeliveryOption == 'choose' && _selectedDeliveryDriver == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a delivery partner'),
+        SnackBar(
+          content: Text(_tr('checkout_page.please_select_a_delivery_driver' , 'Please select a delivery driver')),
           backgroundColor: Colors.orange,
         ),
       );
@@ -721,14 +715,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
       // ✅ UPDATED: Build order data using new format
       final orderData = await _buildOrderData(user, cartService);
-      
-      print('📦 Sending Order Data to Laravel:');
-      print(jsonEncode(orderData));
+    
 
       // Use the createOrderProvider to send the request
       final orderResult = await ref.read(createOrderProvider(orderData).future);
-
-      print('🎯 Order Result: $orderResult');
 
       if (orderResult['success'] == true) {
         // Order created successfully
@@ -736,7 +726,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         
         final apiResponse = orderResult['data'] ?? orderResult;
         
-        print('🎯 API Response: $apiResponse');
         
         // Remove loading page and show full page confirmation
         Navigator.of(context).pop();
@@ -748,7 +737,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${orderResult['message']}'),
+            content: Text(_tr('${orderResult['message']}', '${orderResult['message']}')),
             backgroundColor: Colors.red,
           ),
         );
@@ -759,7 +748,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error processing order: $e'),
+          content: Text(_tr('checkout_page.error_processing_order : $e', 'Error processing order: $e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -776,8 +765,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     CartService cartService,
   ) async {
     final location = await LocationManager().getStoredLocation();
-    String city = 'Unknown City';
-    String street = 'Unknown Street';
+    String city = _tr('checkout_page.unknown_city', 'Unknown City');
+    String street = _tr('checkout_page.unknown_street', 'Unknown Street');
     
     if (location != null) {
       city = location.city;
@@ -789,9 +778,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final deliveryDriverId = _selectedDeliveryOption == 'choose' && _selectedDeliveryDriver != null 
         ? _selectedDeliveryDriver!.id 
         : null;
-
-    print('🚚 Selected Delivery Driver ID: $deliveryDriverId');
-    print('🚚 Selected Delivery Driver Name: ${_selectedDeliveryDriver?.name}');
 
     // ✅ UPDATED: Use the new order format that includes extras
     final orderFormat = cartService.toOrderFormat();
@@ -808,12 +794,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Login Required'),
-        content: const Text('You need to login to place orders.'),
+        title:  Text(_tr('checkout_page.login_required' , 'Login Required')),
+        content:  Text(_tr('checkout_page.login_required_message' , 'You need to login to place orders.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child:  Text(_tr('checkout_page.cancel' , 'Cancel')),
           ),
           TextButton(
             onPressed: () {
@@ -823,7 +809,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ref.refresh(currentUserProvider);
                 });
             },
-            child: const Text('Login Now'),
+            child:  Text(_tr('checkout_page.login_now' , 'Login Now')),
           ),
         ],
       ),
@@ -833,7 +819,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   void _showOrderConfirmation(Map<String, dynamic> orderResponse, double cartSubtotal) {
     final cartService = ref.read(cartServiceProvider);
     
-    print('🎯 Raw Order Response: $orderResponse');
     
     final orderData = orderResponse['order'] ?? orderResponse;
     final orderId = orderData['id']?.toString() ?? 'N/A';
@@ -842,22 +827,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final double totalPrice = orderData['total_price']?.toDouble() ?? (cartSubtotal + 2.99 + 1.50);
     
     final address = orderData['address'] ?? 'User Address';
-    final status = orderData['status'] ?? 'pending';
+    final status = orderData['status'] ?? _tr('checkout_page.pending','pending');
     final clientId = orderData['client_id']?.toString() ?? 'N/A';
-    final deliveryDriverId = orderData['delivery_driver_id']?.toString() ?? 'Not assigned';
+    final deliveryDriverId = orderData['delivery_driver_id']?.toString() ?? _tr('checkout_page.not_assigned','Not assigned');
     final items = orderData['items'] as List<dynamic>? ?? [];
     final realItemCount = orderData['item_count'] ?? items.length;
     
-    if (kDebugMode) {
-      print('🎯 Extracted Order Data:');
-    }
-    print('   - ID: $orderId');
-    print('   - Total: $totalPrice');
-    print('   - Cart Subtotal (with extras): $cartSubtotal');
-    print('   - Address: $address');
-    print('   - Status: $status');
-    print('   - Items: ${items.length}');
-    print('   - Item Count: $realItemCount');
     
     // Navigate to full page order confirmation
     Navigator.of(context).push(

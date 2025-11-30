@@ -28,7 +28,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
     return lastOrderAsync.when(
       data: (lastOrderData) {
         if (lastOrderData == null) {
-          print('🚫 [RatingSection] No pending rating order - hiding section');
           return const SizedBox.shrink();
         }
         
@@ -36,8 +35,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
         final driverId = lastOrderData['driver_id'];
         final driverName = lastOrderData['name'];
         final avatar = lastOrderData['avatar'];
-        
-        print('✅ [RatingSection] Showing rating section for order $orderId, driver: $driverName');
         
         return _buildModernRatingSection(
           orderId: orderId,
@@ -66,12 +63,10 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
           );
         } else {
           // No cached data, don't show anything while loading in background
-          print('🔄 [RatingSection] Loading in background - no cached data');
           return const SizedBox.shrink();
         }
       },
       error: (error, stack) {
-        print('❌ [RatingSection] Error loading last order: $error');
         // On error, check if we have cached data to show
         final cachedData = ref.read(lastOrderDataProvider).value;
         
@@ -849,7 +844,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
       final trimmedComment = comment.trim();
       final finalComment = trimmedComment.isNotEmpty ? trimmedComment : null;
       
-      print('⭐ [RatingSection] Submitting rating for order $orderId, driver $driverId: $rating stars');
       
       final result = await ref.read(rateDriverOrOwnerProvider(
         RateParams(
@@ -861,7 +855,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
       ).future);
 
       if (result['success'] == true) {
-        print('✅ [RatingSection] Rating submitted successfully');
         
         // Mark order as rated and refresh section immediately
         markOrderAsRated(ref, orderId);
@@ -897,7 +890,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
           );
         }
       } else {
-        print('❌ [RatingSection] Rating submission failed');
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -930,7 +922,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
         }
       }
     } catch (e) {
-      print('❌ [RatingSection] Error submitting rating: $e');
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -966,12 +957,10 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
 
   Future<void> _skipRating(int orderId) async {
     try {
-      print('⏭️ [RatingSection] Skipping rating for order $orderId');
       
       final result = await ref.read(markOrderAsSkippedProvider(orderId).future);
 
       if (result['success'] == true) {
-        print('✅ [RatingSection] Order marked as skipped successfully');
         
         // Mark order as skipped and refresh section immediately
         markOrderAsSkipped(ref, orderId);
@@ -1006,7 +995,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
           );
         }
       } else {
-        print('❌ [RatingSection] Failed to mark order as skipped');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1038,7 +1026,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
         }
       }
     } catch (e) {
-      print('❌ [RatingSection] Error skipping rating: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

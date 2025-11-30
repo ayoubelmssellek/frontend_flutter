@@ -64,7 +64,6 @@ final hasPendingRatingProvider = FutureProvider<bool?>((ref) async {
     if (orderId != null) {
       final ratedOrders = ref.read(ratedOrdersProvider);
       final hasRated = ratedOrders.contains(orderId);
-      print('🔍 [hasPendingRatingProvider] Order $orderId rated: $hasRated');
       return !hasRated;
     }
   }
@@ -98,29 +97,24 @@ final lastOrderDataProvider = FutureProvider<Map<String, dynamic>?>((ref) async 
 
 /// Helper function to mark order as rated and refresh
 void markOrderAsRated(WidgetRef ref, int orderId) {
-  print('🔄 [markOrderAsRated] Marking order $orderId as rated');
   final currentRatedOrders = ref.read(ratedOrdersProvider);
   ref.read(ratedOrdersProvider.notifier).state = {...currentRatedOrders, orderId};
   
   // Trigger refresh to hide the section immediately
   ref.read(refreshRatingSectionProvider.notifier).state++;
-  print('✅ [markOrderAsRated] Order $orderId marked as rated and section refreshed');
 }
 
 /// Helper function to mark order as skipped and refresh
 void markOrderAsSkipped(WidgetRef ref, int orderId) {
-  print('🔄 [markOrderAsSkipped] Marking order $orderId as skipped');
   final currentRatedOrders = ref.read(ratedOrdersProvider);
   ref.read(ratedOrdersProvider.notifier).state = {...currentRatedOrders, orderId};
   
   // Trigger refresh to hide the section immediately
   ref.read(refreshRatingSectionProvider.notifier).state++;
-  print('✅ [markOrderAsSkipped] Order $orderId marked as skipped and section refreshed');
 }
 
 /// Function to manually refresh rating section
 void refreshRatingSection(WidgetRef ref) {
-  print('🔄 [refreshRatingSection] Manually refreshing rating section');
   ref.invalidate(lastOrderForRatingProvider);
   ref.read(refreshRatingSectionProvider.notifier).state++;
 }

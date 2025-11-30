@@ -12,6 +12,15 @@ class ClientOrdersPage extends ConsumerStatefulWidget {
   ConsumerState<ClientOrdersPage> createState() => _ClientOrdersPageState();
 }
 
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
 class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
   OrderStatus? _selectedFilter;
   bool _isLoading = false;
@@ -29,17 +38,12 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
     
     setState(() => _isLoading = true);
     try {
-      final clientId = ref.read(clientIdProvider);
-      print('🔄 [ClientOrdersPage] Loading orders for client ID: $clientId');
-      
+      final clientId = ref.read(clientIdProvider);      
       if (clientId != 0) {
         await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
-        print('✅ [ClientOrdersPage] Orders loaded successfully');
       } else {
-        print('❌ [ClientOrdersPage] No client ID found');
       }
     } catch (e) {
-      print('❌ [ClientOrdersPage] Error loading orders: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -65,12 +69,12 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
 
   String _getOrderCountText(List<ClientOrder> orders) {
     if (_selectedFilter == null) {
-      return '${orders.length} ${tr('orders_page.total_orders')}';
+      return '${orders.length} ${_tr('orders_page.total_orders', 'Total Orders')}';
     }
     
     final count = orders.where((order) => order.status == _selectedFilter).length;
     final statusText = _getStatusText(_selectedFilter!);
-    return '$count $statusText ${tr('orders_page.orders')}';
+    return '$count $statusText ${_tr('orders_page.orders', 'Orders')}';
   }
 
   @override
@@ -79,14 +83,14 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr('orders_page.title')),
+        title: Text(_tr('orders_page.title', 'My Orders')),
         backgroundColor: Colors.deepOrange,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _isLoading ? null : _refreshOrders,
-            tooltip: tr('common.refresh'),
+            tooltip: _tr('common.refresh', 'Refresh'),
           ),
         ],
       ),
@@ -122,11 +126,11 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip(null, tr('orders_page.all')),
-                      _buildFilterChip(OrderStatus.pending, tr('order_status.pending')),
-                      _buildFilterChip(OrderStatus.accepted, tr('order_status.accepted')),
-                      _buildFilterChip(OrderStatus.delivered, tr('order_status.delivered')),
-                      _buildFilterChip(OrderStatus.cancelled, tr('order_status.cancelled')),
+                      _buildFilterChip(null, _tr('orders_page.all', 'All')),
+                      _buildFilterChip(OrderStatus.pending, _tr('order_status.pending', 'Pending')),
+                      _buildFilterChip(OrderStatus.accepted, _tr('order_status.accepted', 'Accepted')),
+                      _buildFilterChip(OrderStatus.delivered, _tr('order_status.delivered', 'Delivered')),
+                      _buildFilterChip(OrderStatus.cancelled, _tr('order_status.cancelled', 'Cancelled')),
                     ],
                   ),
                 ),
@@ -224,7 +228,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${tr('order.order')} #${order.id}',
+                          '${_tr('order.order', 'Order')} #${order.id}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -320,7 +324,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${order.totalItemsQuantity} ${tr('order.items')}',
+                      '${order.totalItemsQuantity} ${_tr('order.items', 'items')}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -350,7 +354,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '${tr('order.delivery_driver')}: ${order.deliveryDriver!.name}',
+                        '${_tr('order.delivery_driver', 'Delivery Driver')}: ${order.deliveryDriver!.name}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -372,14 +376,14 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tr('order.total'),
+                        _tr('order.total', 'Total'),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
                       ),
                       Text(
-                        '${order.totalPrice.toStringAsFixed(2)} ${tr('currency.mad')}',
+                        '${order.totalPrice.toStringAsFixed(2)} ${_tr('currency.mad', 'MAD')}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -394,7 +398,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            tr('orders_page.delivered_on'),
+                            _tr('orders_page.delivered_on', 'Delivered On'),
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.grey,
@@ -450,7 +454,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${tr('order.order')} #${order.id}',
+                    '${_tr('order.order', 'Order')} #${order.id}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -460,7 +464,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${order.totalPrice.toStringAsFixed(2)} ${tr('currency.mad')}',
+                        '${order.totalPrice.toStringAsFixed(2)} ${_tr('currency.mad', 'MAD')}',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -468,7 +472,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                         ),
                       ),
                       Text(
-                        tr('order.total'),
+                        _tr('order.total', 'Total'),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -522,17 +526,17 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Order Details
-                    _buildOrderDetailRow(tr('order.restaurant'), order.restaurantName ?? tr('common.not_available')),
-                    _buildOrderDetailRow(tr('order.address'), order.address),
-                    _buildOrderDetailRow(tr('order.items_count'), '${order.totalItemsQuantity} ${tr('order.items')}'),
-                    _buildOrderDetailRow(tr('order.order_time'), _formatDetailedTime(order.createdAt)),
+                    _buildOrderDetailRow(_tr('order.restaurant', 'Restaurant'), order.restaurantName ?? _tr('common.not_available', 'Not Available')),
+                    _buildOrderDetailRow(_tr('order.address', 'Address'), order.address),
+                    _buildOrderDetailRow(_tr('order.items_count', 'Items Count'), '${order.totalItemsQuantity} ${_tr('order.items', 'items')}'),
+                    _buildOrderDetailRow(_tr('order.order_time', 'Order Time'), _formatDetailedTime(order.createdAt)),
                     
                     if (order.acceptedDate != null)
-                      _buildOrderDetailRow(tr('order.accepted_time'), _formatDetailedTime(order.acceptedDate!)),
+                      _buildOrderDetailRow(_tr('order.accepted_time', 'Accepted Time'), _formatDetailedTime(order.acceptedDate!)),
                     
                     // Delivery Driver Info
                     if (order.deliveryDriver != null)
-                      _buildOrderDetailRow(tr('order.delivery_driver'), order.deliveryDriver!.name),
+                      _buildOrderDetailRow(_tr('order.delivery_driver', 'Delivery Driver'), order.deliveryDriver!.name),
                     
                     const SizedBox(height: 20),
                     
@@ -541,14 +545,14 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          tr('order.items'),
+                          _tr('order.items', 'Items'),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          tr('order.subtotal'),
+                          _tr('order.subtotal', 'Subtotal'),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -578,14 +582,14 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            tr('order.total'),
+                            _tr('order.total', 'Total'),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            '${order.totalPrice.toStringAsFixed(2)} ${tr('currency.mad')}',
+                            '${order.totalPrice.toStringAsFixed(2)} ${_tr('currency.mad', 'MAD')}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -659,7 +663,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${item.quantity}x • ${item.unitPrice.toStringAsFixed(2)} ${tr('currency.mad')}',
+                      '${item.quantity}x • ${item.unitPrice.toStringAsFixed(2)} ${_tr('currency.mad', 'MAD')}',
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     if (item.businessName.isNotEmpty)
@@ -678,7 +682,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                 ),
               ),
               Text(
-                '${item.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
+                '${item.subtotal.toStringAsFixed(2)} ${_tr('currency.mad', 'MAD')}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.deepOrange,
@@ -696,7 +700,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    tr('order.extras'),
+                    _tr('order.extras', 'Extras'),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -736,7 +740,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
             ),
           ),
           Text(
-            '+${extra.subtotal.toStringAsFixed(2)} ${tr('currency.mad')}',
+            '+${extra.subtotal.toStringAsFixed(2)} ${_tr('currency.mad', 'MAD')}',
             style: const TextStyle(
               fontSize: 12,
               color: Colors.green,
@@ -754,7 +758,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
     final preview = itemNames.join(', ');
     
     if (order.items.length > 2) {
-      return '$preview, +${order.items.length - 2} more';
+      return '$preview, +${order.items.length - 2} ${_tr('order.more', 'more')}';
     }
     
     return preview;
@@ -869,7 +873,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              tr('orders_page.no_orders'),
+              _tr('orders_page.no_orders', 'No Orders'),
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -878,7 +882,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              tr('orders_page.no_orders_description'),
+              _tr('orders_page.no_orders_description', 'You have no orders at the moment.'),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
@@ -891,7 +895,7 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
                 Navigator.pop(context);
               },
               icon: const Icon(Icons.shopping_cart),
-              label: Text(tr('orders_page.start_shopping')),
+              label: Text(_tr('orders_page.start_shopping', 'Start Shopping')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepOrange,
                 foregroundColor: Colors.white,
@@ -919,13 +923,13 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
   String _getStatusText(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
-        return tr('order_status.pending');
+        return _tr('order_status.pending', 'Pending');
       case OrderStatus.accepted:
-        return tr('order_status.accepted');
+        return _tr('order_status.accepted', 'Accepted');
       case OrderStatus.delivered:
-        return tr('order_status.delivered');
+        return _tr('order_status.delivered', 'Delivered');
       case OrderStatus.cancelled:
-        return tr('order_status.cancelled');
+        return _tr('order_status.cancelled', 'Cancelled');
     }
   }
 
@@ -947,13 +951,13 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
     final difference = now.difference(orderTime);
     
     if (difference.inMinutes < 1) {
-      return tr('time.just_now');
+      return _tr('time.just_now', 'Just now');
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} ${tr('time.minutes_ago')}';
+      return '${difference.inMinutes} ${_tr('time.minutes_ago', 'minutes ago')}';
     } else if (difference.inHours < 24) {
-      return '${difference.inHours} ${tr('time.hours_ago')}';
+      return '${difference.inHours} ${_tr('time.hours_ago', 'hours ago')}';
     } else {
-      return '${difference.inDays} ${tr('time.days_ago')}';
+      return '${difference.inDays} ${_tr('time.days_ago', 'days ago')}';
     }
   }
 

@@ -23,6 +23,15 @@ final clientHomeStateProvider = StateNotifierProvider<ClientHomeStateNotifier, C
   return ClientHomeStateNotifier(ref);
 });
 
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
 class ClientHomeState {
   final bool isLoading;
   final bool isLoggedIn;
@@ -102,7 +111,7 @@ class ClientHomeStateNotifier extends StateNotifier<ClientHomeState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to check authentication status',
+        errorMessage: _tr('home_page.failed_to_check_auth_status','Failed to check authentication status.'),
         hasTokenError: false,
       );
     }
@@ -125,7 +134,6 @@ class ClientHomeStateNotifier extends StateNotifier<ClientHomeState> {
           isLoggedIn: true,
           hasTokenError: false,
         );
-        print('✅ [ClientHomeStateNotifier] User data loaded successfully');
       } else {
         final message = result['message'] ?? '';
         if (ErrorHandlerService.isTokenError(message)) {
@@ -139,13 +147,12 @@ class ClientHomeStateNotifier extends StateNotifier<ClientHomeState> {
           state = state.copyWith(
             isLoading: false,
             isLoggedIn: false,
-            errorMessage: result['message'] ?? 'Failed to load user data',
+            errorMessage: result['message'] ?? _tr('profile_page.failed_to_load_user_data','Failed to load user data'),
             hasTokenError: false,
           );
         }
       }
     } catch (e) {
-      print('❌ Error loading client user data: $e');
       
       if (ErrorHandlerService.isTokenError(e)) {
         state = state.copyWith(
@@ -166,7 +173,6 @@ class ClientHomeStateNotifier extends StateNotifier<ClientHomeState> {
   }
 
   Future<void> refreshProfile() async {
-    print('🔄 [ClientHomeStateNotifier] Refreshing client profile...');
     if (state.isLoggedIn) {
       await _loadUserData();
     } else {
@@ -190,7 +196,6 @@ class ClientHomeStateNotifier extends StateNotifier<ClientHomeState> {
     if (state.userData != null) {
       final userDataMap = state.userData!['data'] as Map<String, dynamic>?;
       final clientId = userDataMap?['client_id'];
-      print('👤 [ClientHomeStateNotifier] Extracted client ID: $clientId');
       return clientId is int ? clientId : null;
     }
     return null;
@@ -201,7 +206,6 @@ class ClientHomeStateNotifier extends StateNotifier<ClientHomeState> {
     if (state.userData != null) {
       final userDataMap = state.userData!['data'] as Map<String, dynamic>?;
       final userId = userDataMap?['id'];
-      print('👤 [ClientHomeStateNotifier] Extracted user ID: $userId');
       return userId is int ? userId : null;
     }
     return null;
@@ -263,7 +267,6 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     
     // Try both data sources to get client ID
     final clientId = _getClientId();
-    print('🏠 [ClientHomePage] Loading orders on startup, clientId: $clientId');
     
     if (clientId != 0) {
       // ADDED: Check mounted before calling ref
@@ -293,7 +296,6 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
       final clientId = userDataMap?['client_id'];
       if (clientId != null && clientId is int && clientId != 0) {
-        print('✅ [ClientHomePage] Got client ID from currentUserProvider: $clientId');
         return clientId;
       }
     }
@@ -304,7 +306,6 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       final userDataMap = clientState.userData!['data'] as Map<String, dynamic>?;
       final clientId = userDataMap?['client_id'];
       if (clientId != null && clientId is int && clientId != 0) {
-        print('✅ [ClientHomePage] Got client ID from clientHomeStateProvider: $clientId');
         return clientId;
       }
     }
@@ -314,12 +315,10 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
       final userId = userDataMap?['id'];
       if (userId != null && userId is int) {
-        print('⚠️ [ClientHomePage] No client_id found, using user ID: $userId');
         return userId;
       }
     }
 
-    print('❌ [ClientHomePage] No client ID found');
     return 0;
   }
 
@@ -334,7 +333,6 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       final userDataMap = userData.value!['data'] as Map<String, dynamic>?;
       final userId = userDataMap?['id'] as int?;
       if (userId != null) {
-        print('✅ [ClientHomePage] Got user ID from currentUserProvider: $userId');
         return userId;
       }
     }
@@ -345,12 +343,9 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       final userDataMap = clientState.userData!['data'] as Map<String, dynamic>?;
       final userId = userDataMap?['id'] as int?;
       if (userId != null) {
-        print('✅ [ClientHomePage] Got user ID from clientHomeStateProvider: $userId');
         return userId;
       }
     }
-    
-    print('❌ [ClientHomePage] Could not get user ID');
     return null;
   }
 
@@ -407,18 +402,17 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       if (_mounted) { // ADDED: Check mounted
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(tr('common.refresh_success')),
+            content: Text(_tr('common.refresh_success', 'Refresh successful')),
             backgroundColor: Colors.green.shade600,
             duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      print('❌ [ClientHomePage] Refresh error: $e');
       if (_mounted) { // ADDED: Check mounted
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${tr('common.refresh_failed')}: ${e.toString()}'),
+            content: Text('${_tr('common.refresh_failed', 'Refresh failed')}: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -451,7 +445,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => TokenExpiredPage(
-            message: customMessage ?? 'Your session has expired. Please login again to continue.',
+            message: customMessage ?? _tr("home_page.token_expired","Your session has expired. Please log in again."),
             allowGuestMode: true,
           ),
         ),
@@ -590,19 +584,19 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
           items: [
             BottomNavigationBarItem(
               icon: const Icon(Icons.home),
-              label: tr('home_page.home'),
+              label: _tr('home_page.home','Home'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.search),
-              label: tr('home_page.search'),
+              label: _tr('home_page.search','Search'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.shopping_cart),
-              label: tr('home_page.cart'),
+              label: _tr('home_page.cart','Cart'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.person),
-              label: tr('home_page.profile'),
+              label: _tr('home_page.profile','Profile'),
             ),
           ],
         ),

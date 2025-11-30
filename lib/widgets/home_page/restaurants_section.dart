@@ -55,9 +55,6 @@ class ShopsList extends ConsumerWidget {
         final backendBusinessOwners = result['data'] as List<dynamic>;
         final allShops = _mapBusinessOwnersToShops(backendBusinessOwners);
         
-        // ✅ DEBUG: Test image URLs to see what we're getting from the backend
-        _debugImageUrls(allShops);
-        
         final topRatedShops = _getTopRatedShops(allShops);
         
         return _buildTopShopsSection(context, topRatedShops);
@@ -65,24 +62,6 @@ class ShopsList extends ConsumerWidget {
     );
   }
 
-  // ✅ DEBUG: Method to check image URLs from backend
-  void _debugImageUrls(List<Shop> shops) {
-    print('=== DEBUG: Image URLs from Backend ===');
-    for (var shop in shops.take(3)) {
-      print('Shop: ${shop.name}');
-      print('Business Type: ${shop.businessType}');
-      print('Categories: ${shop.categories}');
-      print('Raw Cover Image: ${shop.coverImage}');
-      print('Raw Avatar Image: ${shop.image}');
-      print('Full Cover URL: ${ImageHelper.getImageUrl(shop.coverImage)}');
-      print('Full Avatar URL: ${ImageHelper.getImageUrl(shop.image)}');
-      print('Opening Time: ${shop.openingTime}');
-      print('Closing Time: ${shop.closingTime}');
-      print('Is Open: ${shop.isOpen}');
-      print('---');
-    }
-    print('=== END DEBUG ===');
-  }
 
   Widget _buildTopShopsSection(BuildContext context, List<Shop> shops) {
     return Container(

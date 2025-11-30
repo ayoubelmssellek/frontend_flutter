@@ -19,12 +19,10 @@ class NotificationService {
   // Initialize notification service
   Future<void> initialize() async {
     if (_isInitialized) {
-      print("✅ Notification service already initialized");
       return;
     }
 
     try {
-      print("🔧 Initializing Notification Service...");
 
       // Android settings
       const AndroidInitializationSettings androidSettings =
@@ -47,7 +45,6 @@ class NotificationService {
       await _notificationsPlugin.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          print('🖱️ Notification clicked: ${response.payload}');
           _handleNotificationClick(response.payload);
         },
       );
@@ -56,10 +53,8 @@ class NotificationService {
       await _createNotificationChannel();
 
       _isInitialized = true;
-      print("✅ Notification Service initialized successfully");
 
     } catch (e) {
-      print("❌ Error initializing Notification Service: $e");
     }
   }
 
@@ -121,10 +116,8 @@ class NotificationService {
         }),
       );
 
-      print("✅ Notification shown: $title");
 
     } catch (e) {
-      print("❌ Error showing notification: $e");
     }
   }
 
@@ -132,9 +125,7 @@ class NotificationService {
   Future<void> clearAllNotifications() async {
     try {
       await _notificationsPlugin.cancelAll();
-      print("✅ All notifications cleared");
     } catch (e) {
-      print("❌ Error clearing notifications: $e");
     }
   }
 
@@ -142,12 +133,10 @@ class NotificationService {
     if (payload != null) {
       try {
         final data = json.decode(payload);
-        print('🖱️ Notification clicked with data: $data');
         
         // Handle navigation based on notification data
         // You can add your navigation logic here
       } catch (e) {
-        print('❌ Error handling notification click: $e');
       }
     }
   }

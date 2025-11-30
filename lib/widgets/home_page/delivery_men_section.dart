@@ -21,7 +21,6 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
 
   // Public refresh method
   Future<void> refresh() async {
-    print('🔄 [DeliveryMenSection] Manual refresh triggered');
     await ref.read(deliveryDriversProvider.notifier).refreshDeliveryDrivers();
   }
 
@@ -475,7 +474,6 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
   }
 
   Widget _buildErrorState(Object error, StackTrace stack) {
-    print('❌ [DeliveryMenSection] Error: $error');
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

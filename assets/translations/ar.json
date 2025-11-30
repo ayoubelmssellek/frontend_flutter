@@ -15,20 +15,36 @@
     "not_available": "غير متوفر",
     "retry": "إعادة المحاولة",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "token_expired": "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى."
   },
   "home_page": {
     "home": "الرئيسية",
     "search": "بحث",
     "cart": "عربة التسوق",
     "profile": "الملف الشخصي",
+    "failed_to_check_auth_status": "فشل في التحقق من حالة المصادقة",
+    "failed_to_load_user_data": "فشل في تحميل بيانات المستخدم",
     "my_orders": "طلباتي",
     "view_all": "عرض الكل",
     "recent_orders": "الطلبات الأخيرة",
     "loading_orders": "جاري تحميل الطلبات...",
     "orders_error": "فشل في تحميل الطلبات",
     "no_orders": "لا توجد طلبات بعد",
-    "no_orders_description": "ستظهر طلباتك هنا بمجرد إتمام عملية الشراء"
+    "no_orders_description": "ستظهر طلباتك هنا بمجرد إتمام عملية الشراء",
+    "delivery_home_page": {
+      "title": "واجهة السائق",
+      "welcome_message": "مرحباً بك، سائق التوصيل!"
+    },
+    "restaurant_home_page": {
+      "title": "واجهة المطعم",
+      "welcome_message": "مرحباً بك، صاحب المطعم!",
+      "error": "فشل في تحميل المنتجات.",
+      "something_wrong": "عذرًا! حدث خطأ ما",
+      "try_again": "أعد المحاولة"
+
+    }
+
   },
   "client_profile_page": {
     "my_account": "حسابي",
@@ -49,9 +65,6 @@
     "logout": "تسجيل الخروج",
     "find_answers_faqs": "ابحث عن إجابات للأسئلة الشائعة واحصل على المساعدة في المشكلات الشائعة.",
     "support_team_available": "فريق الدعم لدينا متاح على مدار 24/7 لمساعدتك في أي مشكلات أو استفسارات."
-  },
-  "guest_profile_page": {
-    "You_are_Guest": "أنت ضيف"
   },
   "home_app_bar": {
     "getting_location": "جاري الحصول على الموقع...",
@@ -168,7 +181,10 @@
     "unknown_restaurant": "مطعم غير معروف",
     "order_time": "وقت الطلب",
     "accepted_time": "وقت القبول",
-    "delivery_driver": "سائق التوصيل"
+    "delivery_driver": "سائق التوصيل",
+    "extras": "إضافات",
+    "more": "المزيد"
+
   },
   "currency": {
     "mad": "درهم"
@@ -472,10 +488,131 @@
     "phone_update_error": "فشل تحديث رقم الهاتف",
     "update_profile": "تحديث الملف الشخصي",
     "current": "الحالي",
-     "phone_change_failed": "فشل تغيير رقم الهاتف",
+    "phone_change_failed": "فشل تغيير رقم الهاتف",
     "phone_change_error": "فشل تغيير رقم الهاتف",
-    "send_code": "إرسال الرمز"
+    "send_code": "إرسال الرمز",
+    "Failed_to_check_authentication_status": "فشل التحقق من حالة المصادقة",
+    "Failed_to_load_user_data": "فشل تحميل بيانات المستخدم",
+    "session_expired_message": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى للمتابعة.",
+    "go_to_login": "الانتقال إلى تسجيل الدخول",
+    "profile": "الملف الشخصي",
+    "home": "الرئيسية",
+    "search": "بحث",
+    "cart": "السلة",
+    "profile_load_error": "خطأ في تحميل الملف الشخصي",
+    "continue_as_guest": "المتابعة كضيف",
+    "retry": "إعادة المحاولة",
+    "logout_error": "خطأ أثناء تسجيل الخروج",
+    "logging_out": "جاري تسجيل الخروج...",
+    "logout_confirmation": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+    "cancel": "إلغاء"
+  },
+  "checkout_page": {
+  "checkout": "الدفع",
+  "home": "الرئيسية",
+  "cart": "السلة",
+  "search": "بحث",
+  "profile": "الملف الشخصي",
+  "your_cart": "سلتك",
+  "cart_empty": "سلتك فارغة",
+  "add_items_message": "أضف بعض المنتجات من المطاعم للمتابعة",
+  "login_to_place_order": "سجّل الدخول لإتمام الطلب",
+  "continue_browsing": "متابعة التصفح",
+  "login_now": "تسجيل الدخول الآن",
+  "invalid_user_account_message": "حسابك غير صالح لإجراء الطلبات. يرجى تسجيل الدخول بحساب زبون.",
+  "please_select_a_delivery_driver": "يرجى اختيار سائق التوصيل",
+  "error_processing_order": "حدث خطأ أثناء معالجة الطلب: {}",
+  "unknown_city": "مدينة غير معروفة",
+  "unknown_street": "شارع غير معروف",
+  "login_required": "تسجيل الدخول مطلوب",
+  "login_required_message": "يجب عليك تسجيل الدخول لإتمام الطلب.",
+  "cancel": "إلغاء",
+  "pending": "قيد الانتظار",
+  "not_assigned": "غير معيّن"
+  },
+  "guest_profile_page": {
+  "You_are_Guest": "أنت ضيف",
+  "please_login_or_register": "يرجى تسجيل الدخول أو إنشاء حساب للوصول إلى المزيد من الميزات.",
+  "Login": "تسجيل الدخول",
+  "Register": "إنشاء حساب",
+  "Settings": "الإعدادات",
+  "Notifications": "الإشعارات",
+  "Manage_notification_preferences": "إدارة تفضيلات الإشعارات",
+  "Location": "الموقع",
+  "Set_your_delivery_location": "حدد موقع التوصيل الخاص بك",
+  "Earn_Money": "اكسب المال",
+  "Become_Delivery_Man": "كن سائق توصيل",
+  "Deliver_food_and_earn_money": "قم بتوصيل الطعام واربح المال",
+  "Open_Your_Shop": "افتح متجرك",
+  "Sell_your_food_to_customers": "بع طعامك للعملاء",
+  "Support": "الدعم",
+  "Help_Center": "مركز المساعدة",
+  "Get_help_and_FAQs": "احصل على المساعدة واطّلع على الأسئلة الشائعة",
+  "Contact_Support": "تواصل مع الدعم",
+  "Customer_Support": "دعم العملاء على مدار الساعة",
+  "Privacy_Policy": "سياسة الخصوصية",
+  "Read_our_privacy_policy": "اقرأ سياسة الخصوصية الخاصة بنا",
+  "Terms_of_Service": "شروط الاستخدام",
+  "Read_our_terms_and_conditions": "اقرأ الشروط والأحكام الخاصة بنا",
+  "Benefits_of_registering": "فوائد التسجيل",
+  "Save_favorite_restaurants": "✓ حفظ المطاعم المفضلة",
+  "Fast_checkout_with_saved_addresses": "✓ دفع أسرع باستخدام العناوين المحفوظة",
+  "Track_order_history": "✓ تتبع سجل الطلبات",
+  "Exclusive_offers_and_discounts": "✓ عروض وخصومات حصرية",
+  "Earn_loyalty_points": "✓ اربح نقاط الولاء",
+  "Become_a_Delivery_Driver": "كن سائق توصيل",
+  "Register_as_a_delivery_driver": "سجل كسائق توصيل لبدء كسب المال من توصيل الطعام للعملاء.",
+  "Cancel": "إلغاء",
+  "Register_Now": "سجّل الآن",
+  "Find_answers_to_frequently_asked_questions_and_get_help_with_common_issues": "اعثر على إجابات للأسئلة الشائعة واحصل على مساعدة للمشاكل المتكررة.",
+  "Close": "إغلاق",
+  "Our_support_team_is_available_24_7_to_help_you_with_any_issues_or_questions": "فريق الدعم لدينا متاح 24/7 لمساعدتك في أي مشاكل أو استفسارات.",
+  "Read_our_privacy_policy_to_understand_how_we_protect_and_use_your_data": "اقرأ سياسة الخصوصية الخاصة بنا لفهم كيفية حماية بياناتك واستخدامها.",
+  "Read_our_terms_and_conditions_to_understand_the_rules_and_guidelines_for_using_our_app": "اقرأ الشروط والأحكام الخاصة بنا لفهم القواعد والإرشادات الخاصة باستخدام تطبيقنا."
+  },
+  "category_details_page": {
+    "businesses_found": "تم العثور على {} نشاطًا",
+    "no_businesses_found": "لم يتم العثور على أي أنشطة في هذه الفئة.",
+    "try_different_category": "جرّب استكشاف فئة أخرى أو عد لاحقًا.",
+    "Top_Rated_Businesses": "أفضل الأنشطة تقييمًا",
+    "Failed_to_load_businesses": "فشل تحميل الأنشطة",
+    "Businesses": "الأنشطة",
+    "Business": "النشاط",
+    "Something_went_wrong": "حدث خطأ ما",
+    "Try_Again": "إعادة المحاولة",
+    "No ${widget.categoryName} found": "لم يتم العثور على ${widget.categoryName}",
+    "We_couldn't_find_any_businesses_in_this_category": "لم نتمكن من العثور على أي نشاط في هذه الفئة.",
+    "Please_check_back_later": "يرجى العودة لاحقًا."
+  },
+  "search_page": {
+      "title": "ابحث عن المتاجر",
+      "hint": "ابحث عن متاجر، فئات...",
+      "all_categories": "الكل",
+      "businesses_found": " تم العثور على متاجر",
+      "no_businesses_found": "لم يتم العثور على أي متاجر",
+      "try_different_keywords": "جرّب كلمات مفتاحية أو فئات مختلفة"
+  },
+  "language": {
+      "error_changing_language": "خطأ في تغيير اللغة",
+      "skip": "تخطي"
+  },
+  "not_supported_page": {
+      "not_available": "الخدمة غير متوفرة هنا",
+      "description": "نأسف، خدمات التوصيل لدينا غير متاحة في موقعك الحالي.",
+      "detect_location": "موقعك",
+      "contact_support": "اتصل بالدعم",
+      "were_expansig_soon": "سنوسع خدماتنا قريبًا! ترقب التحديثات."
+  },
+  "welcome_page": {
+      "tagline": "طعام لذيذ يتم توصيله\nبسرعة إلى باب منزلك",
+      "login_button": "تسجيل الدخول",
+      "register_button": "تسجيل",
+      "footer_text": "سريع • موثوق • لذيذ"
   }
+
+
+
+
 
 
 }
