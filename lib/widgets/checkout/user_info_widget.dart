@@ -73,7 +73,6 @@ class _UserInfoWidgetState extends ConsumerState<UserInfoWidget> {
         }
       }
     } catch (e) {
-      print('❌ Error refreshing user data on return: $e');
     }
   }
 

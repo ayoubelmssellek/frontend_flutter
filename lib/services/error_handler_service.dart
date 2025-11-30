@@ -47,9 +47,7 @@ class ErrorHandlerService {
     required BuildContext context,
     String? customMessage,
   }) {
-    if (isTokenError(error)) {
-      print('🔐 Token error detected, navigating to token expired page');
-      
+    if (isTokenError(error)) {      
       // Clear token
       SecureStorage.deleteToken();
       

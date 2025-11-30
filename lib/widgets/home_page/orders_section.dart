@@ -23,24 +23,19 @@ class _OrdersSectionState extends ConsumerState<OrdersSection> {
   @override
   void initState() {
     super.initState();
-    print('🔄 [OrdersSection] initState called');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadClientOrders();
     });
   }
 
   Future<void> _loadClientOrders() async {
-    print('🔄 [OrdersSection] Loading client orders...');
     try {
       final clientId = ref.read(clientIdProvider);
-      print('👤 [OrdersSection] Client ID: $clientId');
       if (clientId != 0) {
         await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
       } else {
-        print('⚠️ [OrdersSection] Client ID is 0, cannot load orders');
       }
     } catch (e) {
-      print('❌ [OrdersSection] Error loading orders: $e');
     } finally {
       if (mounted) {
         setState(() => _isInitialLoad = false);
@@ -52,17 +47,13 @@ class _OrdersSectionState extends ConsumerState<OrdersSection> {
   Widget build(BuildContext context) {
     final clientOrdersAsync = ref.watch(clientOrdersProvider);
     
-    print('📊 [OrdersSection] Building with state: ${clientOrdersAsync.value?.length ?? 'loading'} orders');
     
     return clientOrdersAsync.when(
       loading: () => _isInitialLoad ? _buildOrdersSkeleton() : const SizedBox.shrink(),
       error: (error, stack) {
-        print('❌ [OrdersSection] Error state: $error');
-        print('🔍 [OrdersSection] Stack trace: $stack');
         return const SizedBox.shrink();
       },
       data: (orders) {
-        print('✅ [OrdersSection] Received ${orders.length} orders');
         
         // Filter out empty orders and show only pending/accepted
         final activeOrders = orders.where((order) => 
@@ -70,7 +61,6 @@ class _OrdersSectionState extends ConsumerState<OrdersSection> {
           (order.status == OrderStatus.pending || order.status == OrderStatus.accepted)
         ).toList();
 
-        print('📦 [OrdersSection] Active orders: ${activeOrders.length}');
 
         if (activeOrders.isEmpty) {
           return const SizedBox.shrink();

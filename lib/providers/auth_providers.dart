@@ -36,37 +36,20 @@ final currentUserProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     // ✅ CHECK IF USER IS LOGGED IN FIRST
     final isLoggedIn = await SecureStorage.isLoggedIn();
     if (!isLoggedIn) {
-      if (kDebugMode) {
-        print('🔐 User not logged in, skipping currentUser fetch');
-      }
       return {'success': false, 'message': 'User not logged in', 'notLoggedIn': true};
     }
 
     // ✅ CHECK IF TOKEN EXISTS
     final token = await SecureStorage.getToken();
     if (token == null) {
-      if (kDebugMode) {
-        print('🔐 No token found, skipping currentUser fetch');
-      }
       return {'success': false, 'message': 'No authentication token', 'notLoggedIn': true};
-    }
-
-    if (kDebugMode) {
-      print('🔐 Fetching current user data...');
     }
     
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.getCurrentUser();
     
-    if (kDebugMode) {
-      print('👤 Current user fetch result: ${result['success']}');
-    }
-    
     return result;
   } catch (e) {
-    if (kDebugMode) {
-      print('❌ Error in currentUserProvider: $e');
-    }
     return {'success': false, 'message': e.toString()};
   }
 });
@@ -171,29 +154,19 @@ final userLocationProvider = StateProvider<Map<String, String>?>((ref) => {
 
 // Add this to your auth_providers.dart file
 final appStartProvider = FutureProvider<void>((ref) async {
-  print('🚀 App starting - checking authentication status...');
   
   // Check if token exists in SecureStorage
   final hasToken = await SecureStorage.isLoggedIn();
   final currentAuthState = ref.read(authStateProvider);
   
-  print('🔐 SecureStorage has token: $hasToken');
-  print('🔐 Current auth state: $currentAuthState');
-  
   if (!hasToken) {
-    // No token found - but auth state might still be true (from memory)
-    print('🔐 No token found, but auth state is: $currentAuthState');
     
     if (currentAuthState == true) {
-      // Inconsistent state: auth state says logged in, but no token
-      print('🔄 Inconsistent state - logging out from server...');
-      
+      // Inconsistent state: auth state says logged in, but no token      
       try {
         final authRepo = ref.read(logoutProvider);
         await authRepo.logout();
-        print('✅ Successfully logged out from server (no token found)');
       } catch (e) {
-        print('❌ Error during server logout: $e');
         // Still reset auth state even if server logout fails
       }
       
@@ -201,15 +174,12 @@ final appStartProvider = FutureProvider<void>((ref) async {
       ref.read(authStateProvider.notifier).state = false;
     } else {
       // Consistent state: no token and not logged in
-      print('✅ Consistent state - user is not logged in');
     }
   } else {
     // Token exists - ensure auth state is true
-    print('🔐 Token found, setting auth state to true');
     ref.read(authStateProvider.notifier).state = true;
   }
   
-  print('🎯 App start check completed');
 });
 
 
@@ -217,7 +187,6 @@ final appStartProvider = FutureProvider<void>((ref) async {
 
 // Profile Update Providers
 final updateProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, profileData) async {
-  print('🔄 [updateProfileProvider] Starting profile update');
   
   try {
     final authRepo = ref.read(authRepositoryProvider);
@@ -225,20 +194,12 @@ final updateProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<St
     final name = profileData['name'] as String?;
     final avatar = profileData['avatar'] as File?;
     
-    print('🔍 [updateProfileProvider] Extracted parameters:');
-    print('   - name: $name');
-    print('   - avatar: ${avatar != null ? "File provided" : "null"}');
-    
     final result = await authRepo.updateProfile(
       name: name,
       avatar: avatar,
     );
     
-    print('✅ [updateProfileProvider] Profile update result: ${result['success']}');
-    
-    if (result['success'] == true && result['data'] != null) {
-      print('🔄 [updateProfileProvider] Updating local state with new data');
-      
+    if (result['success'] == true && result['data'] != null) {      
       final currentState = ref.read(profileStateProvider);
       if (currentState.userData != null) {
         final newUserData = Map<String, dynamic>.from(result['data']);
@@ -251,7 +212,6 @@ final updateProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<St
     
     return result;
   } catch (e) {
-    print('❌ [updateProfileProvider] Error in provider: $e');
     return {
       'success': false,
       'message': 'Error in profile update: $e',
@@ -261,9 +221,7 @@ final updateProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<St
 
 
 // Password Change Provider
-final changePasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, passwordData) async {
-  print('🔄 [changePasswordProvider] Starting password change');
-  
+final changePasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, passwordData) async {  
   try {
     final authRepo = ref.read(authRepositoryProvider);
     
@@ -277,11 +235,8 @@ final changePasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<S
       confirmPassword: confirmPassword,
     );
     
-    print('✅ [changePasswordProvider] Password change result: ${result['success']}');
-    
     return result;
   } catch (e) {
-    print('❌ [changePasswordProvider] Error in provider: $e');
     return {
       'success': false,
       'message': 'Error changing password: $e',
@@ -290,19 +245,13 @@ final changePasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<S
 });
 
 // Phone Number Change Provider
-final changePhoneNumberProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, phoneNumber) async {
-  print('🔄 [changePhoneNumberProvider] Starting phone number change');
-  
+final changePhoneNumberProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, phoneNumber) async {  
   try {
     final authRepo = ref.read(authRepositoryProvider);
     
-    final result = await authRepo.changePhoneNumber(phoneNumber: phoneNumber);
-    
-    print('✅ [changePhoneNumberProvider] Phone change result: ${result['success']}');
-    
+    final result = await authRepo.changePhoneNumber(phoneNumber: phoneNumber);    
     return result;
   } catch (e) {
-    print('❌ [changePhoneNumberProvider] Error in provider: $e');
     return {
       'success': false,
       'message': 'Error changing phone number: $e',

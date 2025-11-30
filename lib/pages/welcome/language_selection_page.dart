@@ -10,6 +10,15 @@ class LanguagePage extends StatefulWidget {
   State<LanguagePage> createState() => _LanguagePageState();
 }
 
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
 class _LanguagePageState extends State<LanguagePage> {
   final _storage = const FlutterSecureStorage();
   bool _isLoading = true;
@@ -67,7 +76,7 @@ class _LanguagePageState extends State<LanguagePage> {
       // يمكنك إضافة معالجة للأخطاء إذا أردت
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حدث خطأ أثناء تغيير اللغة')),
+          SnackBar(content: Text(_tr("language.error_changing_language", "Error changing language"))),
         );
       }
     }
@@ -97,7 +106,7 @@ class _LanguagePageState extends State<LanguagePage> {
                   TextButton(
                     onPressed: () => _selectLanguage('ar'), // تخطي يختار العربية
                     child: Text(
-                      "تخطي",
+                      _tr("language.skip", "Skip"),
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 16,

@@ -206,24 +206,18 @@ Future<Map<String, dynamic>> updateFcmToken(String fcmToken) async {
 Future<Map<String, dynamic>> logout() async {
   try {
     // Step 1: Call server logout endpoint
-    print('🌐 Attempting server logout...');
     final response = await ApiClient.dio.post('/logout');
-    print('✅ Server logout successful: ${response.data}');
   } on DioException catch (e) {
-    print('⚠️ Server logout failed: ${e.message}');
     // Continue with local cleanup even if server call fails
   } catch (e) {
-    print('⚠️ Server logout error: $e');
     // Continue with local cleanup
   }
 
   // Step 2: Always clear local data
-  print('🗑️ Clearing local data...');
   await storage.delete(key: 'token');
   await SecureStorage.deleteToken();
   ApiClient.clearAuthHeader();
   
-  print('✅ Logout completed successfully');
   return {'success': true, 'message': 'تم تسجيل الخروج بنجاح'};
 }
 
@@ -330,15 +324,10 @@ Future<Map<String, dynamic>> resetPassword({
     try {
       var formData = FormData();
 
-      print('🔄 [AuthRepository] Update profile received:');
-      print('   - name: $name');
-      print('   - avatar: ${avatar != null ? avatar.path : "null"}');
-
       formData.fields.add(MapEntry('_method', 'PUT'));
       
       if (name != null && name.trim().isNotEmpty) {
         formData.fields.add(MapEntry('name', name.trim()));
-        print('✅ [AuthRepository] Added name field');
       }
 
       if (avatar != null) {
@@ -347,17 +336,13 @@ Future<Map<String, dynamic>> resetPassword({
           'avatar',
           await MultipartFile.fromFile(avatar.path, filename: fileName),
         ));
-        print('✅ [AuthRepository] Added avatar file: $fileName');
       }
 
       final res = await ApiClient.dio.post(
         '/update-profile',
         data: formData,
         options: Options(headers: {'Content-Type': 'multipart/form-data'}),
-      );
-
-      print('✅ [AuthRepository] Profile update response: ${res.statusCode}');
-      
+      );      
       final data = res.data;
       Map<String, dynamic> userData = {};
       
@@ -378,9 +363,7 @@ Future<Map<String, dynamic>> resetPassword({
         'message': data['message'] ?? 'Profile updated successfully',
         'data': userData,
       };
-    } on DioException catch (e) {
-      print('❌ [AuthRepository] Dio error updating profile: ${e.message}');
-      
+    } on DioException catch (e) {      
       String errorMessage = 'Failed to update profile';
       if (e.response?.data != null && e.response!.data is Map) {
         final errorData = e.response!.data as Map;
@@ -391,7 +374,6 @@ Future<Map<String, dynamic>> resetPassword({
       
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('❌ [AuthRepository] General error updating profile: $e');
       return {'success': false, 'message': 'Failed to update profile: $e'};
     }
   }
@@ -403,13 +385,8 @@ Future<Map<String, dynamic>> resetPassword({
     try {
       var formData = FormData();
 
-      print('🔄 [AuthRepository] Update delivery profile received:');
-      print('   - name: $name');
-      print('   - avatar: ${avatar != null ? avatar.path : "null"}');
-
       formData.fields.add(MapEntry('_method', 'PUT'));
       formData.fields.add(MapEntry('name', name.trim()));
-      print('✅ [AuthRepository] Added name field');
 
       if (avatar != null) {
         String fileName = avatar.path.split('/').last;
@@ -417,9 +394,7 @@ Future<Map<String, dynamic>> resetPassword({
           'avatar',
           await MultipartFile.fromFile(avatar.path, filename: fileName),
         ));
-        print('✅ [AuthRepository] Added avatar file: $fileName');
       } else {
-        print('ℹ️ [AuthRepository] No avatar file provided (optional)');
       }
 
       final res = await ApiClient.dio.post(
@@ -427,8 +402,6 @@ Future<Map<String, dynamic>> resetPassword({
         data: formData,
         options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       );
-
-      print('✅ [AuthRepository] Delivery profile update response: ${res.statusCode}');
       
       final data = res.data;
       Map<String, dynamic> userData = {};
@@ -451,9 +424,7 @@ Future<Map<String, dynamic>> resetPassword({
         'data': userData,
       };
       
-    } on DioException catch (e) {
-      print('❌ [AuthRepository] Dio error: ${e.message}');
-      
+    } on DioException catch (e) {      
       String errorMessage = 'Failed to update profile';
       if (e.response?.data != null && e.response!.data is Map) {
         final errorData = e.response!.data as Map;
@@ -464,7 +435,6 @@ Future<Map<String, dynamic>> resetPassword({
       
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('❌ [AuthRepository] General error: $e');
       return {'success': false, 'message': 'Failed to update profile: $e'};
     }
   }
@@ -474,9 +444,7 @@ Future<Map<String, dynamic>> resetPassword({
     required String newPassword,
     required String confirmPassword,
   }) async {
-    try {
-      print('🔄 [AuthRepository] Changing password');
-      
+    try {      
       final data = {
         'current_password': currentPassword,
         'new_password': newPassword,
@@ -487,15 +455,12 @@ Future<Map<String, dynamic>> resetPassword({
         '/change-password',
         data: data,
       );
-
-      print('✅ [AuthRepository] Password change response: ${res.statusCode}');
       
       return {
         'success': true,
         'message': res.data['message'] ?? 'Password changed successfully',
       };
     } on DioException catch (e) {
-      print('❌ [AuthRepository] Dio error changing password: ${e.message}');
       
       String errorMessage = 'Failed to change password';
       if (e.response?.data != null && e.response!.data is Map) {
@@ -507,7 +472,6 @@ Future<Map<String, dynamic>> resetPassword({
       
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('❌ [AuthRepository] General error changing password: $e');
       return {'success': false, 'message': 'Failed to change password: $e'};
     }
   }
@@ -515,9 +479,7 @@ Future<Map<String, dynamic>> resetPassword({
   Future<Map<String, dynamic>> changePhoneNumber({
     required String phoneNumber,
   }) async {
-    try {
-      print('🔄 [AuthRepository] Changing phone number to: $phoneNumber');
-      
+    try {      
       final data = {
         'new_number_phone': phoneNumber,
       };
@@ -526,17 +488,13 @@ Future<Map<String, dynamic>> resetPassword({
         '/change-number-phone',
         data: data,
       );
-
-      print('✅ [AuthRepository] Phone change response: ${res.statusCode}');
       
       return {
         'success': true,
         'message': res.data['message'] ?? 'Verification code sent to new number',
         'verification_required': true,
       };
-    } on DioException catch (e) {
-      print('❌ [AuthRepository] Dio error changing phone: ${e.message}');
-      
+    } on DioException catch (e) {      
       String errorMessage = 'Failed to change phone number';
       if (e.response?.data != null && e.response!.data is Map) {
         final errorData = e.response!.data as Map;
@@ -547,7 +505,6 @@ Future<Map<String, dynamic>> resetPassword({
       
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('❌ [AuthRepository] General error changing phone: $e');
       return {'success': false, 'message': 'Failed to change phone number: $e'};
     }
   }
@@ -556,9 +513,7 @@ Future<Map<String, dynamic>> resetPassword({
     required String phoneNumber,
     required String verificationCode,
   }) async {
-    try {
-      print('🔄 [AuthRepository] Verifying phone change');
-      
+    try {      
       final data = {
         'number_phone': phoneNumber,
         'verification_code': verificationCode,
@@ -567,16 +522,12 @@ Future<Map<String, dynamic>> resetPassword({
       final res = await ApiClient.dio.post(
         '/verify-phone-change',
         data: data,
-      );
-
-      print('✅ [AuthRepository] Phone verification response: ${res.statusCode}');
-      
+      );      
       return {
         'success': true,
         'message': res.data['message'] ?? 'Phone number changed successfully',
       };
     } on DioException catch (e) {
-      print('❌ [AuthRepository] Dio error verifying phone: ${e.message}');
       
       String errorMessage = 'Failed to verify phone number';
       if (e.response?.data != null && e.response!.data is Map) {
@@ -588,7 +539,6 @@ Future<Map<String, dynamic>> resetPassword({
       
       return {'success': false, 'message': errorMessage};
     } catch (e) {
-      print('❌ [AuthRepository] General error verifying phone: $e');
       return {'success': false, 'message': 'Failed to verify phone number: $e'};
     }
   }

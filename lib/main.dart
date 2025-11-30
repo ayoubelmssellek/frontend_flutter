@@ -61,17 +61,14 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   Future<void> _initializeApp() async {
     try {
-      print("🚀 Starting app initialization...");
       
       // 1. Initialize Notification Service FIRST
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
-      print("✅ Notification Service ready");
 
       // 2. Initialize FCM Manager SECOND
       final fcmManager = ref.read(fcmManagerProvider);
       await fcmManager.initialize();
-      print("✅ FCM Manager ready");
 
       // 3. Initialize App Service
       final appInitService = AppInitializationService(ref);
@@ -82,7 +79,6 @@ class _MyAppState extends ConsumerState<MyApp> {
         _isInitializing = false;
       });
 
-      print("✅ App initialization complete!");
 
       // Send FCM token to server if user is logged in
       if (result.userData != null) {
@@ -93,7 +89,6 @@ class _MyAppState extends ConsumerState<MyApp> {
       }
 
     } catch (e) {
-      print("❌ App initialization error: $e");
       setState(() {
         _isInitializing = false;
         _appInitResult = AppInitializationResult(
@@ -108,18 +103,14 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   Future<void> _sendFcmTokenToServer(String fcmToken, Map<String, dynamic> userData) async {
     try {
-      print('🚀 Sending FCM token for user: ${userData['id']}');
       
       final result = await ref.read(updateFcmTokenProvider(fcmToken).future);
       
       if (result['success'] == true) {
         final role = userData['role_name']?.toString().toLowerCase();
-        print("✅ FCM token sent to server successfully for $role!");
       } else {
-        print("❌ FCM token update failed: ${result['message']}");
       }
     } catch (e) {
-      print("❌ Error sending FCM token: $e");
     }
   }
 

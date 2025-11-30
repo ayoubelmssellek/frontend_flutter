@@ -13,9 +13,6 @@ class AdminRepository {
 
       if (response.statusCode == 200) {
         final dynamic data = response.data;
-        if (kDebugMode) {
-          print('Pending Delivery Men: $data');
-        }
 
         // Handle both array response and wrapped response
         List<dynamic> deliveryMenList;
@@ -38,7 +35,6 @@ class AdminRepository {
         'Failed to load pending delivery men: ${response.statusCode}',
       );
     } catch (e) {
-      print('Error getting pending delivery men: $e');
       rethrow;
     }
   }
@@ -51,7 +47,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
     if (response.statusCode == 200) {
       final dynamic data = response.data;
 
-      print('🔍 [AdminRepository] Approved delivery men raw response: $data');
 
       // Handle both array response and wrapped response
       List<dynamic> deliveryMenList;
@@ -63,19 +58,14 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
       } else {
         deliveryMenList = [];
       }
-
-      print('🔍 [AdminRepository] Parsing ${deliveryMenList.length} delivery men');
       
       final result = deliveryMenList
           .map((item) {
-            print('🔍 [AdminRepository] Parsing item: $item');
             return DeliveryMan.fromJson(item);
           })
           .toList();
 
-      print('🔍 [AdminRepository] Final parsed result:');
       for (var man in result) {
-        print('   - ${man.name}: rating=${man.avgRating}');
       }
 
       return result;
@@ -84,7 +74,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
       'Failed to load approved delivery men: ${response.statusCode}',
     );
   } catch (e) {
-    print('Error getting approved delivery men: $e');
     rethrow;
   }
 }
@@ -99,7 +88,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Error approving delivery man: $e');
       rethrow;
     }
   }
@@ -114,7 +102,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Error rejecting delivery man: $e');
       rethrow;
     }
   }
@@ -128,7 +115,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
       if (response.statusCode == 200) {
         final dynamic data = response.data;
 
-        print('📊 Raw API response: $data'); // Debug print
 
         if (data is Map) {
           // Your API returns: total_drivers, approved_drivers, pending_drivers, rejected_drivers
@@ -146,7 +132,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
         'Failed to load delivery man stats: ${response.statusCode}',
       );
     } catch (e) {
-      print('Error getting delivery man stats: $e');
       rethrow;
     }
   }
@@ -160,7 +145,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
       if (response.statusCode == 200) {
         final dynamic data = response.data;
 
-        print('📊 Delivery Driver Stats API response: $data');
 
         if (data is Map && data.containsKey('data')) {
           return data['data'] ?? [];
@@ -174,7 +158,6 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
         'Failed to load delivery driver stats: ${response.statusCode}',
       );
     } catch (e) {
-      print('Error getting delivery driver stats: $e');
       rethrow;
     }
   }
@@ -185,10 +168,6 @@ Future<bool> updateDeliveryDriverAvgRating(int driverId, double avgRating) async
   try {
     var formData = FormData();
 
-    print('🔄 [AdminRepository] Update delivery driver avg rating received:');
-    print('   - driverId: $driverId');
-    print('   - avgRating: $avgRating');
-
     formData.fields.add(MapEntry('_method', 'PUT'));
     formData.fields.add(MapEntry('avg_rating', avgRating.toString()));
 
@@ -196,19 +175,14 @@ Future<bool> updateDeliveryDriverAvgRating(int driverId, double avgRating) async
       '/admin/update-delivery-driver-avg-rating/$driverId',
       data: formData,
     );
-
-    print('✅ [AdminRepository] Delivery driver avg rating update response: ${response.statusCode}');
     
     if (response.statusCode == 200) {
       final data = response.data;
-      print('✅ [AdminRepository] Successfully updated avg rating for driver $driverId to $avgRating');
       return true;
     }
     
-    print('❌ [AdminRepository] Failed to update avg rating: ${response.statusCode}');
     return false;
   } catch (e) {
-    print('Error updating delivery driver avg rating: $e');
     rethrow;
   }
 }

@@ -31,40 +31,23 @@ class DeliveryDriversNotifier extends StateNotifier<AsyncValue<List<DeliveryDriv
   DeliveryDriversNotifier(this.ref) : super(const AsyncValue.loading());
 
   Future<void> loadDeliveryDrivers() async {
-    if (kDebugMode) {
-      print('🔄 [DeliveryDriversNotifier] loadDeliveryDrivers() called');
-    }
+
     state = const AsyncValue.loading();
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
       final drivers = await deliveryRepo.getDeliveryDrivers();
-      if (kDebugMode) {
-        print('✅ [DeliveryDriversNotifier] Successfully loaded ${drivers.length} drivers');
-      }
       state = AsyncValue.data(drivers);
     } catch (e, stack) {
-      if (kDebugMode) {
-        print('❌ [DeliveryDriversNotifier] Error loading drivers: $e');
-      }
       state = AsyncValue.error(e, stack);
     }
   }
 
   Future<void> refreshDeliveryDrivers() async {
-    if (kDebugMode) {
-      print('🔄 [DeliveryDriversNotifier] refreshDeliveryDrivers() called');
-    }
     try {
       final deliveryRepo = ref.read(deliveryRepositoryProvider);
       final drivers = await deliveryRepo.getDeliveryDrivers();
-      if (kDebugMode) {
-        print('✅ [DeliveryDriversNotifier] Successfully refreshed ${drivers.length} drivers');
-      }
       state = AsyncValue.data(drivers);
     } catch (e, stack) {
-      if (kDebugMode) {
-        print('❌ [DeliveryDriversNotifier] Error refreshing drivers: $e');
-      }
       // Keep current data on refresh error
     }
   }
@@ -86,26 +69,14 @@ final currentDeliveryManIdProvider = StateProvider<int?>((ref) {
     data: (data) {
       if (data['success'] == true && data['id'] != null) {
         final userId = data['id'] as int;
-        if (kDebugMode) {
-          print('👤 [currentDeliveryManIdProvider] Using USER ID from /me endpoint: $userId');
-        }
         return userId;
-      }
-      if (kDebugMode) {
-        print('⚠️ [currentDeliveryManIdProvider] No valid user ID found');
       }
       return null;
     },
     loading: () {
-      if (kDebugMode) {
-        print('⏳ [currentDeliveryManIdProvider] Loading user data...');
-      }
       return null;
     },
     error: (error, stack) {
-      if (kDebugMode) {
-        print('❌ [currentDeliveryManIdProvider] Error getting user ID: $error');
-      }
       return null;
     },
   );
@@ -113,29 +84,19 @@ final currentDeliveryManIdProvider = StateProvider<int?>((ref) {
 
 
 
-final updateDeliveryProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, profileData) async {
-  print('🔄 [updateDeliveryProfileProvider] Starting delivery profile update');
-  
+final updateDeliveryProfileProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, profileData) async {  
   try {
     final authRepo = ref.read(authRepositoryProvider);
     
     final name = profileData['name'] as String;
     final avatar = profileData['avatar'] as File?;
     
-    print('🔍 [updateDeliveryProfileProvider] Extracted parameters:');
-    print('   - name: $name');
-    print('   - avatar: ${avatar != null ? "File provided" : "null"}');
-    
     final result = await authRepo.updateDeliveryProfile(
       name: name,
       avatar: avatar,
     );
-    
-    print('✅ [updateDeliveryProfileProvider] Delivery profile update result: ${result['success']}');
-    
-    if (result['success'] == true && result['data'] != null) {
-      print('🔄 [updateDeliveryProfileProvider] Updating local state with new data');
-      
+        
+    if (result['success'] == true && result['data'] != null) {      
       final currentState = ref.read(deliveryProfileStateProvider);
       if (currentState.userData != null) {
         final newUserData = Map<String, dynamic>.from(result['data']);
@@ -148,7 +109,6 @@ final updateDeliveryProfileProvider = FutureProvider.family<Map<String, dynamic>
     
     return result;
   } catch (e) {
-    print('❌ [updateDeliveryProfileProvider] Error in provider: $e');
     return {
       'success': false,
       'message': 'Error in profile update: $e',

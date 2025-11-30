@@ -29,11 +29,7 @@ class OrderConfirmationFullPage extends StatelessWidget {
     final deliveryDriverId = orderData['delivery_driver_id']?.toString() ?? 'Not assigned';
     final items = orderData['items'] as List<dynamic>? ?? [];
     final realItemCount = orderData['item_count'] ?? items.length;
-    
-    if (kDebugMode) {
-      print('🎯 Order Confirmation Data:');
-      print(orderData);
-    }
+  
 
     return Scaffold(
       backgroundColor: Colors.white,

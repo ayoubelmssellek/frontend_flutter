@@ -9,6 +9,8 @@ import 'package:food_app/widgets/bussness_profile/products_section.dart';
 import 'package:food_app/widgets/bussness_profile/restaurant_header.dart';
 import 'package:food_app/widgets/bussness_profile/restaurant_info.dart';
 import 'package:food_app/widgets/bussness_profile/product_modal.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 
 class RestaurantProfile extends ConsumerStatefulWidget {
   final Shop shop;
@@ -25,6 +27,15 @@ class RestaurantProfile extends ConsumerStatefulWidget {
   @override
   ConsumerState<RestaurantProfile> createState() => _RestaurantProfilePageState();
 }
+
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
 
 class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
     with SingleTickerProviderStateMixin {
@@ -89,7 +100,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
         error: (e, _) => _buildErrorState(e.toString()),
         data: (result) {
           if (result['success'] != true) {
-            return _buildErrorState('Failed to load products');
+            return _buildErrorState(_tr("home_page.restaurant_home_page.error", "Failed to load products.") );
           }
           final products = result['data'] as List<dynamic>;
           _products = products;
@@ -255,7 +266,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Oops! Something went wrong',
+                  _tr("home_page.restaurant_home_page.something_wrong", "Oops! Something went wrong"),
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey.shade600,
@@ -278,7 +289,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                     backgroundColor: Colors.deepOrange,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Try Again'),
+                  child:  Text(_tr("home_page.restaurant_home_page.try_again", "Try Again")),
                 ),
               ],
             ),

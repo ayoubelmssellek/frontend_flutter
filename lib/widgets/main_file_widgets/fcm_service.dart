@@ -17,7 +17,6 @@ class FCMManager {
   // Initialize FCM - ONLY setup listeners, NO token handling
   Future<void> initialize() async {
     try {
-      print("🔧 Initializing FCM Manager...");
 
       // COMPLETELY disable FCM auto-notifications
       await _messaging.setForegroundNotificationPresentationOptions(
@@ -26,22 +25,18 @@ class FCMManager {
         sound: false, // NO auto sound
       );
 
-      print("✅ FCM auto-notifications COMPLETELY disabled");
 
       // Setup message listeners
       _setupMessageListeners();
 
-      print("✅ FCM Manager initialized");
 
     } catch (e) {
-      print("❌ Error initializing FCM Manager: $e");
     }
   }
 
   void _setupMessageListeners() {
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      print('📱 Received FCM message: ${message.messageId}');
       
       // Extract notification data
       final notification = message.notification;
@@ -60,14 +55,12 @@ class FCMManager {
 
     // Handle when app is opened from background via notification
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('🖱️ App opened from background via notification');
       _handleNotificationOpen(message);
     });
 
     // Handle when app is opened from terminated state via notification
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        print('🚀 App opened from terminated state via notification');
         _handleNotificationOpen(message);
       }
     });
@@ -75,7 +68,6 @@ class FCMManager {
 
   void _handleNotificationOpen(RemoteMessage message) {
     final data = message.data;
-    print('📦 Notification data: $data');
     
     // Handle navigation or other actions when notification is clicked
     // You can add your navigation logic here

@@ -286,7 +286,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
         Navigator.pop(context);
       }
     } catch (e) {
-      print('Error updating cart: $e');
     } finally {
       if (mounted) {
         setState(() {

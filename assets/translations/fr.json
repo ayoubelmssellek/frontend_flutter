@@ -9,15 +9,72 @@
     "select_language": "Choisir la langue",
     "language_changed_to": "Langue changée en",
     "error_changing_language": "Erreur lors du changement de langue",
-    "delivery_app": "Application de livraison"
+    "delivery_app": "Application de livraison",
+    "refresh_successful": "Actualisation réussie",
+    "refresh_failed": "Échec de l'actualisation" ,
+    "token_expired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "cancel": "Annuler",
+    "not_available": "Non disponible",
+    "retry": "Réessayer",
+    "yes": "Oui",
+    "no": "Non"
+
   },
   "home_page": {
     "home": "Accueil",
     "search": "Recherche",
     "cart": "Panier",
-    "profile": "Profil"
+    "profile": "Profil",
+    "failed_to_check_auth_status": "Échec de la vérification de l'état d'authentification",
+    "failed_to_load_user_data": "Échec du chargement des données utilisateur",
+    "my_orders": "Mes commandes",
+    "view_all": "Voir tout",
+    "recent_orders": "Commandes récentes",
+    "loading_orders": "Chargement des commandes...",
+    "orders_error": "Échec du chargement des commandes",
+    "no_orders": "Aucune commande pour le moment",
+    "no_orders_description": "Vos commandes apparaîtront ici une fois votre achat effectué",
+    "delivery_home_page": {
+      "title": "Accueil Livreurs",
+      "welcome_message": "Bienvenue, Livreur !"
+    },
+    "restaurant_home_page": {
+      "title": "Accueil Restaurant",
+      "welcome_message": "Bienvenue, Propriétaire du restaurant !",
+      "error": "Échec du chargement des produits.",
+      "something_wrong": "Oups ! Quelque chose s'est mal passé",
+      "try_again": "Réessayer"
+
+    }
   },
   "profile_page": {
+    "security": "Sécurité",
+    "change_password": "Changer le mot de passe",
+    "update_your_password": "Mettre à jour le mot de passe de votre compte",
+    "change_phone": "Changer le numéro de téléphone",
+    "update_your_phone": "Mettre à jour votre numéro de téléphone",
+    "name_required": "Le nom est requis",
+    "profile_updated": "Profil mis à jour avec succès",
+    "update_failed": "Échec de la mise à jour du profil",
+    "update_error": "Erreur de mise à jour",
+    "fill_all_fields": "Veuillez remplir tous les champs",
+    "passwords_not_match": "Les mots de passe ne correspondent pas",
+    "password_updated": "Mot de passe mis à jour avec succès",
+    "password_update_failed": "Échec de la mise à jour du mot de passe",
+    "password_update_error": "Erreur lors de la mise à jour du mot de passe",
+    "current_password_required": "Le mot de passe actuel est requis",
+    "new_password_required": "Le nouveau mot de passe est requis",
+    "password_min_length": "Le mot de passe doit contenir au moins 6 caractères",
+    "phone_required": "Le numéro de téléphone est requis",
+    "phone_valid": "Veuillez entrer un numéro de téléphone valide",
+    "phone_updated": "Numéro de téléphone mis à jour avec succès",
+    "phone_update_failed": "Échec de la mise à jour du numéro de téléphone",
+    "phone_update_error": "Erreur lors de la mise à jour du numéro de téléphone",
+    "update_profile": "Mettre à jour le profil",
+    "current": "Actuel",
+    "phone_change_failed": "Échec du changement de numéro de téléphone",
+    "phone_change_error": "Erreur lors du changement de numéro de téléphone",
+    "send_code": "Envoyer le code",
     "my_account": "Mon compte",
     "my_orders": "Mes commandes",
     "view_your_order_history": "Voir l'historique de vos commandes",
@@ -35,7 +92,22 @@
     "customer_support": "Support client 24h/24 et 7j/7",
     "logout": "Déconnexion",
     "find_answers_faqs": "Trouvez des réponses aux questions fréquemment posées et obtenez de l'aide pour les problèmes courants.",
-    "support_team_available": "Notre équipe d'assistance est disponible 24h/24 et 7j/7 pour vous aider avec tout problème ou question."
+    "support_team_available": "Notre équipe d'assistance est disponible 24h/24 et 7j/7 pour vous aider avec tout problème ou question.",
+    "Failed_to_check_authentication_status": "Échec de la vérification de l'état d'authentification",
+    "Failed_to_load_user_data": "Échec du chargement des données utilisateur",
+    "session_expired_message": "Votre session a expiré. Veuillez vous reconnecter pour continuer.",
+    "go_to_login": "Aller à la connexion",
+    "profile": "Profil",
+    "home": "Accueil",
+    "search": "Recherche",
+    "cart": "Panier",
+    "profile_load_error": "Erreur de chargement du profil",
+    "continue_as_guest": "Continuer en tant qu'invité",
+    "retry": "Réessayer",
+    "logout_error": "Erreur lors de la déconnexion",
+    "logging_out": "Déconnexion en cours...",
+    "logout_confirmation": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "cancel": "Annuler"
   },
   "home_app_bar": {
   "getting_location": "Obtention de la localisation...",
@@ -121,6 +193,7 @@
     "error_loading_profile": "Erreur de chargement du profil",
     "retry": "Réessayer",
     "yes": "Oui",
+<<<<<<< HEAD
     "no": "Non",
     "name_required": "Le nom est requis",
     "phone_required": "Le numéro de téléphone est requis",
@@ -427,5 +500,167 @@
     "status": "Statut",
     "active": "Actif",
     "inactive": "Inactif"
+=======
+    "no": "Non"
+  },
+  "checkout_page": {
+  "checkout": "Paiement",
+  "home": "Accueil",
+  "cart": "Panier",
+  "search": "Recherche",
+  "profile": "Profil",
+
+  "your_cart": "Votre panier",
+  "cart_empty": "Votre panier est vide",
+  "add_items_message": "Ajoutez des articles depuis les restaurants pour continuer",
+
+  "login_to_place_order": "Connectez-vous pour passer la commande",
+  "continue_browsing": "Continuer la navigation",
+  "login_now": "Se connecter maintenant",
+
+  "invalid_user_account_message": "Votre compte n'est pas valide pour passer des commandes. Veuillez vous connecter avec un compte client.",
+  "please_select_a_delivery_driver": "Veuillez sélectionner un livreur",
+
+  "error_processing_order": "Erreur lors du traitement de la commande : {}",
+
+  "unknown_city": "Ville inconnue",
+  "unknown_street": "Rue inconnue",
+
+  "login_required": "Connexion requise",
+  "login_required_message": "Vous devez vous connecter pour passer une commande.",
+
+  "cancel": "Annuler",
+
+  "pending": "En attente",
+  "not_assigned": "Non attribué"
+  },
+  "guest_profile_page": {
+    "You_are_Guest": "Vous êtes invité",
+    "please_login_or_register": "Veuillez vous connecter ou créer un compte pour accéder à plus de fonctionnalités.",
+    "Login": "Connexion",
+    "Register": "S'inscrire",
+    "Settings": "Paramètres",
+    "Notifications": "Notifications",
+    "Manage_notification_preferences": "Gérer les préférences de notification",
+    "Location": "Localisation",
+    "Set_your_delivery_location": "Définissez votre adresse de livraison",
+    "Earn_Money": "Gagner de l'argent",
+    "Become_Delivery_Man": "Devenir livreur",
+    "Deliver_food_and_earn_money": "Livrez de la nourriture et gagnez de l'argent",
+    "Open_Your_Shop": "Ouvrez votre boutique",
+    "Sell_your_food_to_customers": "Vendez votre nourriture aux clients",
+    "Support": "Support",
+    "Help_Center": "Centre d'aide",
+    "Get_help_and_FAQs": "Obtenez de l'aide et consultez les FAQ",
+    "Contact_Support": "Contacter le support",
+    "Customer_Support": "Support client 24h/24 et 7j/7",
+    "Privacy_Policy": "Politique de confidentialité",
+    "Read_our_privacy_policy": "Lisez notre politique de confidentialité",
+    "Terms_of_Service": "Conditions d'utilisation",
+    "Read_our_terms_and_conditions": "Lisez nos conditions générales",
+    "Benefits_of_registering": "Avantages de l'inscription",
+    "Save_favorite_restaurants": "✓ Enregistrer vos restaurants favoris",
+    "Fast_checkout_with_saved_addresses": "✓ Paiement rapide avec adresses enregistrées",
+    "Track_order_history": "✓ Suivre l'historique des commandes",
+    "Exclusive_offers_and_discounts": "✓ Offres et réductions exclusives",
+    "Earn_loyalty_points": "✓ Gagner des points de fidélité",
+    "Become_a_Delivery_Driver": "Devenir livreur",
+    "Register_as_a_delivery_driver": "Inscrivez-vous en tant que livreur pour commencer à gagner de l'argent en livrant des repas.",
+    "Cancel": "Annuler",
+    "Register_Now": "S'inscrire maintenant",
+    "Find_answers_to_frequently_asked_questions_and_get_help_with_common_issues": "Trouvez des réponses aux questions fréquentes et obtenez de l'aide pour les problèmes courants.",
+    "Close": "Fermer",
+    "Our_support_team_is_available_24_7_to_help_you_with_any_issues_or_questions": "Notre équipe de support est disponible 24h/24 et 7j/7 pour vous aider avec tout problème ou question.",
+    "Read_our_privacy_policy_to_understand_how_we_protect_and_use_your_data": "Lisez notre politique de confidentialité pour comprendre comment nous protégeons et utilisons vos données.",
+    "Read_our_terms_and_conditions_to_understand_the_rules_and_guidelines_for_using_our_app": "Lisez nos conditions générales pour comprendre les règles et directives d'utilisation de notre application."
+  },
+  "category_details_page": {
+    "businesses_found": "{} entreprises trouvées",
+    "no_businesses_found": "Aucune entreprise trouvée dans cette catégorie.",
+    "try_different_category": "Essayez d'explorer une autre catégorie ou revenez plus tard.",
+    "Top_Rated_Businesses": "Entreprises les mieux notées",
+    "Failed_to_load_businesses": "Échec du chargement des entreprises",
+    "Businesses": "Entreprises",
+    "Business": "Entreprise",
+    "Something_went_wrong": "Une erreur s'est produite",
+    "Try_Again": "Réessayer",
+    "No ${widget.categoryName} found": "Aucun ${widget.categoryName} trouvé",
+    "We_couldn't_find_any_businesses_in_this_category": "Nous n'avons trouvé aucune entreprise dans cette catégorie.",
+    "Please_check_back_later": "Veuillez réessayer plus tard."
+  },
+  "orders_page": {
+  "title": "Mes commandes",
+  "total_orders": "Total des commandes",
+  "orders": "Commandes",
+  "no_orders": "Aucune commande",
+  "no_orders_description": "Vous n'avez pas encore passé de commande. Commencez vos achats pour découvrir les restaurants proches de vous !",
+  "start_shopping": "Commencer vos achats",
+  "delivered_on": "Livré le",
+  "all": "Tous"
+  },
+  "order_status": {
+    "pending": "En attente",
+    "accepted": "Acceptée",
+    "delivered": "Livrée",
+    "cancelled": "Annulée",
+    "status": "Statut"
+  },
+  "order": {
+    "order": "Commande",
+    "items": "Articles",
+    "address": "Adresse",
+    "items_count": "Nombre d'articles",
+    "restaurant": "Restaurant",
+    "estimates": {
+      "preparing": "En préparation",
+      "on_the_way": "En route"
+    },
+    "total": "Total",
+    "subtotal": "Sous-total",
+    "unknown_restaurant": "Restaurant inconnu",
+    "order_time": "Heure de commande",
+    "accepted_time": "Heure d'acceptation",
+    "delivery_driver": "Livreur" ,
+    "extras": "Suppléments",
+    "more": "plus"
+
+  },
+  "currency": {
+    "mad": "MAD"
+  },
+  "time": {
+    "unknown": "Heure inconnue",
+    "just_now": "À l'instant",
+    "minutes_ago": "minutes passées",
+    "hours_ago": "heures passées",
+    "days_ago": "jours passés"
+  },
+  "search_page": {
+    "title": "Rechercher des commerces",
+    "hint": "Recherchez des commerces, des catégories...",
+    "all_categories": "Tous",
+    "businesses_found": " commerces trouvés",
+    "no_businesses_found": "Aucun commerce trouvé",
+    "try_different_keywords": "Essayez des mots-clés ou catégories différents"
+  },
+  "language": {
+    "error_changing_language": "Erreur lors du changement de langue",
+    "skip": "Passer"
+  },
+  "not_supported_page": {
+    "not_available": "Service non disponible ici",
+    "description": "Nous sommes désolés, mais nos services de livraison ne sont pas disponibles à votre emplacement actuel.",
+    "detect_location": "Votre emplacement",
+    "contact_support": "Contacter le support",
+    "were_expansig_soon": "Nous étendons bientôt nos services ! Restez à l'écoute des mises à jour."
+  },
+  "welcome_page": {
+    "tagline": "Nourriture délicieuse livrée\nrapidement à votre porte",
+    "login_button": "Connexion",
+    "register_button": "S’inscrire",
+    "footer_text": "Rapide • Fiable • Délicieux"
+>>>>>>> 2512089149a017a11a0a69360649994bc2867d1a
   }
+
+
 }

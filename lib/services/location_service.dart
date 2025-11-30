@@ -63,7 +63,6 @@ class LocationService {
       
       return LocationResult.success(locationData);
     } catch (e) {
-      print('LocationService: Failed to get location: $e');
       return LocationResult.error(LocationError.unknown);
     }
   }

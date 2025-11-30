@@ -9,16 +9,72 @@
     "select_language": "Select Language",
     "language_changed_to": "Language changed to",
     "error_changing_language": "Error changing language",
-    "delivery_app": "Delivery App"
+    "delivery_app": "Delivery App",
+    "refresh_success": "Refresh successful",
+    "refresh_failed": "Refresh failed",
+    "token_expired": "Your session has expired. Please log in again.",
+    "cancel": "Cancel",
+    "not_available": "Not available",
+    "retry": "Retry",
+    "yes": "Yes",
+    "no": "No"
+
   },
   "home_page": {
     "home": "Home",
     "search": "Search",
     "cart": "Cart",
-    "profile": "Profile"
+    "profile": "Profile",
+    "failed_to_check_auth_status": "Failed to check authentication status",
+    "failed_to_load_user_data": "Failed to load user data",
+    "my_orders": "My Orders",
+    "view_all": "View All",
+    "recent_orders": "Recent Orders",
+    "loading_orders": "Loading orders...",
+    "orders_error": "Failed to load orders",
+    "no_orders": "No orders yet",
+    "no_orders_description": "Your orders will appear here once you make a purchase",
+    "delivery_home_page": {
+          "title":"Delivery Home",
+          "welcome_message":"Welcome, Delivery Man!"
+    },
+    "restaurant_home_page": {
+          "title":"Restaurant Home",
+          "welcome_message":"Welcome, Restaurant Owner!",
+          "error":"Failed to load products.",
+          "something_wrong":"Oops! Something went wrong",
+          "try_again":"Try Again"
+    }
   },
   
   "profile_page": {
+    "security": "Security",
+    "change_password": "Change Password",
+    "update_your_password": "Update your account password",
+    "change_phone": "Change Phone Number",
+    "update_your_phone": "Update your phone number",
+    "name_required": "Name is required",
+    "profile_updated": "Profile updated successfully",
+    "update_failed": "Profile update failed",
+    "update_error": "Update error",
+    "fill_all_fields": "Please fill all fields",
+    "passwords_not_match": "Passwords do not match",
+    "password_updated": "Password updated successfully",
+    "password_update_failed": "Password update failed",
+    "password_update_error": "Password update error",
+    "current_password_required": "Current password is required",
+    "new_password_required": "New password is required",
+    "password_min_length": "Password must be at least 6 characters",
+    "phone_required": "Phone number is required",
+    "phone_valid": "Please enter a valid phone number",
+    "phone_updated": "Phone number updated successfully",
+    "phone_update_failed": "Phone number update failed",
+    "phone_update_error": "Phone number update error",
+    "update_profile": "Update Profile",
+    "current": "Current",
+    "phone_change_failed": "Phone change failed",
+    "phone_change_error": "Phone change error",
+    "send_code": "Send Code",
     "my_account": "My Account",
     "my_orders": "My Orders",
     "view_your_order_history": "View your order history",
@@ -36,7 +92,22 @@
     "customer_support": "24/7 customer support",
     "logout": "Logout",
     "find_answers_faqs": "Find answers to frequently asked questions and get help with common issues.",
-    "support_team_available": "Our support team is available 24/7 to help you with any issues or questions."
+    "support_team_available": "Our support team is available 24/7 to help you with any issues or questions.",
+    "Failed_to_check_authentication_status": "Failed to check authentication status",
+    "Failed_to_load_user_data": "Failed to load user data",
+    "session_expired_message": "Your session has expired. Please login again to continue.",
+    "go_to_login": "Go to Login",
+    "profile": "Profile",
+    "home": "Home",
+    "search": "Search",
+    "cart": "Cart",
+    "profile_load_error": "Profile Load Error",
+    "continue_as_guest": "Continue as Guest",
+    "retry": "Retry",
+    "logout_error": "Logout Error",
+    "logging_out": "Logging out...",
+    "logout_confirmation": "Are you sure you want to logout ?",
+    "cancel": "Cancel"
   },
   "home_app_bar": {
   "getting_location": "Getting Location...",
@@ -55,24 +126,24 @@
   "location_info": "Your location is automatically updated when you open the app",
   "delivery_to": "Delivery to",
   "getting_your_location": "Getting your location..."
-},
-"location_service": {
-  "unknown_city": "Unknown City",
-  "unknown_street": "Unknown Street",
-  "enable_location_title": "Enable Location Services",
-  "enable_location_description": "We need your location to provide personalized food delivery services and find nearby restaurants.",
-  "not_now": "Not Now",
-  "enable_location": "Enable Location",
-  "location_access_title": "Location Access",
-  "location_access_description": "This app needs location access to show nearby restaurants, track deliveries, and provide accurate delivery times.",
-  "deny": "Deny",
-  "allow": "Allow",
-  "location_required": "Location access is required for full app functionality"
-},
-"businesses_section":{
-  "Top_Rated_Businesses":"Top Rated Businesses"
-},
-"delivery_profile_page": {
+  },
+  "location_service": {
+    "unknown_city": "Unknown City",
+    "unknown_street": "Unknown Street",
+    "enable_location_title": "Enable Location Services",
+    "enable_location_description": "We need your location to provide personalized food delivery services and find nearby restaurants.",
+    "not_now": "Not Now",
+    "enable_location": "Enable Location",
+    "location_access_title": "Location Access",
+    "location_access_description": "This app needs location access to show nearby restaurants, track deliveries, and provide accurate delivery times.",
+    "deny": "Deny",
+    "allow": "Allow",
+    "location_required": "Location access is required for full app functionality"
+  },
+  "businesses_section":{
+    "Top_Rated_Businesses":"Top Rated Businesses"
+  },
+  "delivery_profile_page": {
     "my_account": "My Account",
     "my_orders": "My Orders",
     "view_your_order_history": "View your order history",
@@ -226,6 +297,7 @@
     "camera": "Camera",
     "current": "Current",
     "new_phone": "New Phone Number",
+<<<<<<< HEAD
     "send_code": "Send Code",
     "error_loading_profile": "Error Loading Profile",
     "unknown_error": "Unknown error occurred",
@@ -478,4 +550,157 @@
     "view_documents": "View Documents",
     "personal_info": "Personal Information"
   }
+=======
+    "send_code": "Send Code"
+  },
+  "checkout_page": {
+    "checkout": "Checkout",
+    "home":"Home",
+    "cart":"Cart",
+    "search":"Search",
+    "profile":"Profile",
+    "your_cart": "Your Cart",
+    "cart_empty": "Your cart is empty",
+    "add_items_message": "Add some items from restaurants to continue",
+    "login_to_place_order": "Login to place order",
+    "continue_browsing": "Continue Browsing",
+    "login_now": "Login Now",
+    "invalid_user_account_message": "Your account is not valid for placing orders. Please login with a customer account.",
+    "please_select_a_delivery_driver": "Please select a delivery driver",
+    "error_processing_order": "Error processing order: {}",
+    "unknown_city": "Unknown City",
+    "unknown_street": "Unknown Street",
+    "login_required" : "Login Required",
+    "login_required_message" : "You need to login to place orders.",
+    "cancel" : "Cancel",
+    "pending" : "pending",
+    "not_assigned" : "Not assigned"
+  },
+  "guest_profile_page": {
+    "You_are_Guest": "You are Guest",
+    "please_login_or_register": "Please login or register to access more features." ,
+    "Login":"Login",
+    "Register":"Register",
+    "Settings":"Settings",
+    "Notifications":"Notifications",
+    "Manage_notification_preferences":"Manage notification preferences",
+    "Location":"Location",
+    "Set_your_delivery_location":"Set your delivery location",
+    "Earn_Money":"Earn Money",
+    "Become_Delivery_Man":"Become Delivery Man",
+    "Deliver_food_and_earn_money":"Deliver food and earn money",
+    "Open_Your_Shop":"Open Your Shop",
+    "Sell_your_food_to_customers":"Sell your food to customers",
+    "Support":"Support",
+    "Help_Center":"Help Center",
+    "Get_help_and_FAQs":"Get help and FAQs",
+    "Contact_Support":"Contact Support",
+    "Customer_Support":"24/7 customer support",
+    "Privacy_Policy":"Privacy Policy",
+    "Read_our_privacy_policy":"Read our privacy policy",
+    "Terms_of_Service":"Terms of Service",
+    "Read_our_terms_and_conditions":"Read our terms and conditions",
+    "Benefits_of_registering":"Benefits of registering",
+    "Save_favorite_restaurants":"✓ Save favorite restaurants",
+    "Fast_checkout_with_saved_addresses":"✓ Fast checkout with saved addresses",
+    "Track_order_history":"✓ Track order history",
+    "Exclusive_offers_and_discounts":"✓ Exclusive offers and discounts",
+    "Earn_loyalty_points":"✓ Earn loyalty points",
+    "Become_a_Delivery_Driver":"Become a Delivery Driver",
+    "Register_as_a_delivery_driver":"Register as a delivery driver to start earning money by delivering food to customers.",
+    "Cancel":"Cancel",
+    "Register_Now":"Register Now",
+    "Find_answers_to_frequently_asked_questions_and_get_help_with_common_issues":"Find answers to frequently asked questions and get help with common issues.",
+    "Close":"Close",
+    "Our_support_team_is_available_24_7_to_help_you_with_any_issues_or_questions":"Our support team is available 24/7 to help you with any issues or questions.",
+    "Read_our_privacy_policy_to_understand_how_we_protect_and_use_your_data":"Read our privacy policy to understand how we protect and use your data.",
+    "Read_our_terms_and_conditions_to_understand_the_rules_and_guidelines_for_using_our_app":"Read our terms and conditions to understand the rules and guidelines for using our app."
+  },
+  "category_details_page": {
+    "businesses_found": "{} businesses found",
+    "no_businesses_found": "No businesses found in this category.",
+    "try_different_category": "Try exploring a different category or check back later.",
+    "Top_Rated_Businesses": "Top Rated Businesses",
+    "Failed_to_load_businesses": "Failed to load businesses",
+    "Businesses": "Businesses",
+    "Business": "Business",
+    "Something_went_wrong": "Something went wrong",
+    "Try_Again": "Try Again",
+    "No ${widget.categoryName} found": "No ${widget.categoryName} found",
+    "We_couldn't_find_any_businesses_in_this_category": "We couldn't find any businesses in this category.",
+    "Please_check_back_later": "Please check back later."
+  },
+  "orders_page": {
+  "title": "My Orders",
+  "total_orders": "Total Orders",
+  "orders": "Orders",
+  "no_orders": "No Orders",
+  "no_orders_description": "You haven't placed any orders yet. Start shopping to discover nearby restaurants!",
+  "start_shopping": "Start Shopping",
+  "delivered_on": "Delivered on",
+  "all": "All"
+  },
+  "order_status": {
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled",
+    "status": "Status"
+  },
+  "order": {
+    "order": "Order",
+    "items": "Items",
+    "address": "Address",
+    "items_count": "Items Count",
+    "restaurant": "Restaurant",
+    "estimates": {
+      "preparing": "Preparing",
+      "on_the_way": "On the way"
+    },
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "unknown_restaurant": "Unknown restaurant",
+    "order_time": "Order Time",
+    "accepted_time": "Accepted Time",
+    "delivery_driver": "Delivery Driver",
+    "extras": "Extras",
+    "more": "more"
+  },
+  "currency": {
+    "mad": "MAD"
+  },
+  "time": {
+    "unknown": "Unknown time",
+    "just_now": "Just now",
+    "minutes_ago": "minutes ago",
+    "hours_ago": "hours ago",
+    "days_ago": "days ago"
+  },
+  "search_page":{
+    "title": "Search Businesses",
+    "hint": "Search for businesses, categories...",
+    "all_categories": "All",
+    "businesses_found": " businesses found",
+    "no_businesses_found": "No businesses found",
+    "try_different_keywords": "Try different keywords or categories"
+  },
+  "language":{
+     "error_changing_language":"Error changing language",
+     "skip":"Skip"
+  },
+  "not_supported_page":{
+    "not_available":"Service Not Available Here",
+    "description":"We're sorry, but our delivery services are not available in your current location.",
+    "detect_location":"Your Location",
+    "contact_support":"Contact Support",
+    "were_expansig_soon":"We're expanding soon! Stay tuned for updates."
+  },
+  "welcome_page":{
+    "tagline":"Delicious food delivered\nfast to your doorstep",
+    "login_button":"Login",
+    "register_button":"Register",
+    "footer_text":"Fast • Reliable • Delicious"
+  }
+
+>>>>>>> 2512089149a017a11a0a69360649994bc2867d1a
 }

@@ -52,9 +52,7 @@ class LocationManager {
       ]);
       
       _locationController.add(location);
-      print('LocationManager: Location updated - ${location.city}, ${location.street}');
     } catch (e) {
-      print('LocationManager: Failed to update location: $e');
       rethrow;
     }
   }
@@ -68,7 +66,6 @@ class LocationManager {
       
       return LocationData(city: city, street: street);
     } catch (e) {
-      print('LocationManager: Failed to read stored location: $e');
       return null;
     }
   }

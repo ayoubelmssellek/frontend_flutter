@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/animation.dart';
 import '../auth/login_page.dart' hide RegisterPage;
 import '../auth/client_register_page.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -9,6 +11,15 @@ class WelcomePage extends StatefulWidget {
   @override
   State<WelcomePage> createState() => _WelcomePageState();
 }
+
+  String _tr(String key, String fallback) {
+    try {
+      final translation = key.tr();
+      return translation == key ? fallback : translation;
+    } catch (e) {
+      return fallback;
+    }
+  }
 
 class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
@@ -181,7 +192,7 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                         child: Column(
                           children: [
                             Text(
-                              "FoodX Delivery",
+                             "Uniqque",
                               style: TextStyle(
                                 fontSize: 38,
                                 fontWeight: FontWeight.w900,
@@ -199,7 +210,7 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              "Delicious food delivered\nfast to your doorstep",
+                              _tr("welcome_page.tagline", "Delicious food delivered\nfast to your doorstep"),
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w400,
@@ -260,8 +271,8 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                                     ),
                                   );
                                 },
-                                child: const Text(
-                                  "Sign In",
+                                child: Text(
+                                   _tr("welcome_page.login_button", "Login"),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -301,8 +312,8 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                                     ),
                                   );
                                 },
-                                child: const Text(
-                                  "Create Account",
+                                child: Text(
+                                  _tr("welcome_page.register_button", "Register"),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -325,7 +336,7 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                     Padding(
                       padding: const EdgeInsets.only(bottom: 20),
                       child: Text(
-                        "Fast • Reliable • Delicious",
+                        _tr("welcome_page.footer_text", "Fast • Reliable • Delicious"),
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
                           fontSize: 14,
