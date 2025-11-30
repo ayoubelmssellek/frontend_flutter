@@ -25,8 +25,8 @@ android {
         applicationId = "com.example.food_app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 10
+        versionName = "1.0.9"
         
         // ✅ CORRECT KOTLIN DSL SYNTAX
         multiDexEnabled = true

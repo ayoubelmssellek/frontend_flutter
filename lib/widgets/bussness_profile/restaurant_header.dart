@@ -62,10 +62,56 @@ class RestaurantHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
+              // // Add search and share icons to the initial header as well
+              // Row(
+              //   children: [
+              //     Container(
+              //       width: 40,
+              //       height: 40,
+              //       decoration: BoxDecoration(
+              //         color: Colors.black.withOpacity(0.5),
+              //         shape: BoxShape.circle,
+              //       ),
+              //       child: IconButton(
+              //         icon: const Icon(
+              //           Icons.search,
+              //           color: Colors.white,
+              //           size: 20,
+              //         ),
+              //         onPressed: () {
+              //           // Add search functionality
+              //         },
+              //       ),
+              //     ),
+              //     const SizedBox(width: 8),
+              //     Container(
+              //       width: 40,
+              //       height: 40,
+              //       decoration: BoxDecoration(
+              //         color: Colors.black.withOpacity(0.5),
+              //         shape: BoxShape.circle,
+              //       ),
+              //       child: IconButton(
+              //         icon: const Icon(
+              //           Icons.share,
+              //           color: Colors.white,
+              //           size: 20,
+              //         ),
+              //         onPressed: () {
+              //           // Add share functionality
+              //         },
+              //       ),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
         ),
@@ -113,7 +159,10 @@ class RestaurantHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: shop.isOpen ? Colors.green : Colors.red,
                         borderRadius: BorderRadius.circular(12),
@@ -128,11 +177,15 @@ class RestaurantHeader extends StatelessWidget {
                       ),
                     ),
                     // Additional shop info
-                    if (shop.businessType.isNotEmpty && shop.businessType != 'General')
+                    if (shop.businessType.isNotEmpty &&
+                        shop.businessType != 'General')
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),

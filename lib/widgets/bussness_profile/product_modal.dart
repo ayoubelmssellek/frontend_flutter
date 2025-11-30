@@ -31,7 +31,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
   late Animation<double> _headerHeightAnimation;
   bool _hasLoadedExistingState = false;
   bool _isUpdatingCart = false;
-  bool _isProductInCart = false; // NEW: Track if product is in cart
+  bool _isProductInCart = false;
 
   @override
   void initState() {
@@ -76,7 +76,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Load existing state after the widget is built and has context
     if (!_hasLoadedExistingState) {
       _loadExistingProductState();
       _hasLoadedExistingState = true;
@@ -103,7 +102,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
     final productId = widget.product['id'].toString();
     final businessOwnerId = widget.shop.id.toString();
     
-    // Check if product is already in cart
     setState(() {
       _isProductInCart = cartService.isProductInCart(productId, businessOwnerId);
     });
@@ -111,13 +109,11 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
     final existingItem = cartService.getItemWithExtras(productId, businessOwnerId);
     
     if (existingItem != null) {
-      // Load main product quantity
       final existingQuantity = existingItem['quantity'] ?? 1;
       setState(() {
         _quantity = existingQuantity;
       });
       
-      // Load extras
       final selectedExtras = existingItem['selected_extras'] as List<dynamic>?;
       if (selectedExtras != null && selectedExtras.isNotEmpty) {
         for (final extra in selectedExtras) {
@@ -234,7 +230,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
       final businessOwnerId = widget.shop.id.toString();
       final uniqueKey = '${productId}_$businessOwnerId';
       
-      // If quantity is 0, remove from cart
       if (_quantity == 0) {
         await cartService.removeItem(uniqueKey);
         if (mounted) {
@@ -243,7 +238,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
         return;
       }
       
-      // Prepare selected extras list
       final selectedExtrasList = [];
       _selectedExtras.forEach((extraId, quantity) {
         if (quantity > 0) {
@@ -259,7 +253,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
         }
       });
       
-      // Create complete item data
       final itemData = {
         'id': productId,
         'product_name': widget.product['product_name'] ?? widget.product['name'] ?? 'Unknown Product',
@@ -271,12 +264,10 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
         'selected_extras': selectedExtrasList,
       };
       
-      // Use the new update method to ensure complete data sync
       if (cartService.cartItems.containsKey(uniqueKey)) {
         await cartService.updateItemWithData(uniqueKey, itemData);
       } else {
         await cartService.addItem(itemData, quantity: _quantity);
-        // Update the state to reflect that product is now in cart
         setState(() {
           _isProductInCart = true;
         });
@@ -295,7 +286,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
     }
   }
 
-  // NEW: Get the correct button text based on cart state
   String _getButtonText() {
     if (_quantity == 0) {
       return 'Remove';
@@ -316,13 +306,12 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
     final selectedExtrasCount = _getSelectedExtrasCount();
     final totalExtrasQuantity = _getTotalExtrasQuantity();
     final productName = widget.product['product_name'] ?? widget.product['name'] ?? 'Product';
-    final buttonText = _getButtonText(); // NEW: Use dynamic button text
+    final buttonText = _getButtonText();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Background dim
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
@@ -330,7 +319,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
             ),
           ),
           
-          // Main content
           Positioned(
             bottom: 0,
             left: 0,
@@ -343,7 +331,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
               ),
               child: Column(
                 children: [
-                  // FIXED: Smooth height animation for header
                   AnimatedBuilder(
                     animation: _headerHeightAnimation,
                     builder: (context, child) {
@@ -384,7 +371,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                                 child: _buildQuantitySection(buttonText),
                               ),
 
-                            // Add extra space at bottom to account for bottom section
                             if (hasExtras)
                               const SliverToBoxAdapter(
                                 child: SizedBox(height: 120),
@@ -392,7 +378,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                           ],
                         ),
                         
-                        // Close button positioned independently - only show when header is hidden
                         if (!_showHeader)
                           Positioned(
                             top: 16,
@@ -426,7 +411,6 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
     );
   }
 
-  // Header that smoothly appears when scrolling
   Widget _buildHeader(BuildContext context, String productName) {
     return Container(
       height: 60,
@@ -467,7 +451,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
               ),
             ),
             
-            const SizedBox(width: 48), // Balance the close button space
+            const SizedBox(width: 48),
           ],
         ),
       ),
@@ -740,6 +724,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
           final extraId = extra['id'].toString();
           final extraName = extra['variant_name'] ?? extra['product_name'] ?? 'Extra';
           final extraPrice = double.tryParse(extra['price']?.toString() ?? '0.0') ?? 0.0;
+          final extraImage = extra['product_image']?.toString() ?? extra['image']?.toString() ?? '';
           final extraQuantity = _selectedExtras[extraId] ?? 0;
           final isSelected = extraQuantity > 0;
           final isLast = extraIndex == extras.length - 1;
@@ -754,13 +739,37 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                   child: InkWell(
                     onTap: _isBusinessOpen ? () => _toggleExtra(extraId) : null,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          // Extra image
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.grey.shade100,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: CustomNetworkImage(
+                                imageUrl: extraImage,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                placeholder: 'restaurant',
+                              ),
+                            ),
+                          ),
+                          
+                          const SizedBox(width: 12),
+                          
                           // Extra info
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   extraName,
@@ -769,8 +778,10 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                                     fontWeight: FontWeight.w600,
                                     color: _isBusinessOpen ? Colors.black87 : Colors.grey.shade400,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 4),
                                 Text(
                                   '+${extraPrice.toStringAsFixed(2)} DH',
                                   style: TextStyle(
@@ -783,6 +794,9 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                             ),
                           ),
                           
+                          const SizedBox(width: 12),
+                          
+                          // Quantity selector or selection indicator
                           if (isSelected)
                             Container(
                               decoration: BoxDecoration(
@@ -791,6 +805,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                                 border: Border.all(color: Colors.grey.shade300),
                               ),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
                                     icon: Icon(
@@ -855,7 +870,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                 
                 if (!isLast)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.only(left: 88, right: 16),
                     child: Divider(
                       height: 1,
                       color: Colors.grey.shade200,

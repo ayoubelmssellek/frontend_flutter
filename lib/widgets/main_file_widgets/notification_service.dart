@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'dart:ui';
 
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 
-// Provider to track if notification service is initialized
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
 });
@@ -16,13 +14,11 @@ class NotificationService {
   
   static bool _isInitialized = false;
 
-  // Initialize notification service
   Future<void> initialize() async {
-    if (_isInitialized) {
-      return;
-    }
-
+    if (_isInitialized) return;
+    
     try {
+      print("🔧 Initializing Notification Service...");
 
       // Android settings
       const AndroidInitializationSettings androidSettings =
@@ -42,64 +38,79 @@ class NotificationService {
         iOS: iosSettings,
       );
 
-      await _notificationsPlugin.initialize(
-        initializationSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse response) {
-          _handleNotificationClick(response.payload);
-        },
-      );
+      await _notificationsPlugin.initialize(initializationSettings);
 
-      // Create notification channel for Android
+      // Create simple notification channel with SYSTEM DEFAULT sound
       await _createNotificationChannel();
 
       _isInitialized = true;
+      print("✅ Notification Service initialized with SYSTEM sounds");
 
     } catch (e) {
+      print("❌ Error initializing Notification Service: $e");
     }
   }
 
   Future<void> _createNotificationChannel() async {
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'high_importance_channel',
-      'High Importance Notifications',
-      description: 'This channel is used for important order notifications.',
-      importance: Importance.high,
-      playSound: true,
-      enableVibration: true,
-    );
+    try {
+      // Simple channel with SYSTEM DEFAULT sound (don't specify custom sound)
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'orders_channel', // Simple channel name
+        'Order Notifications', 
+        description: 'Channel for order notifications',
+        importance: Importance.high,
+        playSound: true,
+        // DON'T set sound parameter - this will use SYSTEM DEFAULT
+        enableVibration: true,
+      );
 
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+      await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+      
+      print("✅ Notification channel created with SYSTEM DEFAULT sound");
+
+    } catch (e) {
+      print("❌ Error creating notification channel: $e");
+    }
   }
 
-  // Show notification - ONLY this function shows notifications
+  // Show notification with SYSTEM DEFAULT sound
   Future<void> showNotification({
     required String title,
     required String body,
     required String orderId,
     Map<String, dynamic>? data,
+    bool playSound = true,
   }) async {
     try {
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+      print("🔔 Showing notification: $title");
+
+      // Android notification details - USE SYSTEM DEFAULT SOUND
+      final AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
-        'high_importance_channel',
-        'High Importance Notifications',
-        channelDescription: 'This channel is used for important order notifications.',
+        'orders_channel',
+        'Order Notifications',
+        channelDescription: 'Channel for order notifications',
         importance: Importance.high,
         priority: Priority.high,
         showWhen: true,
-        playSound: true,
+        playSound: playSound,
+        // DON'T set sound parameter - this will use SYSTEM DEFAULT
         enableVibration: true,
         colorized: true,
-        color: Color(0xFFFF5722),
+        color: const Color(0xFFFF5722),
       );
 
-      const DarwinNotificationDetails iosPlatformChannelSpecifics =
-          DarwinNotificationDetails();
+      // iOS notification details - USE SYSTEM DEFAULT SOUND
+      final DarwinNotificationDetails iosPlatformChannelSpecifics =
+          DarwinNotificationDetails(
+        presentSound: playSound,
+        // DON'T set sound - this will use SYSTEM DEFAULT
+      );
 
-      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      final NotificationDetails platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
         iOS: iosPlatformChannelSpecifics,
       );
@@ -116,8 +127,59 @@ class NotificationService {
         }),
       );
 
+      print("✅ Notification shown: $title - Using SYSTEM sound");
 
     } catch (e) {
+      print("❌ Error showing notification: $e");
+    }
+  }
+
+  // Show silent notification (no sound)
+  Future<void> showSilentNotification({
+    required String title,
+    required String body,
+    required String orderId,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'orders_channel',
+        'Order Notifications',
+        channelDescription: 'Channel for order notifications',
+        importance: Importance.high,
+        priority: Priority.defaultPriority,
+        playSound: false, // No sound
+        enableVibration: false, // No vibration
+      );
+
+      const DarwinNotificationDetails iosPlatformChannelSpecifics =
+          DarwinNotificationDetails(
+        presentSound: false,
+        presentBadge: false,
+      );
+
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iosPlatformChannelSpecifics,
+      );
+
+      await _notificationsPlugin.show(
+        DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title,
+        body,
+        platformChannelSpecifics,
+        payload: json.encode({
+          'orderId': orderId,
+          'type': 'silent_update',
+          ...?data,
+        }),
+      );
+
+      print("🔇 Silent notification shown: $title");
+
+    } catch (e) {
+      print("❌ Error showing silent notification: $e");
     }
   }
 
@@ -125,19 +187,9 @@ class NotificationService {
   Future<void> clearAllNotifications() async {
     try {
       await _notificationsPlugin.cancelAll();
+      print("✅ All notifications cleared");
     } catch (e) {
-    }
-  }
-
-  void _handleNotificationClick(String? payload) {
-    if (payload != null) {
-      try {
-        final data = json.decode(payload);
-        
-        // Handle navigation based on notification data
-        // You can add your navigation logic here
-      } catch (e) {
-      }
+      print("❌ Error clearing notifications: $e");
     }
   }
 }

@@ -15,6 +15,7 @@ class ApiClient {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'XAppSecret':'uniqque@20257afozli9'
         },
       ),
     );

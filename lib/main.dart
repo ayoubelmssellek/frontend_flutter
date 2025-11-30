@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,10 +8,10 @@ import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/services/location_service_widget.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/widgets/main_file_widgets/app_initialization_service.dart';
-import 'package:food_app/widgets/main_file_widgets/fcm_service.dart';
 import 'package:food_app/widgets/main_file_widgets/loading_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_app/widgets/main_file_widgets/notification_service.dart';
+import 'package:food_app/widgets/main_file_widgets/fcm_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,8 @@ void main() async {
   // Initialize ApiClient
   ApiClient.init();
 
-  // NO FCM setup here - handled by FCMManager
+  // Add this line back if you need background notifications
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   runApp(
     EasyLocalization(
@@ -40,7 +42,6 @@ void main() async {
     ),
   );
 }
-
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
@@ -61,16 +62,23 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   Future<void> _initializeApp() async {
     try {
+      print("🚀 Starting app initialization...");
       
       // 1. Initialize Notification Service FIRST
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
+      print("✅ Notification Service ready");
 
       // 2. Initialize FCM Manager SECOND
       final fcmManager = ref.read(fcmManagerProvider);
       await fcmManager.initialize();
+      print("✅ FCM Manager ready");
 
-      // 3. Initialize App Service
+      // 3. Request notification permissions
+      await fcmManager.requestPermissions();
+      print("✅ Notification permissions requested");
+
+      // 4. Initialize App Service
       final appInitService = AppInitializationService(ref);
       final result = await appInitService.initializeApp(navKey: _navigatorKey);
       
@@ -79,6 +87,7 @@ class _MyAppState extends ConsumerState<MyApp> {
         _isInitializing = false;
       });
 
+      print("✅ App initialization complete!");
 
       // Send FCM token to server if user is logged in
       if (result.userData != null) {
@@ -89,6 +98,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       }
 
     } catch (e) {
+      print("❌ App initialization error: $e");
       setState(() {
         _isInitializing = false;
         _appInitResult = AppInitializationResult(
@@ -103,14 +113,18 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   Future<void> _sendFcmTokenToServer(String fcmToken, Map<String, dynamic> userData) async {
     try {
+      print('🚀 Sending FCM token for user: ${userData['id']}');
       
       final result = await ref.read(updateFcmTokenProvider(fcmToken).future);
       
       if (result['success'] == true) {
         final role = userData['role_name']?.toString().toLowerCase();
+        print("✅ FCM token sent to server successfully for $role!");
       } else {
+        print("❌ FCM token update failed: ${result['message']}");
       }
     } catch (e) {
+      print("❌ Error sending FCM token: $e");
     }
   }
 
