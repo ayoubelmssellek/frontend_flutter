@@ -530,7 +530,7 @@
   "delivery_home_page": {
     "failed_to_check_auth": "فشل التحقق من حالة المصادقة",
     "user_id_not_found": "معرف المستخدم غير موجود",
-    "now_online": "أنت الآن متصل بالإنترنت",
+    "now_online": "أنت الآن متصل ",
     "now_offline": "أنت الآن غير متصل",
     "failed_toggle_status": "فشل تبديل الحالة: {error}",
     "session_expired_message": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى للمتابعة.",
@@ -544,14 +544,14 @@
     "unknown_error": "حدث خطأ غير معروف",
     "offline_title": "شريك التوصيل - غير متصل",
     "you_are_offline": "أنت غير متصل",
-    "offline_description": "اتصل بالإنترنت لبدء استقبال طلبات التوصيل وإدارة عمليات التسليم الخاصة بك",
-    "go_online": "الاتصال بالإنترنت",
+    "offline_description": "اتصل بالتطبيق لبدء استقبال طلبات التوصيل وإدارة عمليات التسليم الخاصة بك",
+    "go_online": "الاتصال ",
     "offline": "غير متصل",
     "online": "متصل",
     "busy": "مشغول",
     "delivery_status": "حالة التوصيل",
     "current_status": "الحالة الحالية: {status}",
-    "status_dialog_description": "قم بتبديل المفتاح في شريط التطبيق للاتصال بالإنترنت والبدء في استقبال طلبات التوصيل.",
+    "status_dialog_description": "قم بتبديل المفتاح في شريط التطبيق للاتصال بالتطبيق والبدء في استقبال طلبات التوصيل.",
     "online_available": "متصل - متاح للطلبات",
     "online_delivering": "متصل - قيد التسليم"
   },
@@ -619,7 +619,6 @@
     "current": "الحالي",
     "phone_change_failed": "فشل تغيير رقم الهاتف",
     "phone_change_error": "فشل تغيير رقم الهاتف",
-<<<<<<< HEAD
     "send_code": "إرسال الرمز"
   },
   "my_orders_page": {
@@ -649,7 +648,6 @@
     "loading_dot": "جاري التحميل...",
     "refresh_orders": "تحديث الطلبات"
   },
-  //mohamed
   "order_details_page": {
     "could_not_open_phone": "لم يتمكن من فتح تطبيق الهاتف",
     "error_opening_phone": "خطأ في فتح الهاتف: {error}",
@@ -748,7 +746,6 @@
     "support_banned": "تم حظر حسابك. يرجى الاتصال بفريق الدعم لدينا للحصول على مزيد من المعلومات.",
     "refreshing_status": "جاري تحديث حالة الحساب..."
   },
-  // Admin Pages
   "admin_home_page": {
     "failed_to_check_auth": "فشل التحقق من حالة المصادقة",
     "failed_load_user_data": "فشل تحميل بيانات المستخدم",
