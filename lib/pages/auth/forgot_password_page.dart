@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/providers/auth_providers.dart';
@@ -125,7 +126,7 @@ Future<void> _sendResetCode() async {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "نسيت كلمة المرور",
+          "auth_page.forgot_password_title".tr(),
           style: TextStyle(
             color: Colors.grey.shade800,
             fontWeight: FontWeight.w700,
@@ -163,9 +164,9 @@ Future<void> _sendResetCode() async {
                               size: 40, color: Colors.deepOrange),
                         ),
                         const SizedBox(height: 24),
-                        const Text(
-                          "إعادة تعيين كلمة المرور",
-                          style: TextStyle(
+                        Text(
+                          "auth_page.reset_password_title".tr(),
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
                             color: Colors.black87,
@@ -173,7 +174,7 @@ Future<void> _sendResetCode() async {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          "أدخل رقم هاتفك لإرسال كود التحقق",
+                          "auth_page.enter_phone_for_code".tr(),
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey.shade600,
@@ -188,9 +189,8 @@ Future<void> _sendResetCode() async {
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
-                      textDirection: TextDirection.ltr,
                       decoration: InputDecoration(
-                        labelText: 'رقم الهاتف',
+                        labelText: 'auth_page.phone'.tr(),
                         labelStyle: TextStyle(color: Colors.grey.shade600),
                         prefixIcon: Icon(Icons.phone, color: Colors.grey.shade500),
                         border: OutlineInputBorder(
@@ -203,15 +203,14 @@ Future<void> _sendResetCode() async {
                         ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
-                        hintText: 'مثال: 212644567890+',
-                        hintTextDirection: TextDirection.ltr,
+                        hintText: 'e.g. +212644567890',
                       ),
                       validator: (val) {
                         if (val == null || val.isEmpty) {
-                          return 'رقم الهاتف مطلوب';
+                          return 'auth_page.phone_required'.tr();
                         }
                         if (val.length < 10) {
-                          return 'أدخل رقم هاتف صحيح';
+                          return 'auth_page.invalid_phone'.tr();
                         }
                         return null;
                       },
@@ -240,9 +239,9 @@ Future<void> _sendResetCode() async {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                'إرسال كود التحقق',
-                                style: TextStyle(
+                            : Text(
+                                'auth_page.send_verification_code'.tr(),
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),

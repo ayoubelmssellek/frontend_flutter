@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -288,7 +289,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Create Account",
+          "auth_page.create_account".tr(),
           style: TextStyle(
             color: Colors.grey.shade800,
             fontWeight: FontWeight.w700,
@@ -310,18 +311,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
-                      Text("Join uniqque Today",
+                      Text("auth_page.join_today".tr(),
                           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.grey.shade900)),
                       const SizedBox(height: 8),
-                      Text("Create your account and start enjoying delicious food",
+                      Text("auth_page.create_account_subtitle".tr(),
                           style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                       const SizedBox(height: 32),
 
                       // Full Name
                       TextFormField(
                         controller: _nameController,
-                        decoration: _inputDecoration('Full Name', Icons.person),
-                        validator: (val) => val!.isEmpty ? 'Name is required' : null,
+                        decoration: _inputDecoration('auth_page.full_name'.tr(), Icons.person),
+                        validator: (val) => val!.isEmpty ? 'auth_page.name_required'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -329,8 +330,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                       TextFormField(
                         controller: _whatsappController,
                         keyboardType: TextInputType.phone,
-                        decoration: _inputDecoration('WhatsApp Number', Icons.phone),
-                        validator: (val) => val!.isEmpty ? 'WhatsApp number is required' : null,
+                        decoration: _inputDecoration('auth_page.whatsapp_number'.tr(), Icons.phone),
+                        validator: (val) => val!.isEmpty ? 'auth_page.whatsapp_required'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -338,7 +339,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        decoration: _inputDecoration('Password', Icons.lock).copyWith(
+                        decoration: _inputDecoration('auth_page.password'.tr(), Icons.lock).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -347,7 +348,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                             onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
                         ),
-                        validator: (val) => val!.length < 6 ? 'Minimum 6 characters required' : null,
+                        validator: (val) => val!.length < 6 ? 'auth_page.password_min_length'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -355,7 +356,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirmPassword,
-                        decoration: _inputDecoration('Confirm Password', Icons.lock_outline).copyWith(
+                        decoration: _inputDecoration('auth_page.confirm_password'.tr(), Icons.lock_outline).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
@@ -364,7 +365,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                             onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                           ),
                         ),
-                        validator: (val) => val != _passwordController.text ? 'Passwords do not match' : null,
+                        validator: (val) => val != _passwordController.text ? 'auth_page.passwords_not_match'.tr() : null,
                       ),
                       const SizedBox(height: 40),
 
@@ -380,7 +381,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                           onPressed: _isLoading ? null : _register,
                           child: _isLoading
                               ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text("Create Account", style: TextStyle(fontSize: 18)),
+                              : Text("auth_page.create_account".tr(), style: const TextStyle(fontSize: 18)),
                         ),
                       ),
                       const SizedBox(height: 24),

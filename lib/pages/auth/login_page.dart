@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -345,14 +346,14 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                         ),
                         const SizedBox(height: 24),
                         const Text(
-                          "Welcome Back",
+                          "auth_page.welcome_back",
                           style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
                               color: Colors.black87),
-                        ),
+                        ).tr(),
                         const SizedBox(height: 8),
-                        Text("Sign in to your account to continue",
+                        Text("auth_page.sign_in_to_account".tr(),
                             style: TextStyle(
                                 fontSize: 16, color: Colors.grey.shade600)),
                       ],
@@ -366,7 +367,7 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                             controller: _whatsappController,
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
-                              labelText: 'WhatsApp Number',
+                              labelText: 'auth_page.whatsapp_number'.tr(),
                               labelStyle: TextStyle(color: Colors.grey.shade600),
                               prefixIcon: Icon(Icons.phone, color: Colors.grey.shade500),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -376,8 +377,8 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                               hintText: 'e.g. +212644567890',
                             ),
                             validator: (val) {
-                              if (val == null || val.isEmpty) return 'WhatsApp number is required';
-                              if (val.length < 10) return 'Enter a valid phone number';
+                              if (val == null || val.isEmpty) return 'auth_page.whatsapp_required'.tr();
+                              if (val.length < 10) return 'auth_page.invalid_phone'.tr();
                               return null;
                             },
                           ),
@@ -386,7 +387,7 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
-                              labelText: 'Password',
+                              labelText: 'auth_page.password'.tr(),
                               labelStyle: TextStyle(color: Colors.grey.shade600),
                               prefixIcon: Icon(Icons.lock, color: Colors.grey.shade500),
                               suffixIcon: IconButton(
@@ -399,8 +400,8 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                               fillColor: Colors.grey.shade50,
                             ),
                             validator: (val) {
-                              if (val == null || val.isEmpty) return 'Password is required';
-                              if (val.length < 6) return 'Password must be at least 6 characters';
+                              if (val == null || val.isEmpty) return 'auth_page.password_required'.tr();
+                              if (val.length < 6) return 'auth_page.password_min_length'.tr();
                               return null;
                             },
                           ),
@@ -412,7 +413,7 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                                 onPressed: () { 
                                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordPage()));
                                 },
-                                child: const Text('Forgot Password?', style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600)),
+                                child: Text('auth_page.forgot_password_btn'.tr(), style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),
@@ -433,14 +434,14 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                                       height: 20,
                                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                     )
-                                  : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                  : Text('auth_page.login'.tr(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                             ),
                           ),
                           const SizedBox(height: 24),
                           Row(
                             children: [
                               Expanded(child: Divider(color: Colors.grey.shade300)),
-                              const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("or", style: TextStyle(color: Colors.grey)) ),
+                              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text("auth_page.or".tr(), style: const TextStyle(color: Colors.grey)) ),
                               Expanded(child: Divider(color: Colors.grey.shade300)),
                             ],
                           ),
@@ -448,12 +449,12 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text("Don't have an account? ", style: TextStyle(color: Colors.grey.shade600)),
+                              Text("auth_page.no_account".tr(), style: TextStyle(color: Colors.grey.shade600)),
                               TextButton(
                                 onPressed: () {
                                   Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
                                 },
-                                child: const Text("Sign Up", style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600)),
+                                child: Text("auth_page.sign_up".tr(), style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),
