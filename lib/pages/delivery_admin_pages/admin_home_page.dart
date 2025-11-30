@@ -191,14 +191,18 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   bool _isTogglingStatus = false;
   bool _hasHandledTokenNavigation = false;
 
-  final List<Widget> _pages = [
-    // Admin Management Section
-    _AdminSectionWidget(),
-    // Delivery Operations Section
-    _DeliverySectionWidget(),
-    // Profile Section
-    const AdminProfilePage(),
-  ];
+  // Use a getter so the pages are constructed at build-time (after
+  // EasyLocalization is initialized). Constructing them as a field caused
+  // `.tr()` to run too early and display raw keys like
+  // "admin_home_page.pending" instead of the localized value.
+  List<Widget> get _pages => [
+        // Admin Management Section
+        _AdminSectionWidget(),
+        // Delivery Operations Section
+        _DeliverySectionWidget(),
+        // Profile Section
+        const AdminProfilePage(),
+      ];
 
   static Widget _AdminSectionWidget() {
     return DefaultTabController(
@@ -244,7 +248,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
       child: Scaffold(
         body: Column(
           children: [
-            Container(
+            Container( 
               color: Colors.deepOrange,
               child: TabBar(
                 labelColor: Colors.white,
