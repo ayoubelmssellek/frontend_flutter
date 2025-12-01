@@ -1,7 +1,10 @@
 // repositories/admin_repository.dart
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:food_app/core/api_client.dart';
+import 'package:food_app/models/delivery_driver_stats_model.dart';
 import '../../models/delivery_man_model.dart';
 
 class AdminRepository {
@@ -136,33 +139,41 @@ Future<List<DeliveryMan>> getApprovedDeliveryMen() async {
     }
   }
 
-  // Get all delivery drivers statistics (accepted orders, delivered orders & reviews)
-  Future<List<dynamic>> getDeliveryDriverStats() async {
-    try {
-      await ApiClient.setAuthHeader();
-      final response = await ApiClient.dio.get('/admin/delivery-driver-stats');
+Future<DeliveryDriverStats> getDeliveryDriverStatsById(int driverId) async {
+  try {
+    await ApiClient.setAuthHeader();
+    final response = await ApiClient.dio.get('/admin/delivery-driver-stats/$driverId');
 
-      if (response.statusCode == 200) {
-        final dynamic data = response.data;
-
-
-        if (data is Map && data.containsKey('data')) {
-          return data['data'] ?? [];
-        } else if (data is List) {
-          return data;
+    if (response.statusCode == 200) {
+      final dynamic data = response.data;
+      print('Single driver stats response: ${response.data}'); // Debug
+      
+      // Convert to Map<String, dynamic>
+      final Map<String, dynamic> responseData = Map<String, dynamic>.from(data as Map);
+      
+      if (responseData.containsKey('data')) {
+        final dynamic statsData = responseData['data'];
+        if (statsData is Map) {
+          final Map<String, dynamic> typedStatsData = Map<String, dynamic>.from(statsData);
+          return DeliveryDriverStats.fromJson(typedStatsData);
         } else {
-          return [];
+          throw Exception('Invalid data format: "data" is not a Map');
         }
+      } else if (responseData.containsKey('driver_id')) {
+        // If the data is directly the stats object
+        return DeliveryDriverStats.fromJson(responseData);
+      } else {
+        throw Exception('Invalid data format from stats endpoint');
       }
-      throw Exception(
-        'Failed to load delivery driver stats: ${response.statusCode}',
-      );
-    } catch (e) {
-      rethrow;
     }
+    throw Exception(
+      'Failed to load delivery driver stats: ${response.statusCode}',
+    );
+  } catch (e) {
+    print('Error in getDeliveryDriverStatsById: $e');
+    rethrow;
   }
-
-
+}
 // Update the avg rating column in delivery drivers table
 Future<bool> updateDeliveryDriverAvgRating(int driverId, double avgRating) async {
   try {
@@ -183,6 +194,27 @@ Future<bool> updateDeliveryDriverAvgRating(int driverId, double avgRating) async
     
     return false;
   } catch (e) {
+    rethrow;
+  }
+}
+
+
+
+Future<bool> updateDriverStatus(int driverId, String status) async {
+  try {
+    await ApiClient.setAuthHeader();
+    final response = await ApiClient.dio.put(
+      '/admin/delivery-drivers/$driverId/update-status',
+      data: {'status': status},
+    );
+
+    if (response.statusCode == 200) {
+      final data = response.data;
+      return data['status'] == 'success';
+    }
+    return false;
+  } catch (e) {
+    print('Error updating driver status: $e');
     rethrow;
   }
 }

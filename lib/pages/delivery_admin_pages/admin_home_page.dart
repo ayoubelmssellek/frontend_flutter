@@ -256,7 +256,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                 indicatorColor: Colors.white,
                 tabs: [
                   Tab(
-                    icon: const Icon(Icons.local_shipping),
+                    icon: const Icon(Icons.pending_actions),
                     text: 'admin_home_page.available'.tr(),
                   ),
                   Tab(

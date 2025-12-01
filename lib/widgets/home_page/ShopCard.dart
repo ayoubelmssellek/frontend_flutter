@@ -64,13 +64,13 @@ class ShopCard extends StatelessWidget {
           child: _buildStatusBadge(shop.isOpen),
         ),
 
-        // Categories Badge - Top Left (if available)
-        if (shop.categories.isNotEmpty)
-          Positioned(
-            top: 12,
-            left: 12,
-            child: _buildCategoriesBadge(),
-          ),
+        // // Categories Badge - Top Left (if available)
+        // if (shop.categories.isNotEmpty)
+        //   Positioned(
+        //     top: 12,
+        //     left: 12,
+        //     child: _buildCategoriesBadge(),
+        //   ),
       ],
     );
   }

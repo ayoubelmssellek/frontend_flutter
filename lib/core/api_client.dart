@@ -44,7 +44,7 @@ class ApiClient {
           print('📤 [REQUEST] ${options.method} → ${options.uri}');
           print('🔹 Headers: ${options.headers}');
           print('🔹 Data: ${options.data}');
-          print('🔹 Needs Auth: $needsAuth'); // ✅ ADDED: Debug info
+          print('🔹 Needs Auth: $needsAuth');
         }
         return handler.next(options);
       },

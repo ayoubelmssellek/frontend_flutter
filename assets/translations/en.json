@@ -13,7 +13,6 @@
     "refresh_success": "Refresh successful",
     "refresh_failed": "Refresh failed",
     "token_expired": "Your session has expired. Please log in again.",
-    "cancel": "Cancel",
     "not_available": "Not available",
     "retry": "Retry",
     "yes": "Yes",
@@ -750,6 +749,7 @@
   "search_page":{
     "title": "Search Businesses",
     "hint": "Search for businesses, categories...",
+    "search":"search",
     "all_categories": "All",
     "businesses_found": " businesses found",
     "no_businesses_found": "No businesses found",

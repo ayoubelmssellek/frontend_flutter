@@ -218,55 +218,65 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
     _hasProcessedFromNotApproved = false; // ✅ RESET
     super.dispose();
   }
+// In DeliveryHomePage - Replace the entire _checkStatusAfterVerification method
+Future<void> _checkStatusAfterVerification() async {
+  if (_isCheckingStatus || _hasProcessedFromNotApproved) return;
 
-  Future<void> _checkStatusAfterVerification() async {
-    if (_isCheckingStatus || _hasProcessedFromNotApproved) return;
+  setState(() => _isCheckingStatus = true);
 
-    setState(() => _isCheckingStatus = true);
+  try {
+    print('🔄 Checking status after verification...');
 
-    try {
-      print('🔄 Checking status after verification...');
+    // Force refresh and wait for completion
+    ref.invalidate(currentUserProvider);
+    final result = await ref.read(currentUserProvider.future);
 
-      ref.invalidate(currentUserProvider);
-      final result = await ref.read(currentUserProvider.future);
+    if (!mounted) {
+      print('❌ Widget not mounted after refresh - cancelling check');
+      return;
+    }
 
-      if (result['success'] == true && result['data'] != null) {
-        final userData = result['data'];
-        final newStatus = userData['status']?.toString().toLowerCase();
+    print('🔄 Latest status after verification: ${result['success']}');
 
-        print('🔄 Latest status after verification: $newStatus');
+    if (result['success'] == true && result['data'] != null) {
+      final userData = result['data'];
+      final newStatus = userData['status']?.toString().toLowerCase();
 
-        if (newStatus != 'approved') {
-          print(
-            '❌ Status is still $newStatus after verification - redirecting to NotApprovedPage',
-          );
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => NotApprovedPage(
-                  status: newStatus ?? 'unknown',
-                  user: userData,
-                ),
+      print('🔄 Latest user status: $newStatus');
+
+      // Only redirect if status is definitely NOT approved
+      final unapprovedStatuses = ['pending', 'rejected', 'unverified', 'banned'];
+      if (unapprovedStatuses.contains(newStatus)) {
+        print('❌ Status is $newStatus after verification - redirecting to NotApprovedPage');
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => NotApprovedPage(
+                status: newStatus ?? 'unknown',
+                user: userData,
               ),
-            );
-            return;
-          }
-        } else {
-          print('🎉 Status is approved after verification!');
+            ),
+          );
+          return;
         }
+      } else {
+        print('🎉 Status check passed: $newStatus - staying in DeliveryHomePage');
       }
-    } catch (e) {
-      print('❌ Error checking status after verification: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCheckingStatus = false;
-          _hasProcessedFromNotApproved = true; // ✅ MARK AS PROCESSED
-        });
-      }
+    } else {
+      print('⚠️ Could not verify status, but staying in DeliveryHomePage');
+    }
+  } catch (e) {
+    print('❌ Error checking status after verification: $e');
+    // Don't redirect on error - stay in DeliveryHomePage
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isCheckingStatus = false;
+        _hasProcessedFromNotApproved = true;
+      });
     }
   }
-
+}
   void _setInitialStatus(Map<String, dynamic> userData) {
     final state = ref.read(deliveryHomeStateProvider);
     if (state.hasSetInitialStatus) return;
@@ -418,147 +428,105 @@ class _DeliveryHomePageState extends ConsumerState<DeliveryHomePage> {
       });
     }
   }
+@override
+Widget build(BuildContext context) {
+  print('🏠 DeliveryHomePage building...');
 
-  @override
-  Widget build(BuildContext context) {
-    print('🏠 DeliveryHomePage building...');
+  final userAsync = ref.watch(currentUserProvider);
+  final homeState = ref.watch(deliveryHomeStateProvider);
 
-    final userAsync = ref.watch(currentUserProvider);
-    final homeState = ref.watch(deliveryHomeStateProvider);
+  // Handle token errors first
+  _handleTokenErrors(homeState, context);
 
-    if (_isCheckingStatus) {
-      return _buildLoadingState();
-    }
-
-    // ✅ FIXED: Simplified logic to prevent infinite loop
-    // Directly use the main content without separate _buildWithUserData method
-    if (widget.fromNotApproved &&
-        userAsync.hasValue &&
-        userAsync.value != null) {
-      final userData = userAsync.value!;
-      if (userData['success'] == true && userData['data'] != null) {
-        print('🎯 Using fresh user data from currentUserProvider');
-        return _buildMainContent(userData, homeState);
-      }
-    }
-
-    _handleTokenErrors(homeState, context);
-
-    if (homeState.hasTokenError) {
-      return const Scaffold(body: SizedBox.shrink());
-    }
-
-    if (widget.fromNotApproved && homeState.isLoading) {
-      return _buildLoadingState();
-    }
-
-    return homeState.isLoading
-        ? _buildLoadingState()
-        : homeState.errorMessage != null
-        ? _buildErrorState(homeState, context)
-        : homeState.isLoggedIn && homeState.userData != null
-        ? _buildMainContent(homeState.userData!, homeState)
-        : _buildTokenExpiredState();
+  if (homeState.hasTokenError) {
+    return const Scaffold(body: SizedBox.shrink());
   }
 
-  Widget _buildMainContent(
-    Map<String, dynamic> userData,
-    DeliveryHomeState state,
-  ) {
-    // Set initial status if not set yet
-    if (!state.hasSetInitialStatus) {
-      _setInitialStatus(userData);
-    }
+  // If we came from verification and still checking, show loading
+  if (widget.fromNotApproved && _isCheckingStatus) {
+    return _buildLoadingState();
+  }
 
-    // Get delivery driver ID
-    final deliveryManId = _getDeliveryManId(userData);
+  // For fresh data from verification, use it directly
+  if (widget.fromNotApproved && 
+      userAsync.hasValue && 
+      userAsync.value != null && 
+      userAsync.value!['success'] == true) {
+    final userData = userAsync.value!;
+    print('🎯 Using fresh verified user data');
+    return _buildMainContent(userData, homeState);
+  }
 
-    String? status;
+  // Normal flow for other cases
+  return homeState.isLoading
+      ? _buildLoadingState()
+      : homeState.errorMessage != null
+          ? _buildErrorState(homeState, context)
+          : homeState.isLoggedIn && homeState.userData != null
+              ? _buildMainContent(homeState.userData!, homeState)
+              : _buildTokenExpiredState();
+}
+Widget _buildMainContent(
+  Map<String, dynamic> userData,
+  DeliveryHomeState state,
+) {
+  // Set initial status if not set yet
+  if (!state.hasSetInitialStatus) {
+    _setInitialStatus(userData);
+  }
 
-    final userDataMap = userData['data'] as Map<String, dynamic>?;
-    status = userDataMap?['status']?.toString().toLowerCase();
+  // Get delivery driver ID
+  final deliveryManId = _getDeliveryManId(userData);
 
-    print(
-      '🔍 DeliveryHomePage - Status from userData: $status, fromNotApproved: ${widget.fromNotApproved}',
-    );
+  String? status;
 
-    if (status != 'approved') {
-      final freshUserAsync = ref.read(currentUserProvider);
-      if (freshUserAsync.hasValue && freshUserAsync.value != null) {
-        final freshUserData = freshUserAsync.value!;
-        if (freshUserData['success'] == true && freshUserData['data'] != null) {
-          final freshUserDataMap =
-              freshUserData['data'] as Map<String, dynamic>?;
-          final freshStatus = freshUserDataMap?['status']
-              ?.toString()
-              .toLowerCase();
-          print(
-            '🔍 DeliveryHomePage - Fresh status from currentUserProvider: $freshStatus',
-          );
+  final userDataMap = userData['data'] as Map<String, dynamic>?;
+  status = userDataMap?['status']?.toString().toLowerCase();
 
-          if (freshStatus != status) {
-            status = freshStatus;
-            print('🔄 Using fresh status from currentUserProvider: $status');
-          }
-        }
-      }
-    }
+  print('🔍 DeliveryHomePage - Final status: $status');
 
-    if (status != 'approved' && state.userData != null) {
-      final stateUserDataMap = state.userData!['data'] as Map<String, dynamic>?;
-      final stateStatus = stateUserDataMap?['status']?.toString().toLowerCase();
-      print(
-        '🔍 DeliveryHomePage - Status from deliveryHomeState: $stateStatus',
-      );
-
-      if (stateStatus != status) {
-        status = stateStatus;
-        print('🔄 Using status from deliveryHomeState: $status');
-      }
-    }
-
-    print('🎯 Final status being used: $status');
-
-    if (status != 'approved') {
-      final unapprovedStatuses = [
-        'pending',
-        'rejected',
-        'unverified',
-        'banned',
-      ];
+  // If we came from verification, trust the status we have
+  if (widget.fromNotApproved) {
+    print('🔍 From verification - trusting current status: $status');
+    if (status == 'approved') {
+      // Continue to build the home page
+    } else {
+      final unapprovedStatuses = ['pending', 'rejected', 'unverified', 'banned'];
       if (unapprovedStatuses.contains(status)) {
-        print(
-          '🔍 User status is unapproved: $status - Redirecting to NotApprovedPage',
-        );
+        print('❌ Unapproved status from verified flow: $status');
         return NotApprovedPage(
           status: status ?? 'unknown',
           user: userDataMap ?? {},
         );
-      } else {
-        print('🔍 Unknown status: $status - Showing error');
-        return _buildErrorState(
-          DeliveryHomeState(errorMessage: 'Unknown account status: $status'),
-          context,
-        );
       }
     }
-
-    if (deliveryManId == null) {
-      return _buildErrorState(
-        DeliveryHomeState(errorMessage: 'Delivery profile not found'),
-        context,
+  } else {
+    // Original logic for non-verification flows
+    final unapprovedStatuses = ['pending', 'rejected', 'unverified', 'banned'];
+    if (unapprovedStatuses.contains(status)) {
+      print('🔍 User status is unapproved: $status - Redirecting to NotApprovedPage');
+      return NotApprovedPage(
+        status: status ?? 'unknown',
+        user: userDataMap ?? {},
       );
     }
-
-    final deliveryStatus = ref.watch(deliveryManStatusProvider);
-
-    if (deliveryStatus == DeliveryManStatus.offline) {
-      return _buildGlobalOfflineState();
-    }
-
-    return _buildOnlineState(deliveryStatus, deliveryManId);
   }
 
+  if (deliveryManId == null) {
+    return _buildErrorState(
+      DeliveryHomeState(errorMessage: 'Delivery profile not found'),
+      context,
+    );
+  }
+
+  final deliveryStatus = ref.watch(deliveryManStatusProvider);
+
+  if (deliveryStatus == DeliveryManStatus.offline) {
+    return _buildGlobalOfflineState();
+  }
+
+  return _buildOnlineState(deliveryStatus, deliveryManId);
+}
   Widget _buildTokenExpiredState() {
     return TokenExpiredPage(
       message: 'Your session has expired. Please login again to continue.',

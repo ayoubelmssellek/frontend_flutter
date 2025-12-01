@@ -588,8 +588,10 @@ class LocationDialog extends StatelessWidget {
             Icons.location_on,
             color: hasPermanentError ? Colors.red : Colors.deepOrange,
           ),
-          const SizedBox(width: 8),
-          Text('home_app_bar.current_location'.tr()),
+          const SizedBox(width: 10),
+          Text('home_app_bar.current_location'.tr(),
+               style: TextStyle(fontSize: 20)
+          ),
         ],
       ),
       content: Column(

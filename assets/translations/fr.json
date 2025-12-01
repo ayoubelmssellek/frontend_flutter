@@ -13,7 +13,6 @@
     "refresh_successful": "Actualisation réussie",
     "refresh_failed": "Échec de l'actualisation" ,
     "token_expired": "Votre session a expiré. Veuillez vous reconnecter.",
-    "cancel": "Annuler",
     "not_available": "Non disponible",
     "retry": "Réessayer",
     "yes": "Oui",
@@ -701,6 +700,7 @@
     "title": "Rechercher des commerces",
     "hint": "Recherchez des commerces, des catégories...",
     "all_categories": "Tous",
+    "search":"Rechercher",
     "businesses_found": " commerces trouvés",
     "no_businesses_found": "Aucun commerce trouvé",
     "try_different_keywords": "Essayez des mots-clés ou catégories différents"

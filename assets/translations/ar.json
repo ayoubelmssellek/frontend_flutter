@@ -78,7 +78,7 @@
   "home_page": {
     "home": "الرئيسية",
     "search": "بحث",
-    "cart": "عربة التسوق",
+    "cart": "السلة",
     "profile": "الملف الشخصي",
     "failed_to_check_auth_status": "فشل في التحقق من حالة المصادقة",
     "failed_to_load_user_data": "فشل في تحميل بيانات المستخدم",
@@ -867,7 +867,7 @@
     "inactive": "غير نشط"
   },
   "checkout_page": {
-  "checkout": "الدفع",
+  "checkout": "السلة",
   "home": "الرئيسية",
   "cart": "السلة",
   "search": "بحث",
@@ -945,6 +945,7 @@
   },
   "search_page": {
       "title": "ابحث عن المتاجر",
+      "search":"بحث",
       "hint": "ابحث عن متاجر، فئات...",
       "all_categories": "الكل",
       "businesses_found": " تم العثور على متاجر",

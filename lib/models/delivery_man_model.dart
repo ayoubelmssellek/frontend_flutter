@@ -3,7 +3,7 @@ class DeliveryMan {
   final int id;
   final String name;
   final String phone;
-  final String status;
+final String status;
   final bool isActive;
   final String? avatar;
   final double? avgRating;
@@ -14,7 +14,7 @@ class DeliveryMan {
     required this.id,
     required this.name,
     required this.phone,
-    required this.status,
+required this.status,
     required this.isActive,
     this.avatar,
     this.avgRating,

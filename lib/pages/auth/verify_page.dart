@@ -225,37 +225,37 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
     }
   }
 
-  // NEW: Check delivery driver status from verification response
-  Future<void> _checkDeliveryDriverStatus(Map<String, dynamic> result) async {
-    try {
-      // Extract user data from verification response
-      final userData = result['data']?['user'] ?? result['user'];
+// In VerifyPage - _checkDeliveryDriverStatus method
+Future<void> _checkDeliveryDriverStatus(Map<String, dynamic> result) async {
+  try {
+    // Extract user data from verification response
+    final userData = result['data']?['user'] ?? result['user'];
+    
+    if (userData != null) {
+      final status = userData['status']?.toString().toLowerCase();
+      print('🔍 Delivery driver status from verification: $status');
       
-      if (userData != null) {
-        final status = userData['status']?.toString().toLowerCase();
-        print('🔍 Delivery driver status from verification: $status');
-        
-        if (status == 'approved') {
-          // Status is approved - navigate to home page
-          print('🎉 Delivery driver approved - navigating to home page');
-          _navigateToDeliveryHome();
-        } else {
-          // Status is not approved - navigate to NotApprovedPage
-          print('❌ Delivery driver not approved ($status) - navigating to NotApprovedPage');
-          _navigateToNotApprovedPage(status ?? 'unknown', userData);
-        }
+      // Force refresh the currentUserProvider before navigation
+      ref.invalidate(currentUserProvider);
+      
+      if (status == 'approved') {
+        print('🎉 Delivery driver approved - navigating to home page');
+        // Small delay to ensure provider is refreshed
+        await Future.delayed(const Duration(milliseconds: 500));
+        _navigateToDeliveryHome();
       } else {
-        // If user data is not in response, try to get it from current user provider
-        print('🔍 User data not in response, fetching from current user provider');
-        await _fetchCurrentUserStatus();
+        print('❌ Delivery driver not approved ($status) - navigating to NotApprovedPage');
+        _navigateToNotApprovedPage(status ?? 'unknown', userData);
       }
-    } catch (e) {
-      print('❌ Error checking delivery driver status: $e');
-      // Fallback: try to get current user status
+    } else {
+      print('🔍 User data not in response, fetching from current user provider');
       await _fetchCurrentUserStatus();
     }
+  } catch (e) {
+    print('❌ Error checking delivery driver status: $e');
+    await _fetchCurrentUserStatus();
   }
-
+}
   // NEW: Fetch current user status from provider
   Future<void> _fetchCurrentUserStatus() async {
     try {
@@ -302,16 +302,19 @@ class _VerifyPageState extends ConsumerState<VerifyPage> with SingleTickerProvid
     }
   }
 
-  // NEW: Navigate to delivery home
-  void _navigateToDeliveryHome() {
-     Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (_) => const DeliveryHomePage(fromNotApproved: true),
-              ),
-              (route) => false,
-            );
-  }
-
+void _navigateToDeliveryHome() {
+  // Small delay to ensure all providers are updated
+  Future.delayed(const Duration(milliseconds: 300), () {
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const DeliveryHomePage(fromNotApproved: true),
+        ),
+        (route) => false,
+      );
+    }
+  });
+}
   void _handleVerificationError(String message) {
     final errorMessage = message.isNotEmpty ? message : 'كود التحقق غير صحيح';
     setState(() => _errorMessage = errorMessage);
