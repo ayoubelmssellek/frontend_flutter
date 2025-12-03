@@ -1,10 +1,10 @@
-// pages/auth/token_expired_page.dart
 import 'package:flutter/material.dart';
+import 'package:food_app/core/api_client.dart';
 import 'package:food_app/core/secure_storage.dart';
 import 'package:food_app/pages/auth/login_page.dart';
 import 'package:food_app/pages/home/client_home_page.dart';
 
-class TokenExpiredPage extends StatelessWidget {
+class TokenExpiredPage extends StatefulWidget {
   final String message;
   final bool allowGuestMode;
 
@@ -13,6 +13,13 @@ class TokenExpiredPage extends StatelessWidget {
     required this.message,
     this.allowGuestMode = true,
   });
+
+  @override
+  State<TokenExpiredPage> createState() => _TokenExpiredPageState();
+}
+
+class _TokenExpiredPageState extends State<TokenExpiredPage> {
+  bool _isNavigating = false; // Flag to prevent multiple navigations
 
   @override
   Widget build(BuildContext context) {
@@ -26,12 +33,12 @@ class TokenExpiredPage extends StatelessWidget {
             child: Column(
               children: [
                 // Header with close button (for guest mode)
-                if (allowGuestMode)
+                if (widget.allowGuestMode)
                   Align(
                     alignment: Alignment.topRight,
                     child: IconButton(
                       icon: const Icon(Icons.close, size: 24),
-                      onPressed: () => _continueAsGuest(context),
+                      onPressed: _isNavigating ? null : () => _continueAsGuest(context),
                       tooltip: 'Continue as Guest',
                     ),
                   ),
@@ -72,7 +79,7 @@ class TokenExpiredPage extends StatelessWidget {
                       
                       // Message
                       Text(
-                        message,
+                        widget.message,
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey.shade600,
@@ -88,7 +95,7 @@ class TokenExpiredPage extends StatelessWidget {
                         width: double.infinity,
                         height: 54,
                         child: ElevatedButton(
-                          onPressed: () => _navigateToLogin(context),
+                          onPressed: _isNavigating ? null : () => _navigateToLogin(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue.shade600,
                             foregroundColor: Colors.white,
@@ -97,24 +104,33 @@ class TokenExpiredPage extends StatelessWidget {
                             ),
                             elevation: 2,
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.login, size: 20),
-                              SizedBox(width: 12),
-                              Text(
-                                'Go to Login',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                          child: _isNavigating
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.login, size: 20),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Go to Login',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                       
-                      if (allowGuestMode) ...[
+                      if (widget.allowGuestMode) ...[
                         const SizedBox(height: 16),
                         
                         // Continue as Guest Button (Secondary Action)
@@ -122,7 +138,7 @@ class TokenExpiredPage extends StatelessWidget {
                           width: double.infinity,
                           height: 54,
                           child: OutlinedButton(
-                            onPressed: () => _continueAsGuest(context),
+                            onPressed: _isNavigating ? null : () => _continueAsGuest(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.grey.shade700,
                               side: BorderSide(color: Colors.grey.shade300),
@@ -131,20 +147,29 @@ class TokenExpiredPage extends StatelessWidget {
                               ),
                               backgroundColor: Colors.white,
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.person_outline, size: 20),
-                                SizedBox(width: 12),
-                                Text(
-                                  'Continue as Guest',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
+                            child: _isNavigating
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                                    ),
+                                  )
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.person_outline, size: 20),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Continue as Guest',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
                           ),
                         ),
                         
@@ -213,46 +238,91 @@ class TokenExpiredPage extends StatelessWidget {
   Future<void> _clearAuthData() async {
     try {
       await SecureStorage.deleteToken();
-      print('Auth data cleared from secure storage');
+      print('✅ Auth data cleared from secure storage');
     } catch (e) {
-      print('Error clearing auth data: $e');
+      print('❌ Error clearing auth data: $e');
       // Continue with navigation even if clearing fails
     }
   }
 
-  void _navigateToLogin(BuildContext context) {
-    // Use a flag to prevent multiple navigations
-    _clearAuthData().then((_) {
-      // Navigate to login without waiting for async operations
+  void _navigateToLogin(BuildContext context) async {
+    // Prevent multiple navigations
+    if (_isNavigating) {
+      print('🚫 Navigation already in progress, skipping login');
+      return;
+    }
+    
+    _isNavigating = true;
+    setState(() {}); // Update UI to show loading
+    
+    try {
+      print('🔄 Starting login navigation...');
+      
+      await _clearAuthData();
+      print('✅ SecureStorage cleared');
+      
+      print('🔄 Navigating to login page...');
+      
+      // Navigate to login
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginPage()),
         (route) => false,
       );
-    });
+      
+      print('✅ Login navigation completed');
+      
+    } catch (e, stackTrace) {
+      print('❌ Error during login navigation: $e');
+      print('Stack trace: $stackTrace');
+      _isNavigating = false;
+      setState(() {});
+    }
   }
 
-  void _continueAsGuest(BuildContext context) {
-    // Use a flag to prevent multiple navigations
-    _clearAuthData().then((_) {
-      // Navigate to guest mode without waiting for async operations
-      Navigator.of(context).pushAndRemoveUntil(
+  void _continueAsGuest(BuildContext context) async {
+    // Prevent multiple navigations
+    if (_isNavigating) {
+      print('🚫 Navigation already in progress, skipping guest mode');
+      return;
+    }
+    
+    _isNavigating = true;
+    setState(() {}); // Update UI to show loading
+    
+    try {
+      print('🔄 Starting guest mode transition...');
+      
+      await _clearAuthData();
+      print('✅ SecureStorage cleared');
+
+      await ApiClient.clearAuthHeader();
+      print('✅ Dio headers cleared');
+      
+      print('🔄 Navigating to home page...');
+      
+      // Navigate to home page
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const ClientHomePage()),
-        (route) => false,
       );
       
-      // Show confirmation message with a delay to ensure navigation completes
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (Navigator.of(context).canPop()) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Continuing as guest'),
-              backgroundColor: Colors.green.shade600,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      });
-    });
+      print('✅ Guest mode navigation completed');
+      
+    } catch (e, stackTrace) {
+      print('❌ Error during guest mode transition: $e');
+      print('Stack trace: $stackTrace');
+      
+      // Try fallback navigation
+      try {
+        Navigator.of(context).pop();
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ClientHomePage()),
+        );
+      } catch (e2) {
+        print('❌ Fallback navigation also failed: $e2');
+      }
+      
+      _isNavigating = false;
+      setState(() {});
+    }
   }
 }

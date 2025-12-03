@@ -10,6 +10,7 @@ import 'package:food_app/services/language_selector.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/pages/auth/verify_page.dart';
 import 'package:food_app/pages/auth/forgot_password_page.dart';
+import 'package:food_app/core/secure_storage.dart'; // ✅ ADDED
 
 class ClientProfile extends ConsumerStatefulWidget {
   final VoidCallback onLogout;
@@ -38,6 +39,13 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileStateProvider);
+    
+    // ✅ CHECK: Verify we still have valid user data
+    if (profileState.userData == null) {
+      // If userData is null but we're in ClientProfile, something went wrong
+      return _buildErrorState(context);
+    }
+    
     final userData = profileState.userData!;
 
     print('🔄 [ClientProfile] Rebuilding with name: ${userData['name']}');
@@ -52,6 +60,65 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
         _buildLogoutButton(context),
         const SizedBox(height: 20),
       ],
+    );
+  }
+
+  // ✅ ADDED: Error state widget for when userData is null
+  Widget _buildErrorState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.orange,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              _tr("profile_page.session_expired", "Session Expired"),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _tr("profile_page.please_login_again", "Your session has expired. Please login again to continue."),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                // Refresh profile data
+                widget.onRefresh();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              ),
+              child: Text(_tr("profile_page.refresh", "Refresh")),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: widget.onLogout,
+              child: Text(
+                _tr("profile_page.logout", "Logout"),
+                style: TextStyle(
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -126,6 +193,18 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
               color: Colors.grey.shade600,
             ),
           ),
+          // // ✅ ADDED: Refresh button in header
+          // const SizedBox(height: 16),
+          // OutlinedButton.icon(
+          //   onPressed: widget.onRefresh,
+          //   icon: Icon(Icons.refresh, size: 18),
+          //   label: Text(_tr("profile_page.refresh_profile", "Refresh Profile")),
+          //   style: OutlinedButton.styleFrom(
+          //     foregroundColor: Colors.deepOrange,
+          //     side: BorderSide(color: Colors.deepOrange.withOpacity(0.3)),
+          //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -244,8 +323,25 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
     );
   }
 
-  // ✅ FIXED: Update Profile Dialog (Name & Avatar)
+  // ✅ ADDED: Check token before showing dialogs
+  bool _checkTokenBeforeAction(BuildContext context) {
+    final profileState = ref.read(profileStateProvider);
+    if (!profileState.isLoggedIn || profileState.userData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_tr("profile_page.session_expired_message", "Your session has expired. Please login again.")),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
   void _showUpdateProfileDialog(BuildContext context, Map<String, dynamic> userData) {
+    // ✅ CHECK: Verify we still have valid user data
+    if (!_checkTokenBeforeAction(context)) return;
+
     showDialog(
       context: context,
       builder: (context) => _UpdateProfileDialog(
@@ -274,8 +370,23 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
                   backgroundColor: Colors.green,
                 ),
               );
+              
+              // ✅ Refresh profile data after update
+              widget.onRefresh();
               return true;
             } else {
+              // ✅ CHECK: If token error, handle it
+              final message = result['message'] ?? '';
+              if (message.toLowerCase().contains('token')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return false;
+              }
+              
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(result['message'] ?? 'profile_page.update_failed'.tr()),
@@ -285,6 +396,17 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
               return false;
             }
           } catch (e) {
+            // ✅ CHECK: Handle token errors
+            if (e.toString().toLowerCase().contains('token')) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return false;
+            }
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('profile_page.update_error'.tr()),
@@ -298,8 +420,10 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
     );
   }
 
-  // ✅ FIXED: Change Password Dialog with Forgot Password Link
   void _showChangePasswordDialog(BuildContext context) {
+    // ✅ CHECK: Verify we still have valid user data
+    if (!_checkTokenBeforeAction(context)) return;
+
     showDialog(
       context: context,
       builder: (context) => _ChangePasswordDialog(
@@ -319,7 +443,6 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
           }
 
           try {
-            // ✅ FIXED: Use changePasswordProvider instead of updateProfileProvider
             final result = await ref.read(changePasswordProvider({
               'current_password': currentPassword,
               'password': newPassword,
@@ -335,6 +458,18 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
               );
               return true;
             } else {
+              // ✅ CHECK: If token error, handle it
+              final message = result['message'] ?? '';
+              if (message.toLowerCase().contains('token')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return false;
+              }
+              
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(result['message'] ?? 'profile_page.password_update_failed'.tr()),
@@ -344,6 +479,17 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
               return false;
             }
           } catch (e) {
+            // ✅ CHECK: Handle token errors
+            if (e.toString().toLowerCase().contains('token')) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return false;
+            }
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('profile_page.password_update_error'.tr()),
@@ -357,8 +503,10 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
     );
   }
 
-  // ✅ FIXED: Change Phone Dialog with Verification Navigation
   void _showChangePhoneDialog(BuildContext context, Map<String, dynamic> user) {
+    // ✅ CHECK: Verify we still have valid user data
+    if (!_checkTokenBeforeAction(context)) return;
+
     final currentPhone = user['number_phone'] ?? '';
     final userId = user['id'];
     
@@ -375,7 +523,6 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
           }
 
           try {
-            // ✅ FIXED: Use changePhoneNumberProvider and navigate to VerifyPage
             final result = await ref.read(changePhoneNumberProvider(newPhone).future);
             
             if (result['success'] == true) {
@@ -393,6 +540,18 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
               );
               return true;
             } else {
+              // ✅ CHECK: If token error, handle it
+              final message = result['message'] ?? '';
+              if (message.toLowerCase().contains('token')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return false;
+              }
+              
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(result['message'] ?? 'profile_page.phone_change_failed'.tr()),
@@ -402,6 +561,17 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
               return false;
             }
           } catch (e) {
+            // ✅ CHECK: Handle token errors
+            if (e.toString().toLowerCase().contains('token')) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return false;
+            }
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('profile_page.phone_change_error'.tr()),
@@ -489,7 +659,7 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
     try {
       final success = await widget.onSave(
         _nameController.text.trim(),
-        null, // For client, we're not handling avatar upload in this example
+        null,
       );
 
       if (success && mounted) {
@@ -576,7 +746,7 @@ class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
   }
 }
 
-// ✅ FIXED: Change Password Dialog Class with Forgot Password Link
+// Change Password Dialog Class with Forgot Password Link
 class _ChangePasswordDialog extends StatefulWidget {
   final Future<bool> Function(String currentPassword, String newPassword, String confirmPassword) onChangePassword;
 
@@ -634,7 +804,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   }
 
   void _navigateToForgotPassword(BuildContext context) {
-    Navigator.pop(context); // Close the change password dialog
+    Navigator.pop(context);
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
@@ -737,7 +907,6 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                 validator: _validateConfirmPassword,
               ),
               
-              // ✅ ADDED: Forgot Password Link
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
@@ -791,7 +960,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   }
 }
 
-// ✅ FIXED: Change Phone Dialog Class with Verification Navigation
+// Change Phone Dialog Class with Verification Navigation
 class _ChangePhoneDialog extends StatefulWidget {
   final String currentPhone;
   final Future<bool> Function(String newPhone) onChangePhone;

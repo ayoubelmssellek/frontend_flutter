@@ -26,7 +26,8 @@ void main() async {
   await Firebase.initializeApp();
 
   // Initialize ApiClient
-  ApiClient.init();
+
+    ApiClient.init();
 
   // Add this line back if you need background notifications
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

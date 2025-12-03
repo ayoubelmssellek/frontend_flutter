@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:food_app/core/api_client.dart';
+import 'package:food_app/core/secure_storage.dart';
 import 'package:food_app/models/client_order_model.dart';
 
 class OrderRepository {
@@ -29,12 +30,16 @@ class OrderRepository {
       };
     }
   }
-
-/// ✅ Get client orders - FIXED to handle actual backend response structure
 Future<List<ClientOrder>> getClientOrders(int clientId) async {
   try {
-    await ApiClient.setAuthHeader();
+    // ✅ ADD: Check token first
+    final token = await SecureStorage.getToken();
+    if (token == null || token.isEmpty) {
+      print('🚫 No token available, skipping order fetch (guest mode)');
+      return []; // Return empty, don't throw error
+    }
     
+    await ApiClient.setAuthHeader();
     
     final res = await ApiClient.dio.get('/client/orders');
     
@@ -56,13 +61,10 @@ Future<List<ClientOrder>> getClientOrders(int clientId) async {
       
       for (final orderJson in ordersData) {
         try {
-          
           // Use the fromJson method to parse the order
           final order = ClientOrder.fromJson(orderJson);
-          
           orders.add(order);
         } catch (e, stack) {
-          
           // Create empty order as fallback
           orders.add(ClientOrder.empty());
         }
@@ -73,14 +75,19 @@ Future<List<ClientOrder>> getClientOrders(int clientId) async {
       return [];
     }
   } on DioException catch (e) {
+    // ✅ MODIFIED: Don't propagate "token not provided" errors in guest mode
+    if (e.response?.statusCode == 401) {
+      final message = e.response?.data?['message']?.toString().toLowerCase() ?? '';
+      if (message.contains('token not provided') || message.contains('token absent')) {
+        print('🚫 Guest mode: Token not provided for orders');
+        return []; // Return empty instead of throwing
+      }
+    }
     return [];
   } catch (e, stack) {
     return [];
   }
 }
-
-
-
 
 /// ✅ جلب طلبات المستخدم (Legacy - returns Map for backward compatibility)
   Future<Map<String, dynamic>> getClientOrdersLegacy() async {

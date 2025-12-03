@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/core/image_helper.dart';
+import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/order_providers.dart';
 import 'package:food_app/models/client_order_model.dart';
 
@@ -28,20 +29,27 @@ class _OrdersSectionState extends ConsumerState<OrdersSection> {
     });
   }
 
-  Future<void> _loadClientOrders() async {
-    try {
-      final clientId = ref.read(clientIdProvider);
-      if (clientId != 0) {
-        await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
-      } else {
-      }
-    } catch (e) {
-    } finally {
-      if (mounted) {
-        setState(() => _isInitialLoad = false);
-      }
+Future<void> _loadClientOrders() async {
+  try {
+    // ADDED: Check if user is logged in before loading orders
+    final isLoggedIn = ref.read(authStateProvider);
+    if (!isLoggedIn) {
+      print('🚫 User is not logged in, skipping order loading');
+      return;
+    }
+    
+    final clientId = ref.read(clientIdProvider);
+    if (clientId != 0) {
+      await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
+    } else {
+    }
+  } catch (e) {
+  } finally {
+    if (mounted) {
+      setState(() => _isInitialLoad = false);
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

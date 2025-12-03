@@ -14,6 +14,16 @@ class ErrorHandlerService {
           final message = responseData['message']?.toString().toLowerCase() ?? '';
           final errorMsg = responseData['error']?.toString().toLowerCase() ?? '';
           
+          // ✅ ADD: Don't treat "Token not provided" as an error in guest mode
+          // This happens when user is in guest mode and tries to access protected endpoints
+          if (message.contains('token not provided') || 
+              message.contains('token absent') ||
+              errorMsg.contains('token not provided') ||
+              errorMsg.contains('token absent')) {
+            print('⚠️ Token not provided - user might be in guest mode');
+            return false; // Not a real token error, just guest mode
+          }
+          
           final tokenKeywords = [
             'token',
             'expired',
@@ -32,6 +42,13 @@ class ErrorHandlerService {
     
     if (error is String) {
       final errorLower = error.toLowerCase();
+      
+      // ✅ ADD: Skip "token not provided" messages
+      if (errorLower.contains('token not provided') || 
+          errorLower.contains('token absent')) {
+        return false;
+      }
+      
       return errorLower.contains('token') || 
              errorLower.contains('expired') ||
              errorLower.contains('401') ||
@@ -46,11 +63,9 @@ class ErrorHandlerService {
     required dynamic error,
     required BuildContext context,
     String? customMessage,
+    bool skipGuestModeErrors = true, // ✅ ADD: New parameter
   }) {
     if (isTokenError(error)) {      
-      // Clear token
-      SecureStorage.deleteToken();
-      
       // Extract error message
       String errorMessage = customMessage ?? 'Your session has expired. Please login again to continue.';
       if (error is DioException && error.response?.data is Map) {
@@ -59,6 +74,19 @@ class ErrorHandlerService {
           errorMessage = message;
         }
       }
+      
+      // ✅ ADD: Check if this is a "token not provided" error in guest mode
+      if (skipGuestModeErrors) {
+        final errorStr = error.toString().toLowerCase();
+        if (errorStr.contains('token not provided') || 
+            errorStr.contains('token absent')) {
+          print('🚫 Skipping token error in guest mode: $errorMessage');
+          return false; // Don't handle it, just return false
+        }
+      }
+      
+      // Clear token
+      SecureStorage.deleteToken();
       
       // Navigate to token expired page using context
       Navigator.of(context).pushAndRemoveUntil(

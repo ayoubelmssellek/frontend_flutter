@@ -113,7 +113,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           } else if (index == 1) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => SearchPage(businesses: [])),
+              MaterialPageRoute(builder: (_) => SearchPage()),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(

@@ -33,23 +33,30 @@ class _ClientOrdersPageState extends ConsumerState<ClientOrdersPage> {
     });
   }
 
-  Future<void> _loadOrders() async {
-    if (_isLoading) return;
+Future<void> _loadOrders() async {
+  if (_isLoading) return;
+  
+  setState(() => _isLoading = true);
+  try {
+    // ADDED: Check if user is logged in before loading orders
+    final isLoggedIn = ref.read(authStateProvider);
+    if (!isLoggedIn) {
+      print('🚫 User is not logged in, skipping order loading');
+      return;
+    }
     
-    setState(() => _isLoading = true);
-    try {
-      final clientId = ref.read(clientIdProvider);      
-      if (clientId != 0) {
-        await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
-      } else {
-      }
-    } catch (e) {
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    final clientId = ref.read(clientIdProvider);      
+    if (clientId != 0) {
+      await ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
+    } else {
+    }
+  } catch (e) {
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
 
   Future<void> _refreshOrders() async {
     try {

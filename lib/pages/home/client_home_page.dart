@@ -246,6 +246,10 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     
     // Load orders when home page initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // ✅ ADDED: Clear token error state before loading orders
+      // This prevents the infinite loop when navigating from TokenExpiredPage
+      ref.read(clientHomeStateProvider.notifier).clearError();
+      
       _loadOrdersOnStartup();
       if (widget.initialTab != 0) {
         _handleTabNavigation(widget.initialTab);
@@ -261,29 +265,44 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     super.dispose();
   }
 
-  void _loadOrdersOnStartup() {
-    // ADDED: Check if widget is still mounted before proceeding
-    if (!_mounted) return;
-    
-    // Try both data sources to get client ID
-    final clientId = _getClientId();
-    
-    if (clientId != 0) {
-      // ADDED: Check mounted before calling ref
-      if (_mounted) {
-        ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
-      }
-    } else {
-      Future.delayed(const Duration(seconds: 2), () {
-        // ADDED: Check mounted before accessing ref
-        if (!_mounted) return;
-        final delayedClientId = _getClientId();
-        if (delayedClientId != 0 && _mounted) {
-          ref.read(clientOrdersProvider.notifier).loadClientOrders(delayedClientId);
-        }
-      });
-    }
+void _loadOrdersOnStartup() {
+  // ADDED: Check if widget is still mounted before proceeding
+  if (!_mounted) return;
+  
+  // ADDED: Check if user is logged in before loading orders
+  final isLoggedIn = ref.read(authStateProvider);
+  if (!isLoggedIn) {
+    print('🚫 User is not logged in, skipping order loading');
+    return;
   }
+  
+  // Try both data sources to get client ID
+  final clientId = _getClientId();
+  
+  if (clientId != 0) {
+    // ADDED: Check mounted before calling ref
+    if (_mounted) {
+      ref.read(clientOrdersProvider.notifier).loadClientOrders(clientId);
+    }
+  } else {
+    Future.delayed(const Duration(seconds: 2), () {
+      // ADDED: Check mounted before accessing ref
+      if (!_mounted) return;
+      
+      // ADDED: Check if still logged in after delay
+      final isStillLoggedIn = ref.read(authStateProvider);
+      if (!isStillLoggedIn) {
+        print('🚫 User logged out during delay, skipping order loading');
+        return;
+      }
+      
+      final delayedClientId = _getClientId();
+      if (delayedClientId != 0 && _mounted) {
+        ref.read(clientOrdersProvider.notifier).loadClientOrders(delayedClientId);
+      }
+    });
+  }
+}
 
   // ✅ FIXED: Get client ID from both data sources like delivery example
   int _getClientId() {
@@ -475,17 +494,14 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     );
   }
 
-  void _navigateToSearchPageSimple() {
-    final businessOwnersAsync = ref.read(businessOwnersProvider);
-    final businesses = businessOwnersAsync.value?['data'] as List<dynamic>? ?? [];
-    
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SearchPage(businesses: businesses),
-      ),
-    );
-  }
+ void _navigateToSearchPageSimple() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const SearchPage(), // Remove businesses parameter
+    ),
+  );
+}
 
   void _handleTabNavigation(int index) {
     switch (index) {

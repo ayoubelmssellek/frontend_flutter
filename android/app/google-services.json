@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:96860959043:android:710489cea1090120e77ff6",
+        "mobilesdk_app_id": "1:96860959043:android:026081d8dd5fc3a5e77ff6",
         "android_client_info": {
-          "package_name": "com.example.food_app"
+          "package_name": "com.oramadev.uniqque"
         }
       },
       "oauth_client": [],

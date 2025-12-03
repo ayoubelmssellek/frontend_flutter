@@ -62,12 +62,15 @@ final clientIdProvider = Provider<int>((ref) {
 /// Client Orders Provider
 final clientOrdersProvider = StateNotifierProvider<ClientOrdersNotifier, AsyncValue<List<ClientOrder>>>((ref) {
   final notifier = ClientOrdersNotifier(ref);
-  // Auto-load orders when provider is first used
-  final clientId = ref.read(clientIdProvider);
-  if (clientId != 0) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifier.loadClientOrders(clientId);
-    });
+  // Auto-load orders when provider is first used - BUT ONLY IF LOGGED IN
+  final isLoggedIn = ref.read(authStateProvider); // ADDED: Check login status
+  if (isLoggedIn) {
+    final clientId = ref.read(clientIdProvider);
+    if (clientId != 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifier.loadClientOrders(clientId);
+      });
+    }
   }
   return notifier;
 });
@@ -78,6 +81,14 @@ class ClientOrdersNotifier extends StateNotifier<AsyncValue<List<ClientOrder>>> 
   ClientOrdersNotifier(this.ref) : super(const AsyncValue.loading());
 
   Future<void> loadClientOrders(int clientId) async {
+    // ADDED: Check if user is logged in before loading
+    final isLoggedIn = ref.read(authStateProvider);
+    if (!isLoggedIn) {
+      print('🚫 User is not logged in, skipping order loading in provider');
+      state = const AsyncValue.data([]);
+      return;
+    }
+    
     state = const AsyncValue.loading();
     try {
       final orderRepo = ref.read(orderRepositoryProvider);
@@ -89,11 +100,19 @@ class ClientOrdersNotifier extends StateNotifier<AsyncValue<List<ClientOrder>>> 
   }
 
   Future<void> refreshClientOrders(int clientId) async {
+    // ADDED: Check if user is logged in before refreshing
+    final isLoggedIn = ref.read(authStateProvider);
+    if (!isLoggedIn) {
+      print('🚫 User is not logged in, skipping order refresh');
+      return;
+    }
+    
     try {
       final orderRepo = ref.read(orderRepositoryProvider);
       final orders = await orderRepo.getClientOrders(clientId);
       state = AsyncValue.data(orders);
     } catch (e, stack) {
+      // Keep existing state on error
     }
   }
 
