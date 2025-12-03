@@ -47,5 +47,93 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		
+		<!-- ================ FIREBASE & NOTIFICATION CONFIGURATIONS ================ -->
+		
+		<!-- Disable Firebase App Delegate Proxy to handle notifications manually -->
+		<key>FirebaseAppDelegateProxyEnabled</key>
+		<false/>
+		
+		<!-- Enable background modes for push notifications -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+		</array>
+		
+		<!-- Localization support -->
+		<key>CFBundleLocalizations</key>
+		<array>
+			<string>en</string>
+			<string>ar</string>
+			<string>fr</string>
+		</array>
+		
+		<!-- Privacy descriptions for notifications (iOS 10+) -->
+		<key>NSUserNotificationsUsageDescription</key>
+		<string>نحتاج إرسال إشعارات لك عند وجود طلبات جديدة</string>
+		
+		<key>NSUserNotificationAlertStyle</key>
+		<string>banner</string>
+		
+		<!-- iOS 12+ Provisional notifications (delivery without explicit permission) -->
+		<key>UNNotificationExtensionDefaultContentHidden</key>
+		<false/>
+		
+		<!-- iOS 12+ Critical alerts permissions (requires entitlement) -->
+		<key>UNNotificationExtensionUserInteractionEnabled</key>
+		<true/>
+		
+		<!-- Support for non-Exempt encryption (required for App Store) -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
+		
+		<!-- Prevent screenshots in App Switcher for sensitive screens (optional) -->
+		<key>UIApplicationSceneManifest</key>
+		<dict>
+			<key>UIApplicationSupportsMultipleScenes</key>
+			<false/>
+			<key>UISceneConfigurations</key>
+			<dict>
+				<key>UIWindowSceneSessionRoleApplication</key>
+				<array>
+					<dict>
+						<key>UISceneConfigurationName</key>
+						<string>Default Configuration</string>
+						<key>UISceneDelegateClassName</key>
+						<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+						<key>UISceneStoryboardFile</key>
+						<string>Main</string>
+					</dict>
+				</array>
+			</dict>
+		</dict>
+		
+		<!-- Required for iOS 13+ scene delegate support -->
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		
+		<!-- Disable non-essential logs in production -->
+		<key>OS_ACTIVITY_MODE</key>
+		<string>disable</string>
+		
+		<!-- For location-based notifications if you use them -->
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>نحتاج تحديد موقعك لتوصيل الطلبات</string>
+		
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>نحتاج تحديد موقعك لتتبع الطلبات وتوصيلها</string>
+		
+		<!-- Camera permission if your app uses it -->
+		<key>NSCameraUsageDescription</key>
+		<string>نحتاج الكاميرا لالتقاط صور المنتجات</string>
+		
+		<!-- Photo library permission if your app uses it -->
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>نحتاج المكتبة لاختيار صور المنتجات</string>
+		
+		<!-- Microphone permission if your app uses it -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>نحتاج الميكروفون لدعم خدمة العملاء</string>
+		
 	</dict>
 </plist>

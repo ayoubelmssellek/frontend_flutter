@@ -19,11 +19,12 @@ class FCMManager {
     try {
       print("🔧 Initializing FCM Manager...");
 
-      // Disable FCM auto-notifications (we handle them manually)
+      // IMPORTANT: Different handling for iOS vs Android
+      // iOS needs sound to be true for foreground notifications to work properly
       await _messaging.setForegroundNotificationPresentationOptions(
-        alert: false,
+        alert: false, // We handle alerts manually via flutter_local_notifications
         badge: false,  
-        sound: false,
+        sound: false, // Keep false, we'll handle sound manually for consistency
       );
 
       print("✅ FCM auto-notifications disabled");
@@ -109,18 +110,46 @@ class FCMManager {
     }
   }
 
-  // Request notification permissions
+  // Request notification permissions - IMPORTANT for iOS
   Future<void> requestPermissions() async {
     try {
+      // For iOS, we need to request permissions explicitly
+      // The settings may vary between platforms
       final settings = await _messaging.requestPermission(
         alert: true,
+        announcement: false,
         badge: true,
+        carPlay: false,
+        criticalAlert: false, // Set to true if you need critical alerts
+        provisional: false, // Set to true for provisional notifications (iOS 12+)
         sound: true,
       );
       
       print('🔔 Notification permission status: ${settings.authorizationStatus}');
+      print('🔔 Notification permission granted: '
+          'alert: ${settings.alert}, '
+          'badge: ${settings.badge}, '
+          'sound: ${settings.sound}');
     } catch (e) {
       print('❌ Error requesting notification permissions: $e');
+    }
+  }
+
+  // Optional: Subscribe to topics if needed
+  Future<void> subscribeToTopics(String userId, String userRole) async {
+    try {
+      // Unsubscribe from all topics first to avoid duplicates
+      await _messaging.unsubscribeFromTopic('all_users');
+      
+      // Subscribe to role-specific topic
+      await _messaging.subscribeToTopic('role_${userRole.toLowerCase()}');
+      
+      // Subscribe to user-specific topic
+      await _messaging.subscribeToTopic('user_$userId');
+      
+      print('✅ Subscribed to topics for user: $userId, role: $userRole');
+    } catch (e) {
+      print('❌ Error subscribing to topics: $e');
     }
   }
 }
@@ -128,6 +157,11 @@ class FCMManager {
 // Background handler
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // IMPORTANT: For iOS, make sure Firebase is initialized in background
   await Firebase.initializeApp();
   print("📩 Background message received: ${message.notification?.title}");
+  
+  // You can also handle background notifications here if needed
+  // Note: For iOS, background notifications are handled automatically when 
+  // proper entitlements and AppDelegate setup are in place
 }

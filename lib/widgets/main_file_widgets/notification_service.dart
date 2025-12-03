@@ -13,23 +13,34 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   
   static bool _isInitialized = false;
+  
+  // Store notification response callback
+  static Function(NotificationResponse)? _onNotificationTapped;
 
-  Future<void> initialize() async {
+  Future<void> initialize({Function(NotificationResponse)? onNotificationTapped}) async {
     if (_isInitialized) return;
     
     try {
       print("🔧 Initializing Notification Service...");
 
+      // Store the callback if provided
+      if (onNotificationTapped != null) {
+        _onNotificationTapped = onNotificationTapped;
+      }
+
       // Android settings
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('ic_notification');
 
-      // iOS settings
+      // iOS settings - Correct for version 19.5.0
       const DarwinInitializationSettings iosSettings =
           DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
+        defaultPresentAlert: true,
+        defaultPresentBadge: true,
+        defaultPresentSound: true,
       );
 
       const InitializationSettings initializationSettings =
@@ -38,7 +49,11 @@ class NotificationService {
         iOS: iosSettings,
       );
 
-      await _notificationsPlugin.initialize(initializationSettings);
+      // Initialize with handlers
+      await _notificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: _onDidReceiveNotificationResponse,
+      );
 
       // Create simple notification channel with SYSTEM DEFAULT sound
       await _createNotificationChannel();
@@ -48,6 +63,32 @@ class NotificationService {
 
     } catch (e) {
       print("❌ Error initializing Notification Service: $e");
+    }
+  }
+
+  // Notification response handler
+  static void _onDidReceiveNotificationResponse(NotificationResponse response) {
+    print('🖱️ Notification tapped: ${response.payload}');
+    
+    // Handle notification tap here
+    _handleNotificationTap(response);
+    
+    // Call the external callback if set
+    if (_onNotificationTapped != null) {
+      _onNotificationTapped!(response);
+    }
+  }
+
+  static void _handleNotificationTap(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload != null) {
+      try {
+        final data = json.decode(payload);
+        print('📦 Notification payload: $data');
+        // You can navigate to specific page based on payload here
+      } catch (e) {
+        print('❌ Error parsing notification payload: $e');
+      }
     }
   }
 
@@ -101,13 +142,23 @@ class NotificationService {
         enableVibration: true,
         colorized: true,
         color: const Color(0xFFFF5722),
+        channelShowBadge: true,
+        autoCancel: true,
+        enableLights: true,
+        ledColor: const Color(0xFFFF5722),
+        ledOnMs: 1000,
+        ledOffMs: 500,
       );
 
-      // iOS notification details - USE SYSTEM DEFAULT SOUND
+      // iOS notification details - SIMPLIFIED version
+      // In version 19.5.0, for default system sound, we can just set presentSound: true
       final DarwinNotificationDetails iosPlatformChannelSpecifics =
           DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
         presentSound: playSound,
-        // DON'T set sound - this will use SYSTEM DEFAULT
+        // For default system sound, don't set the 'sound' parameter
+        // Only set 'sound' if you have a custom sound file
       );
 
       final NotificationDetails platformChannelSpecifics = NotificationDetails(
@@ -123,6 +174,7 @@ class NotificationService {
         payload: json.encode({
           'orderId': orderId,
           'type': 'new_order',
+          'timestamp': DateTime.now().toIso8601String(),
           ...?data,
         }),
       );
@@ -149,14 +201,17 @@ class NotificationService {
         channelDescription: 'Channel for order notifications',
         importance: Importance.high,
         priority: Priority.defaultPriority,
-        playSound: false, // No sound
-        enableVibration: false, // No vibration
+        playSound: false,
+        enableVibration: false,
+        channelShowBadge: true,
+        autoCancel: true,
       );
 
       const DarwinNotificationDetails iosPlatformChannelSpecifics =
           DarwinNotificationDetails(
-        presentSound: false,
+        presentAlert: true,
         presentBadge: false,
+        presentSound: false,
       );
 
       const NotificationDetails platformChannelSpecifics = NotificationDetails(
@@ -172,6 +227,7 @@ class NotificationService {
         payload: json.encode({
           'orderId': orderId,
           'type': 'silent_update',
+          'timestamp': DateTime.now().toIso8601String(),
           ...?data,
         }),
       );
@@ -191,5 +247,44 @@ class NotificationService {
     } catch (e) {
       print("❌ Error clearing notifications: $e");
     }
+  }
+
+  // iOS specific: Request notification permissions
+  Future<void> requestIOSPermissions() async {
+    try {
+      final iOSPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      
+      if (iOSPlugin != null) {
+        final bool? result = await iOSPlugin.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        
+        print('📱 iOS Permission request result: $result');
+      }
+    } catch (e) {
+      print('❌ Error requesting iOS notification permissions: $e');
+    }
+  }
+
+  // Get notification permission status for iOS
+  Future<void> checkIOSNotificationSettings() async {
+    try {
+      print('📱 Checking iOS notification settings...');
+      
+      // In version 19.5.0, we need to use requestPermissions to check status
+      await requestIOSPermissions();
+      
+    } catch (e) {
+      print('❌ Error checking iOS notification settings: $e');
+    }
+  }
+
+  // Register notification tapped callback
+  void setOnNotificationTapped(Function(NotificationResponse) callback) {
+    _onNotificationTapped = callback;
   }
 }
