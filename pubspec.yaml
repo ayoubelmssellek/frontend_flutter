@@ -127,4 +127,3 @@ flutter_native_splash:
   image: assets/images/splash_img.png
   android: true
   ios: true
-  fill: true
