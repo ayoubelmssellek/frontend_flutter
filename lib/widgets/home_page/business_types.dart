@@ -1,9 +1,19 @@
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/pages/home/category_details_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
+
+// Color Palette from Logo
+const Color primaryYellow = Color(0xFFCFC000);
+const Color secondaryRed = Color(0xFFC63232);
+const Color accentYellow = Color(0xFFFFD600);
+const Color black = Color(0xFF000000);
+const Color white = Color(0xFFFFFFFF);
+const Color greyBg = Color(0xFFF8F8F8);
+const Color greyText = Color(0xFF666666);
+const Color lightGrey = Color(0xFFF0F0F0);
 
 class BusinessTypesSection extends ConsumerWidget {
   final String selectedBusinessType;
@@ -24,31 +34,52 @@ class BusinessTypesSection extends ConsumerWidget {
       loading: () => _buildBusinessTypesSkeleton(),
       error: (error, stack) {
         return SizedBox(
-          height: 120,
+          height: 100,
           child: Center(
-            child: Text('Error loading business types', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Error loading categories',
+              style: TextStyle(
+                color: secondaryRed,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         );
       },
       data: (businessTypesResult) {
-
         return businessOwnersAsync.when(
           loading: () => _buildBusinessTypesSkeleton(),
           error: (error, stack) {
             return SizedBox(
-              height: 120,
+              height: 100,
               child: Center(
-                child: Text('Error loading businesses', style: TextStyle(color: Colors.red)),
+                child: Text(
+                  'Error loading businesses',
+                  style: TextStyle(
+                    color: secondaryRed,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             );
           },
           data: (businessOwnersResult) {
-
             // Check if both requests were successful
             if (businessTypesResult['success'] != true || businessOwnersResult['success'] != true) {
               return SizedBox(
-                height: 120,
-                child: Center(child: Text('Failed to load data', style: TextStyle(color: Colors.red))),
+                height: 100,
+                child: Center(
+                  child: Text(
+                    'Failed to load data',
+                    style: TextStyle(
+                      color: secondaryRed,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
               );
             }
 
@@ -58,15 +89,33 @@ class BusinessTypesSection extends ConsumerWidget {
 
             if (backendBusinessTypes == null || backendBusinessOwners == null) {
               return SizedBox(
-                height: 120,
-                child: Center(child: Text('No data available', style: TextStyle(color: Colors.grey))),
+                height: 100,
+                child: Center(
+                  child: Text(
+                    'No data available',
+                    style: TextStyle(
+                      color: greyText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
               );
             }
 
             if (backendBusinessTypes.isEmpty) {
               return SizedBox(
-                height: 120,
-                child: Center(child: Text('No business types available', style: TextStyle(color: Colors.grey))),
+                height: 100,
+                child: Center(
+                  child: Text(
+                    'No categories available',
+                    style: TextStyle(
+                      color: greyText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
               );
             }
 
@@ -75,6 +124,7 @@ class BusinessTypesSection extends ConsumerWidget {
               child: Wrap(
                 spacing: 16,
                 runSpacing: 16,
+                alignment: WrapAlignment.start,
                 children: backendBusinessTypes.map((businessType) {
                   final typeName = businessType['type_name']?.toString() ?? 'Unknown';
                   final typeId = businessType['id'] as int?;
@@ -85,10 +135,10 @@ class BusinessTypesSection extends ConsumerWidget {
                     return const SizedBox(); // Skip this item
                   }
 
-                  // Count businesses for this business type using the new structure
-                  final businessCount = backendBusinessOwners
-                      .where((business) => business['business_type'] == typeName)
-                      .length;
+                  // Count businesses for this business type
+                  // final businessCount = backendBusinessOwners
+                  //     .where((business) => business['business_type'] == typeName)
+                  //     .length;
 
                   return GestureDetector(
                     onTap: () {
@@ -99,7 +149,7 @@ class BusinessTypesSection extends ConsumerWidget {
                           builder: (_) => CategoryDetailsPage(
                             categoryName: typeName,
                             businessTypeId: typeId,
-                            categoryColor: Colors.deepOrange,
+                            categoryColor: secondaryRed,
                           ),
                         ),
                       );
@@ -107,47 +157,87 @@ class BusinessTypesSection extends ConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Category Image Container
                         Container(
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.deepOrange : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(16),
+                            color: white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                             border: Border.all(
-                              color: isSelected ? Colors.deepOrange : Colors.grey.shade300,
-                              width: 2,
+                              color: isSelected ? secondaryRed : lightGrey,
+                              width: isSelected ? 2.5 : 1.5,
                             ),
                           ),
                           child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: CustomNetworkImage(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Stack(
+                              children: [
+                                // Category Image
+                                if (typeImage != null && typeImage.isNotEmpty)
+                                  CustomNetworkImage(
                                     imageUrl: typeImage,
                                     width: 56,
                                     height: 56,
                                     fit: BoxFit.cover,
                                     placeholder: 'default',
+                                  )
+                                else
+                                  Center(
+                                    child: Icon(
+                                      _getCategoryIcon(typeName),
+                                      size: 28,
+                                      color: isSelected ? secondaryRed : greyText,
+                                    ),
                                   ),
-                                )
-                              // : Center(
-                              //     child: Text(
-                              //       businessCount > 0 ? businessCount.toString() : '0',
-                              //       style: TextStyle(
-                              //         fontSize: 16,
-                              //         fontWeight: FontWeight.bold,
-                              //         color: isSelected ? Colors.white : Colors.deepOrange,
-                              //       ),
-                              //     ),
-                              //   ),
+                                
+                                // Business Count Badge
+                                // if (businessCount > 0)
+                                //   Positioned(
+                                //     top: 4,
+                                //     right: 4,
+                                //     child: Container(
+                                //       width: 20,
+                                //       height: 20,
+                                //       decoration: BoxDecoration(
+                                //         color: secondaryRed,
+                                //         shape: BoxShape.circle,
+                                //         border: Border.all(color: white, width: 2),
+                                //       ),
+                                //       child: Center(
+                                //         child: Text(
+                                //           businessCount > 9 ? '9+' : businessCount.toString(),
+                                //           style: const TextStyle(
+                                //             fontSize: 9,
+                                //             color: white,
+                                //             fontWeight: FontWeight.w800,
+                                //           ),
+                                //         ),
+                                //       ),
+                                //     ),
+                                //   ),
+                              ],
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 6),
+                        
+                        // Category Name
                         SizedBox(
                           width: 70,
                           child: Text(
                             typeName,
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected ? Colors.deepOrange : Colors.grey.shade700,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                              color: isSelected ? secondaryRed : greyText,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 2,
@@ -172,14 +262,15 @@ class BusinessTypesSection extends ConsumerWidget {
       child: Wrap(
         spacing: 16,
         runSpacing: 16,
-        children: List.generate(6, (index) => Column(
+        alignment: WrapAlignment.start,
+        children: List.generate(8, (index) => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: lightGrey,
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
@@ -188,7 +279,7 @@ class BusinessTypesSection extends ConsumerWidget {
               width: 60,
               height: 12,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: lightGrey,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -196,5 +287,42 @@ class BusinessTypesSection extends ConsumerWidget {
         )),
       ),
     );
+  }
+
+  // Helper function to get icon for category
+  IconData _getCategoryIcon(String categoryName) {
+    final lowerName = categoryName.toLowerCase();
+    
+    if (lowerName.contains('restaurant') || lowerName.contains('food') || lowerName.contains('meal')) {
+      return Icons.restaurant_rounded;
+    } else if (lowerName.contains('cafe') || lowerName.contains('coffee') || lowerName.contains('tea')) {
+      return Icons.local_cafe_rounded;
+    } else if (lowerName.contains('bakery') || lowerName.contains('bread') || lowerName.contains('pastry')) {
+      return Icons.bakery_dining_rounded;
+    } else if (lowerName.contains('supermarket') || lowerName.contains('grocery') || lowerName.contains('market')) {
+      return Icons.shopping_cart_rounded;
+    } else if (lowerName.contains('pharmacy') || lowerName.contains('drug') || lowerName.contains('medical')) {
+      return Icons.local_pharmacy_rounded;
+    } else if (lowerName.contains('electronics') || lowerName.contains('tech')) {
+      return Icons.computer_rounded;
+    } else if (lowerName.contains('clothing') || lowerName.contains('fashion') || lowerName.contains('apparel')) {
+      return Icons.checkroom_rounded;
+    } else if (lowerName.contains('book') || lowerName.contains('stationery')) {
+      return Icons.menu_book_rounded;
+    } else if (lowerName.contains('flower') || lowerName.contains('florist')) {
+      return Icons.local_florist_rounded;
+    } else if (lowerName.contains('hardware') || lowerName.contains('tool')) {
+      return Icons.handyman_rounded;
+    } else if (lowerName.contains('cosmetic') || lowerName.contains('beauty')) {
+      return Icons.spa_rounded;
+    } else if (lowerName.contains('sport') || lowerName.contains('fitness')) {
+      return Icons.sports_rounded;
+    } else if (lowerName.contains('toy') || lowerName.contains('game')) {
+      return Icons.toys_rounded;
+    } else if (lowerName.contains('jewelry') || lowerName.contains('jewellery')) {
+      return Icons.diamond_rounded;
+    } else {
+      return Icons.storefront_rounded;
+    }
   }
 }

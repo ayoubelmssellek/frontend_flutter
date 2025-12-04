@@ -38,7 +38,7 @@ class CartBottomBar extends ConsumerWidget {
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepOrange,
+          backgroundColor: Color(0xFFC63232),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

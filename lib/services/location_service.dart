@@ -1,6 +1,6 @@
-// services/location_service.dart
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'location_manager.dart';
 
 enum LocationError {
@@ -20,15 +20,20 @@ class LocationService {
   
   Future<LocationResult> getCurrentLocation() async {
     try {
-      // Check location service
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return LocationResult.error(LocationError.serviceDisabled);
+      // iOS needs special handling
+      if (!kIsWeb) {
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          return LocationResult.error(LocationError.serviceDisabled);
+        }
       }
       
-      // Check permissions
+      // Check permissions with platform-specific handling
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
+      
+      // iOS has different permission levels
+      if (permission == LocationPermission.denied || 
+          permission == LocationPermission.deniedForever) {
         permission = await Geolocator.requestPermission();
       }
       
@@ -40,31 +45,49 @@ class LocationService {
         return LocationResult.error(LocationError.permissionPermanentlyDenied);
       }
       
-      // Get position
+      // Get position with platform-specific accuracy
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
+        desiredAccuracy: _getPlatformSpecificAccuracy(),
+        timeLimit: const Duration(seconds: 15), // Add timeout for iOS
       );
       
-      // Get address
+      // Get address (geocoding)
       final places = await placemarkFromCoordinates(
         position.latitude, 
         position.longitude,
       );
       
       if (places.isEmpty) {
-        return LocationResult.error(LocationError.unknown);
+        // Return location data with coordinates even if address lookup fails
+        return LocationResult.success(
+          LocationData(
+            city: 'Unknown City',
+            street: 'Unknown Street',
+            latitude: position.latitude,
+            longitude: position.longitude,
+          ),
+        );
       }
       
       final place = places.first;
       final locationData = LocationData(
-        city: place.locality ?? 'Unknown City',
+        city: place.locality ?? place.subAdministrativeArea ?? place.administrativeArea ?? 'Unknown City',
         street: place.street ?? place.thoroughfare ?? place.subLocality ?? 'Unknown Street',
+        latitude: position.latitude,
+        longitude: position.longitude,
       );
       
       return LocationResult.success(locationData);
     } catch (e) {
+      print('📍 Location error: $e');
       return LocationResult.error(LocationError.unknown);
     }
+  }
+  
+  // Helper method for platform-specific accuracy
+  LocationAccuracy _getPlatformSpecificAccuracy() {
+    // iOS works better with high accuracy
+    return LocationAccuracy.best;
   }
   
   Future<void> refreshAndStoreLocation() async {
@@ -81,6 +104,14 @@ class LocationService {
   Future<LocationData?> getStoredLocation() => _locationManager.getStoredLocation();
   
   Future<bool> hasStoredLocation() => _locationManager.hasStoredLocation();
+  
+  // iOS specific: Check if we can request "Always" permission
+  Future<bool> canRequestAlwaysPermission() async {
+    if (kIsWeb) return false;
+    
+    final permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.whileInUse;
+  }
 }
 
 class LocationResult {

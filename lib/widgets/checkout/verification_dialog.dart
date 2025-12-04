@@ -19,12 +19,12 @@ class VerificationDialog {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                color: const Color(0xFFFFD600).withOpacity(0.1), // accentYellow with opacity
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.verified_user_outlined,
-                color: Colors.orange.shade600,
+                color: const Color(0xFFCFC000), // primaryYellow
                 size: 18,
               ),
             ),
@@ -34,7 +34,7 @@ class VerificationDialog {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                color: const Color(0xFF000000), // black
               ),
             ),
           ],
@@ -47,7 +47,7 @@ class VerificationDialog {
               'Your account needs to be verified to place orders and access all features.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade700,
+                color: const Color(0xFF666666), // greyText
                 height: 1.4,
               ),
             ),
@@ -55,15 +55,15 @@ class VerificationDialog {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                color: const Color(0xFFFFD600).withOpacity(0.1), // accentYellow with opacity
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade100),
+                border: Border.all(color: const Color(0xFFCFC000).withOpacity(0.2)), // primaryYellow with opacity
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: Colors.orange.shade600,
+                    color: const Color(0xFFCFC000), // primaryYellow
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -73,7 +73,7 @@ class VerificationDialog {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Colors.orange.shade800,
+                        color: const Color(0xFF000000), // black
                       ),
                     ),
                   ),
@@ -85,7 +85,7 @@ class VerificationDialog {
               'Verification helps ensure the security of your account and enables:',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade600,
+                color: const Color(0xFF666666), // greyText
               ),
             ),
             const SizedBox(height: 8),
@@ -102,7 +102,7 @@ class VerificationDialog {
             },
             child: Text(
               'Verify Later',
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: const Color(0xFF666666)), // greyText
             ),
           ),
           ElevatedButton(
@@ -111,8 +111,8 @@ class VerificationDialog {
               _showPhoneVerificationDialog(context, userData, ref);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepOrange,
-              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFFC63232), // secondaryRed
+              foregroundColor: const Color(0xFFFFFFFF), // white
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -161,7 +161,7 @@ class VerificationDialog {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(result['message'] ?? 'Failed to send verification code'),
-                  backgroundColor: Colors.red,
+                  backgroundColor: const Color(0xFFC63232), // secondaryRed
                 ),
               );
               return false;
@@ -170,7 +170,7 @@ class VerificationDialog {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Failed to start verification: $e'),
-                backgroundColor: Colors.red,
+                backgroundColor: const Color(0xFFC63232), // secondaryRed
               ),
             );
             return false;
@@ -188,7 +188,7 @@ class VerificationDialog {
         children: [
           Icon(
             Icons.check_circle,
-            color: Colors.green.shade500,
+            color: const Color(0xFFCFC000), // primaryYellow
             size: 16,
           ),
           const SizedBox(width: 8),
@@ -197,7 +197,7 @@ class VerificationDialog {
               text,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade700,
+                color: const Color(0xFF666666), // greyText
               ),
             ),
           ),
@@ -272,13 +272,14 @@ class _PhoneVerificationDialogState extends State<_PhoneVerificationDialog> {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Color(0xFF000000), // black
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 '${'Current'}: ${widget.currentPhone}',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: const Color(0xFF666666), // greyText
                 ),
               ),
               const SizedBox(height: 20),
@@ -287,10 +288,13 @@ class _PhoneVerificationDialogState extends State<_PhoneVerificationDialog> {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'New Phone Number',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
+                  labelStyle: TextStyle(color: const Color(0xFF666666)), // greyText
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: const Color(0xFFF0F0F0)), // lightGrey
+                  ),
+                  prefixIcon: Icon(Icons.phone, color: const Color(0xFF666666)), // greyText
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -310,7 +314,10 @@ class _PhoneVerificationDialogState extends State<_PhoneVerificationDialog> {
                   Expanded(
                     child: TextButton(
                       onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: const Color(0xFF666666)), // greyText
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -318,14 +325,17 @@ class _PhoneVerificationDialogState extends State<_PhoneVerificationDialog> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _verifyPhone,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFFC63232), // secondaryRed
+                        foregroundColor: const Color(0xFFFFFFFF), // white
                       ),
                       child: _isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFFFFFFF), // white
+                              ),
                             )
                           : const Text('Send Code'),
                     ),

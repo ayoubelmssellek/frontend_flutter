@@ -1,4 +1,5 @@
 // lib/pages/restaurant_profile/widgets/product_modal.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/cart_storage.dart';
@@ -263,7 +264,12 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
         'business_owner_id': businessOwnerId,
         'selected_extras': selectedExtrasList,
       };
-      
+      if (kDebugMode) {
+        if (kDebugMode) {
+          print('🛒 Updating cart with item: $itemData');
+          print('🛒 Product details: ${widget.product}');
+        }
+      }
       if (cartService.cartItems.containsKey(uniqueKey)) {
         await cartService.updateItemWithData(uniqueKey, itemData);
       } else {
@@ -500,7 +506,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.deepOrange.withOpacity(0.9),
+                color: Color(0xFFC63232).withOpacity(0.9),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
@@ -631,7 +637,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
             child: _isBusinessOpen
                 ? ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
+                      backgroundColor: Color(0xFFC63232),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -786,7 +792,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
                                   '+${extraPrice.toStringAsFixed(2)} DH',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _isBusinessOpen ? Colors.deepOrange : Colors.grey.shade400,
+                                    color: _isBusinessOpen ? Color(0xFFC63232) : Colors.grey.shade400,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -971,7 +977,7 @@ class _ProductModalState extends ConsumerState<ProductModal> with SingleTickerPr
             child: _isBusinessOpen
                 ? ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
+                      backgroundColor: Color(0xFFC63232),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),

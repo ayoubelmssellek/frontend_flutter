@@ -4,6 +4,16 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/providers/rating_providers.dart';
 
+// Color Palette from Logo
+const Color primaryYellow = Color(0xFFCFC000);
+const Color secondaryRed = Color(0xFFC63232);
+const Color accentYellow = Color(0xFFFFD600);
+const Color black = Color(0xFF000000);
+const Color white = Color(0xFFFFFFFF);
+const Color greyBg = Color(0xFFF8F8F8);
+const Color greyText = Color(0xFF666666);
+const Color lightGrey = Color(0xFFF0F0F0);
+
 class RatingSection extends ConsumerStatefulWidget {
   const RatingSection({super.key});
 
@@ -101,7 +111,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
-        elevation: 4,
+        elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -111,8 +121,8 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.orange.shade50,
-                Colors.red.shade50,
+                primaryYellow.withOpacity(0.1),
+                secondaryRed.withOpacity(0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(20),
@@ -134,13 +144,13 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
-                                Colors.orange.shade500,
-                                Colors.red.shade500,
+                                primaryYellow,
+                                accentYellow,
                               ],
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.orange.shade300.withOpacity(0.4),
+                                color: primaryYellow.withOpacity(0.3),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -153,7 +163,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       shape: BoxShape.circle,
                                       gradient: LinearGradient(
                                         colors: [
-                                          Colors.grey.shade300,
+                                          lightGrey,
                                           Colors.grey.shade400,
                                         ],
                                       ),
@@ -161,7 +171,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                     child: Icon(
                                       Icons.delivery_dining,
                                       size: 28,
-                                      color: Colors.grey.shade600,
+                                      color: greyText,
                                     ),
                                   )
                                 : CustomNetworkImage(
@@ -177,15 +187,15 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                           shape: BoxShape.circle,
                                           gradient: LinearGradient(
                                             colors: [
-                                              Colors.orange.shade500,
-                                              Colors.red.shade500,
+                                              primaryYellow,
+                                              accentYellow,
                                             ],
                                           ),
                                         ),
                                         child: Icon(
                                           Icons.delivery_dining,
                                           size: 28,
-                                          color: Colors.white,
+                                          color: white,
                                         ),
                                       );
                                     },
@@ -203,7 +213,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       width: 150,
                                       height: 20,
                                       decoration: BoxDecoration(
-                                        color: Colors.grey.shade300,
+                                        color: lightGrey,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     )
@@ -211,8 +221,9 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       tr('rating.rate_your_experience'),
                                       style: TextStyle(
                                         fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.orange.shade800,
+                                        fontWeight: FontWeight.w800,
+                                        color: black,
+                                        letterSpacing: -0.5,
                                       ),
                                     ),
                               const SizedBox(height: 6),
@@ -224,7 +235,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                           width: 200,
                                           height: 14,
                                           decoration: BoxDecoration(
-                                            color: Colors.grey.shade300,
+                                            color: lightGrey,
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                         ),
@@ -233,7 +244,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                           width: 180,
                                           height: 14,
                                           decoration: BoxDecoration(
-                                            color: Colors.grey.shade300,
+                                            color: lightGrey,
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                         ),
@@ -243,7 +254,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       text: TextSpan(
                                         style: TextStyle(
                                           fontSize: 14,
-                                          color: Colors.grey.shade700,
+                                          color: greyText,
                                           height: 1.4,
                                         ),
                                         children: [
@@ -251,8 +262,8 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                           TextSpan(
                                             text: driverName,
                                             style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.orange.shade700,
+                                              fontWeight: FontWeight.w700,
+                                              color: secondaryRed,
                                             ),
                                           ),
                                           TextSpan(text: tr('rating.rate_driver_message_suffix')),
@@ -270,11 +281,15 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: white,
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: lightGrey,
+                          width: 1,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.orange.shade100.withOpacity(0.3),
+                            color: black.withOpacity(0.04),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -288,7 +303,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                               Icon(
                                 Icons.check_circle,
                                 size: 16,
-                                color: isLoading ? Colors.grey.shade400 : Colors.orange.shade600,
+                                color: isLoading ? lightGrey : primaryYellow,
                               ),
                               const SizedBox(width: 6),
                               isLoading
@@ -296,7 +311,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       width: 80,
                                       height: 14,
                                       decoration: BoxDecoration(
-                                        color: Colors.grey.shade300,
+                                        color: lightGrey,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     )
@@ -304,7 +319,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       tr('rating.last_delivery'),
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.orange.shade700,
+                                        color: black,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -316,7 +331,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                   width: 60,
                                   height: 12,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.shade300,
+                                    color: lightGrey,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 )
@@ -324,7 +339,8 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                   '${tr('order.order')} #$orderId',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Colors.grey.shade500,
+                                    color: greyText,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                           
@@ -337,7 +353,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                     ? Container(
                                         height: 44,
                                         decoration: BoxDecoration(
-                                          color: Colors.grey.shade300,
+                                          color: lightGrey,
                                           borderRadius: BorderRadius.circular(25),
                                         ),
                                       )
@@ -349,7 +365,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                     ? Container(
                                         height: 44,
                                         decoration: BoxDecoration(
-                                          color: Colors.grey.shade300,
+                                          color: lightGrey,
                                           borderRadius: BorderRadius.circular(25),
                                         ),
                                       )
@@ -369,11 +385,13 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.1),
+                      color: white.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Center(
-                      child: CircularProgressIndicator(),
+                      child: CircularProgressIndicator.adaptive(
+                        valueColor: AlwaysStoppedAnimation(secondaryRed),
+                      ),
                     ),
                   ),
                 ),
@@ -388,20 +406,23 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
     return OutlinedButton(
       onPressed: () => _skipRating(orderId),
       style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.grey.shade700,
+        foregroundColor: greyText,
+        backgroundColor: white,
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
         ),
         side: BorderSide(
-          color: Colors.grey.shade300,
+          color: lightGrey,
+          width: 1.5,
         ),
       ),
       child: Text(
         tr('rating.skip'),
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w600,
           fontSize: 14,
+          color: greyText,
         ),
       ),
     );
@@ -412,14 +433,14 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.orange.shade500,
-            Colors.red.shade600,
+            secondaryRed,
+            secondaryRed,
           ],
         ),
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.shade300.withOpacity(0.4),
+            color: Color(0xFFC63232).withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -444,14 +465,14 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                   Icon(
                     Icons.star_rounded,
                     size: 18,
-                    color: Colors.white,
+                    color: white,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     tr('rating.rate_now'),
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      color: white,
+                      fontWeight: FontWeight.w700,
                       fontSize: 14,
                     ),
                   ),
@@ -464,7 +485,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
     );
   }
 
-  // ... rest of your methods remain the same (_showBottomSheetRatingDialog, _buildCancelButton, _buildSubmitButton, _submitRating, _skipRating)
   void _showBottomSheetRatingDialog({
     required int orderId,
     required int driverId,
@@ -489,37 +509,46 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.85,
                 ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: white,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
                 ),
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Drag Handle
                         Container(
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
+                            color: lightGrey,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                         const SizedBox(height: 16),
                         
+                        // Header
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                Colors.orange.shade500,
-                                Colors.red.shade500,
+                                primaryYellow,
+                                accentYellow,
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
@@ -534,12 +563,12 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: white,
                                     width: 2,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
+                                      color: black.withOpacity(0.1),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -557,12 +586,12 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       return Container(
                                         decoration: const BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: Colors.white,
+                                          color: white,
                                         ),
                                         child: Icon(
                                           Icons.delivery_dining,
                                           size: 24,
-                                          color: Colors.orange.shade700,
+                                          color: primaryYellow,
                                         ),
                                       );
                                     },
@@ -578,8 +607,8 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       tr('rating.rate_driver'),
                                       style: const TextStyle(
                                         fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        color: white,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -587,7 +616,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       driverName,
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.white.withOpacity(0.9),
+                                        color: white.withOpacity(0.9),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -598,14 +627,14 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                           ),
                         ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         
                         Text(
                           tr('rating.how_was_delivery'),
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade800,
+                            fontWeight: FontWeight.w800,
+                            color: black,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -615,10 +644,10 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
+                            color: greyBg,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Colors.grey.shade200,
+                              color: lightGrey,
                             ),
                           ),
                           child: Column(
@@ -626,15 +655,15 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.shade100,
+                                  color: primaryYellow.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   '$rating ${tr('rating.stars')}',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.amber.shade800,
+                                    fontWeight: FontWeight.w800,
+                                    color: primaryYellow,
                                   ),
                                 ),
                               ),
@@ -654,7 +683,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       margin: const EdgeInsets.symmetric(horizontal: 4),
                                       child: Icon(
                                         index < rating ? Icons.star_rounded : Icons.star_border_rounded,
-                                        color: Colors.amber,
+                                        color: primaryYellow,
                                         size: 40,
                                       ),
                                     ),
@@ -672,14 +701,16 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                       tr('rating.poor'),
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey.shade600,
+                                        color: greyText,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     Text(
                                       tr('rating.excellent'),
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey.shade600,
+                                        color: greyText,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
@@ -699,16 +730,16 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade700,
+                                color: black,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
+                                color: greyBg,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: Colors.grey.shade300,
+                                  color: lightGrey,
                                 ),
                               ),
                               child: TextField(
@@ -716,7 +747,7 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                                 decoration: InputDecoration(
                                   hintText: tr('rating.comment_hint'),
                                   hintStyle: TextStyle(
-                                    color: Colors.grey.shade500,
+                                    color: greyText,
                                   ),
                                   border: InputBorder.none,
                                   contentPadding: const EdgeInsets.all(16),
@@ -765,13 +796,15 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
     return OutlinedButton(
       onPressed: () => Navigator.pop(context),
       style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.grey.shade700,
+        foregroundColor: greyText,
+        backgroundColor: white,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
         side: BorderSide(
-          color: Colors.grey.shade300,
+          color: lightGrey,
+          width: 1.5,
         ),
       ),
       child: Text(
@@ -793,14 +826,14 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.orange.shade500,
-            Colors.red.shade600,
+            secondaryRed,
+            secondaryRed,
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.shade300.withOpacity(0.4),
+            color: secondaryRed.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -822,8 +855,8 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
               child: Text(
                 tr('rating.submit_rating'),
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+                  color: white,
+                  fontWeight: FontWeight.w700,
                   fontSize: 14,
                 ),
               ),
@@ -844,7 +877,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
       final trimmedComment = comment.trim();
       final finalComment = trimmedComment.isNotEmpty ? trimmedComment : null;
       
-      
       final result = await ref.read(rateDriverOrOwnerProvider(
         RateParams(
           driverId: driverId,
@@ -855,7 +887,6 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
       ).future);
 
       if (result['success'] == true) {
-        
         // Mark order as rated and refresh section immediately
         markOrderAsRated(ref, orderId);
         
@@ -867,20 +898,20 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                 children: [
                   Icon(
                     Icons.check_circle,
-                    color: Colors.white,
+                    color: white,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       tr('rating.rating_submitted'),
                       style: const TextStyle(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: Colors.green,
+              backgroundColor: secondaryRed,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -898,20 +929,20 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                 children: [
                   Icon(
                     Icons.error,
-                    color: Colors.white,
+                    color: white,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       result['message'] ?? tr('rating.rating_error'),
                       style: const TextStyle(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: Colors.red,
+              backgroundColor: secondaryRed,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -930,20 +961,20 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
               children: [
                 Icon(
                   Icons.error,
-                  color: Colors.white,
+                  color: white,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     tr('rating.rating_error'),
                     style: const TextStyle(
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: secondaryRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -957,11 +988,9 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
 
   Future<void> _skipRating(int orderId) async {
     try {
-      
       final result = await ref.read(markOrderAsSkippedProvider(orderId).future);
 
       if (result['success'] == true) {
-        
         // Mark order as skipped and refresh section immediately
         markOrderAsSkipped(ref, orderId);
         
@@ -972,20 +1001,20 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                 children: [
                   Icon(
                     Icons.check_circle,
-                    color: Colors.white,
+                    color: white,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       tr('rating.rating_skipped'),
                       style: const TextStyle(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: Colors.orange,
+              backgroundColor: primaryYellow,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1002,20 +1031,20 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
                 children: [
                   Icon(
                     Icons.error,
-                    color: Colors.white,
+                    color: white,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       result['message'] ?? tr('rating.skip_error'),
                       style: const TextStyle(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: Colors.red,
+              backgroundColor: secondaryRed,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1033,20 +1062,20 @@ class _RatingSectionState extends ConsumerState<RatingSection> {
               children: [
                 Icon(
                   Icons.error,
-                  color: Colors.white,
+                  color: white,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     tr('rating.skip_error'),
                     style: const TextStyle(
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: secondaryRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

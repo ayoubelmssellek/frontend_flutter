@@ -42,7 +42,7 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFFFFFF), // white
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -74,7 +74,7 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
         Container(
           width: double.infinity,
           height: 2,
-          color: Colors.grey[300],
+          color: const Color(0xFFF0F0F0), // lightGrey
         ),
         
         // Motorcycle
@@ -95,7 +95,7 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
               const Icon(
                 Icons.delivery_dining,
                 size: 50,
-                color: Colors.deepOrange,
+                color: Color(0xFFC63232), // secondaryRed
               ),
               const SizedBox(height: 8),
               Text(
@@ -103,7 +103,7 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.deepOrange,
+                  color: Color(0xFFC63232), // secondaryRed
                 ),
               ),
             ],
@@ -118,8 +118,8 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
       children: [
         LinearProgressIndicator(
           value: _progressAnimation.value,
-          backgroundColor: Colors.grey[200],
-          valueColor: const AlwaysStoppedAnimation<Color>(Colors.deepOrange),
+          backgroundColor: const Color(0xFFF8F8F8), // greyBg
+          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFCFC000)), // primaryYellow
           minHeight: 8,
           borderRadius: BorderRadius.circular(10),
         ),
@@ -128,7 +128,7 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
           'Creating your order...',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey[600],
+            color: const Color(0xFF666666), // greyText
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -145,7 +145,7 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[500],
+            color: const Color(0xFF666666), // greyText
           ),
         ),
       ],
@@ -156,7 +156,7 @@ class _OrderLoadingWidgetState extends State<OrderLoadingWidget> with SingleTick
     if (progress < 0.3) {
       return 'Preparing your items...';
     } else if (progress < 0.6) {
-      return 'Processing payment...';
+      return 'Processing driver...';
     } else if (progress < 0.9) {
       return 'Confirming with stores...';
     } else {

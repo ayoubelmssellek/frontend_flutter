@@ -9,6 +9,16 @@ import 'package:food_app/pages/restaurant_profile/restaurant_profile.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/widgets/home_page/ShopCard.dart';
 
+// Color Palette from Home Page
+const Color primaryYellow = Color(0xFFCFC000);
+const Color secondaryRed = Color(0xFFC63232);
+const Color accentYellow = Color(0xFFFFD600);
+const Color black = Color(0xFF000000);
+const Color white = Color(0xFFFFFFFF);
+const Color greyBg = Color(0xFFF8F8F8);
+const Color greyText = Color(0xFF666666);
+const Color lightGrey = Color(0xFFF0F0F0);
+
 String _tr(String key, String fallback) {
   try {
     final translation = key.tr();
@@ -32,6 +42,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   String _selectedCategory = 'All';
   bool _isLoading = true;
   String? _errorMessage;
+  List<String> _allCategories = ['All']; // Initialize with 'All'
 
   @override
   void initState() {
@@ -59,6 +70,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               _allShops = shops;
               _filteredShops = shops;
               _isLoading = false;
+              _updateCategories(); // Update categories after loading shops
             });
           }
         },
@@ -85,6 +97,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           _errorMessage = e.toString();
         });
       }
+    }
+  }
+
+  void _updateCategories() {
+    final categories = <String>{};
+    
+    for (final shop in _allShops) {
+      // Add shop categories
+      categories.addAll(shop.categories);
+      
+      // Also add business type if it's not empty and not 'General'
+      if (shop.businessType.isNotEmpty && shop.businessType != 'General') {
+        categories.add(shop.businessType);
+      }
+    }
+    
+    // Sort categories alphabetically
+    final sortedCategories = categories.toList()..sort();
+    
+    if (mounted) {
+      setState(() {
+        _allCategories = ['All'] + sortedCategories;
+      });
     }
   }
 
@@ -127,6 +162,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               _allShops = shops;
               _filteredShops = shops;
               _isLoading = false;
+              _updateCategories(); // Update categories when shops change
             });
           }
         });
@@ -134,20 +170,32 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_tr('search_page.title', 'Search Businesses')),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _refreshData,
-            tooltip: _tr('search_page.refresh', 'Refresh'),
+   appBar: AppBar(
+        title: Text(
+          _tr('search_page.title', 'Search Businesses'),
+          style: const TextStyle(
+            color: black,
+            fontWeight: FontWeight.w700,
           ),
-        ],
+        ),
+        
+         flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryYellow, accentYellow],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: black),
+     
       ),
+
+      backgroundColor: greyBg,
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildLoadingState()
           : _errorMessage != null
               ? _buildErrorState()
               : _buildMainContent(),
@@ -155,42 +203,26 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildLoadingState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _tr('search_page.loading_error', 'Failed to load businesses'),
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w500,
+          SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(secondaryRed),
+              strokeWidth: 3,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _errorMessage ?? '',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _refreshData,
-            icon: const Icon(Icons.refresh),
-            label: Text(_tr('common.retry', 'Retry')),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepOrange,
-              foregroundColor: Colors.white,
+          Text(
+            _tr('search_page.loading_businesses', 'Loading businesses...'),
+            style: const TextStyle(
+              fontSize: 16,
+              color: greyText,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -198,35 +230,108 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
-  Widget _buildMainContent() {
-    if (_allShops.isEmpty) {
-      return Center(
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _tr('search_page.no_businesses_available', 'No businesses available'),
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: secondaryRed.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 40,
+                color: secondaryRed,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
             Text(
-              _tr('search_page.try_again_later', 'Please try again later'),
-              style: TextStyle(
+              _tr('search_page.loading_error', 'Failed to load businesses'),
+              style: const TextStyle(
+                fontSize: 18,
+                color: black,
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage ?? '',
+              style: const TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade500,
+                color: greyText,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _refreshData,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(_tr('common.retry', 'Retry')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryRed,
+                foregroundColor: white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent() {
+    if (_allShops.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: primaryYellow.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.search_off_rounded,
+                  size: 40,
+                  color: primaryYellow,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                _tr('search_page.no_businesses_available', 'No businesses available'),
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: black,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _tr('search_page.try_again_later', 'Please try again later'),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: greyText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -249,17 +354,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Widget _buildSearchBar() {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [primaryYellow, accentYellow],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
+          color: white,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -267,10 +383,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           controller: _searchController,
           decoration: InputDecoration(
             hintText: _tr('search_page.hint', 'Search for businesses, categories...'),
-            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+            prefixIcon: const Icon(Icons.search_rounded, color: primaryYellow),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    icon: const Icon(Icons.clear_rounded, color: greyText),
                     onPressed: () {
                       _searchController.clear();
                       _performSearch('');
@@ -279,6 +395,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            hintStyle: const TextStyle(color: greyText),
+          ),
+          style: const TextStyle(
+            color: black,
+            fontWeight: FontWeight.w500,
           ),
           onChanged: _performSearch,
         ),
@@ -287,69 +408,78 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Widget _buildCategoriesFilter() {
-    final allCategories = _getAllCategories();
-    
-    return SizedBox(
-      height: 50,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          // All Categories
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              selected: _selectedCategory == 'All',
-              label: Text(_tr('search_page.all_categories', 'All')),
-              onSelected: (selected) {
-                setState(() {
-                  _selectedCategory = _tr('search_page.all_categories', 'All');
-                  _filterShops();
-                });
-              },
-              backgroundColor: Colors.grey.shade100,
-              selectedColor: Colors.blue.shade100,
-              checkmarkColor: Colors.blue,
-            ),
-          ),
-          
-          // Other Categories
-          ...allCategories.map((category) {
+    return Container(
+      color: white,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          children: _allCategories.map((category) {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
                 selected: _selectedCategory == category,
-                label: Text(category),
+                label: Text(
+                  category,
+                  style: TextStyle(
+                    color: _selectedCategory == category ? white : black,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 onSelected: (selected) {
                   setState(() {
                     _selectedCategory = category;
                     _filterShops();
                   });
                 },
-                backgroundColor: Colors.grey.shade100,
-                selectedColor: Colors.blue.shade100,
-                checkmarkColor: Colors.blue,
+                backgroundColor: lightGrey,
+                selectedColor: secondaryRed,
+                checkmarkColor: white,
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
             );
-          }),
-        ],
+          }).toList(),
+        ),
       ),
     );
   }
 
   Widget _buildResultsCount() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Container(
+      color: white,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          Text(
-            '${_filteredShops.length}${_tr("search_page.businesses_found", " businesses found")}',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: primaryYellow.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${_filteredShops.length}${_tr("search_page.businesses_found", " businesses found")}',
+              style: const TextStyle(
+                fontSize: 14,
+                color: black,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
+          const Spacer(),
+          if (_filteredShops.isNotEmpty && _allShops.isNotEmpty)
+            Text(
+              '${((_filteredShops.length / _allShops.length) * 100).toInt()}%${_tr("search_page.of_total", " of total")}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: greyText,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
         ],
       ),
     );
@@ -358,54 +488,109 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget _buildBusinessesList() {
     if (_filteredShops.isEmpty) {
       return Expanded(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.search_off_rounded,
-                size: 64,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _tr('search_page.no_businesses_found', 'No businesses found'),
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
+        child: Container(
+          color: greyBg,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.search_off_rounded,
+                    size: 48,
+                    color: primaryYellow,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _tr('search_page.try_different_keywords', 'Try different keywords or categories'),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
+                const SizedBox(height: 24),
+                Text(
+                  _tr('search_page.no_businesses_found', 'No businesses found'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: black,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Text(
+                    _tr('search_page.try_different_keywords', 'Try different keywords or categories'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: greyText,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCategory = 'All';
+                      _searchController.clear();
+                      _filteredShops = _allShops;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: secondaryRed,
+                    foregroundColor: white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(_tr('search_page.clear_filters', 'Clear Filters')),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
     return Expanded(
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _filteredShops.length,
-        itemBuilder: (context, index) {
-          final shop = _filteredShops[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: ShopCard(
-              shop: shop,
-              onTap: () {
-                _navigateToBusinessDetails(shop);
-              },
-            ),
-          );
-        },
+      child: Container(
+        color: greyBg,
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          itemCount: _filteredShops.length,
+          itemBuilder: (context, index) {
+            final shop = _filteredShops[index];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: black.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ShopCard(
+                shop: shop,
+                onTap: () {
+                  _navigateToBusinessDetails(shop);
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -432,35 +617,24 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       }).toList();
     }
 
-    // Filter by category
+    // Filter by category (except when 'All' is selected)
     if (_selectedCategory != 'All') {
       results = results.where((shop) {
-        return shop.categories.contains(_selectedCategory);
+        // Check if shop has the selected category
+        if (shop.categories.contains(_selectedCategory)) {
+          return true;
+        }
+        // Also check business type
+        if (shop.businessType == _selectedCategory) {
+          return true;
+        }
+        return false;
       }).toList();
     }
 
     setState(() {
       _filteredShops = results;
     });
-  }
-
-  List<String> _getAllCategories() {
-    final allCategories = <String>{};
-    
-    for (final shop in _allShops) {
-      allCategories.addAll(shop.categories);
-    }
-    
-    // If no categories found, extract from business types
-    if (allCategories.isEmpty) {
-      for (final shop in _allShops) {
-        if (shop.businessType.isNotEmpty && shop.businessType != 'General') {
-          allCategories.add(shop.businessType);
-        }
-      }
-    }
-    
-    return allCategories.toList()..sort();
   }
 
   void _navigateToBusinessDetails(Shop shop) {
@@ -486,10 +660,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget _buildBottomNavigationBar(int currentIndex) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
+            color: black.withOpacity(0.08),
             blurRadius: 20,
             offset: const Offset(0, -2),
           ),
@@ -522,25 +696,85 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.deepOrange,
-        unselectedItemColor: Colors.grey.shade600,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        backgroundColor: white,
+        selectedItemColor: secondaryRed,
+        unselectedItemColor: greyText,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 11,
+        ),
         items: [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.home),
-            label: _tr('home_page.home', 'Home'),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 0 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.home_rounded,
+                size: 22,
+                color: currentIndex == 0 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.home','Home'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.search),
-            label: _tr('search_page.search', 'Search'),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 1 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.search_rounded,
+                size: 22,
+                color: currentIndex == 1 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.search','Search'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.shopping_cart),
-            label: _tr('home_page.cart', 'Cart'),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 2 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.shopping_cart_rounded,
+                size: 22,
+                color: currentIndex == 2 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.cart','Cart'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.person),
-            label: _tr('home_page.profile', 'Profile'),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 3 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.person_rounded,
+                size: 22,
+                color: currentIndex == 3 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.profile','Profile'),
           ),
         ],
       ),

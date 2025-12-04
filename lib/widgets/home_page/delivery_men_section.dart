@@ -3,7 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/models/delivery_driver_model.dart';
 import 'package:food_app/providers/delivery_providers.dart';
 import 'package:food_app/core/image_helper.dart';
+import 'package:food_app/widgets/home_page/image_viewer_dialog.dart';
 import 'delivery_man_card.dart';
+
+// Color Palette from Home Page
+const Color primaryYellow = Color(0xFFCFC000);
+const Color secondaryRed = Color(0xFFC63232);
+const Color accentYellow = Color(0xFFFFD600);
+const Color black = Color(0xFF000000);
+const Color white = Color(0xFFFFFFFF);
+const Color greyBg = Color(0xFFF8F8F8);
+const Color greyText = Color(0xFF666666);
+const Color lightGrey = Color(0xFFF0F0F0);
 
 class DeliveryMenSection extends ConsumerStatefulWidget {
   const DeliveryMenSection({super.key});
@@ -28,6 +39,16 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
     _showDriverDetails(driver, context);
   }
 
+  void _showFullImage(BuildContext context, String imageUrl, String name) {
+    showDialog(
+      context: context,
+      builder: (context) => ImageViewerDialog(
+        imageUrl: imageUrl,
+        title: name,
+      ),
+    );
+  }
+
   void _showDriverDetails(DeliveryDriver driver, BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -41,10 +62,10 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.8,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: white,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
       ),
       child: Column(
@@ -52,28 +73,80 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              gradient: LinearGradient(
+                colors: [primaryYellow.withOpacity(0.1), accentYellow.withOpacity(0.1)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
               ),
             ),
             child: Row(
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey.shade200,
-                  ),
-                  child: ClipOval(
-                    child: CustomNetworkImage(
-                      imageUrl: driver.avatar,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      placeholder: 'avatar',
+                // Driver Avatar with tap to view full image
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context); // Close bottom sheet first
+                    _showFullImage(
+                      context,
+                      driver.avatar ?? '',
+                      driver.name ?? 'Driver',
+                    );
+                  },
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: primaryYellow, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: black.withOpacity(0.1),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        ClipOval(
+                          child: CustomNetworkImage(
+                            imageUrl: driver.avatar,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            placeholder: 'avatar',
+                          ),
+                        ),
+                        // Zoom icon overlay
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: primaryYellow, width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.zoom_out_map,
+                              size: 12,
+                              color: primaryYellow,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -86,27 +159,37 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
                         driver.name ?? 'Unknown Driver',
                         style: const TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
+                          color: black,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.star, size: 16, color: Colors.orange.shade600),
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: primaryYellow,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.star, size: 14, color: white),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             (driver.rating ?? 0.0).toStringAsFixed(1),
                             style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: black,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             '(${driver.reviewsCount ?? 0} reviews)',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade600,
+                              color: greyText,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -114,13 +197,14 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.local_shipping, size: 14, color: Colors.grey.shade500),
+                          Icon(Icons.local_shipping, size: 14, color: primaryYellow),
                           const SizedBox(width: 4),
                           Text(
                             '${driver.totalDeliveries ?? 0} deliveries',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade600,
+                              color: greyText,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -137,14 +221,30 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
               length: 2,
               child: Column(
                 children: [
-                  TabBar(
-                    labelColor: Colors.deepOrange,
-                    unselectedLabelColor: Colors.grey.shade600,
-                    indicatorColor: Colors.deepOrange,
-                    tabs: const [
-                      Tab(text: 'Ratings & Reviews'),
-                      Tab(text: 'Delivery Stats'),
-                    ],
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: lightGrey, width: 1),
+                      ),
+                    ),
+                    child: TabBar(
+                      labelColor: secondaryRed,
+                      unselectedLabelColor: greyText,
+                      indicatorColor: secondaryRed,
+                      indicatorWeight: 3,
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                      tabs: const [
+                        Tab(text: 'Ratings & Reviews'),
+                        Tab(text: 'Delivery Stats'),
+                      ],
+                    ),
                   ),
                   Expanded(
                     child: TabBarView(
@@ -171,13 +271,22 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.reviews, size: 64, color: Colors.grey.shade300),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: primaryYellow.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.reviews, size: 40, color: primaryYellow),
+            ),
             const SizedBox(height: 16),
             Text(
               'No reviews yet',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+                color: greyText,
               ),
             ),
             const SizedBox(height: 8),
@@ -185,7 +294,7 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
               'Be the first to review this driver!',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade500,
+                color: greyText.withOpacity(0.7),
               ),
             ),
           ],
@@ -198,8 +307,20 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
       itemCount: comments.length,
       itemBuilder: (context, index) {
         final comment = comments[index];
-        return Card(
+        return Container(
           margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: lightGrey),
+            boxShadow: [
+              BoxShadow(
+                color: black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -207,20 +328,40 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.star, size: 16, color: Colors.orange.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${comment['rating'] ?? 0}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: primaryYellow.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(1),
+                            decoration: BoxDecoration(
+                              color: primaryYellow,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const Icon(Icons.star, size: 10, color: white),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${comment['rating'] ?? 0}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: black,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      '⭐ ${comment['rating'] ?? 0}/5',
+                      '${comment['rating'] ?? 0}/5',
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: greyText,
                         fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -231,6 +372,8 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
                     comment['comment'].toString(),
                     style: const TextStyle(
                       fontSize: 14,
+                      color: black,
+                      height: 1.5,
                     ),
                   ),
               ],
@@ -251,7 +394,16 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
           _buildStatItem('Customer Reviews', '${driver.reviewsCount ?? 0}', Icons.reviews),
           _buildStatItem('Average Rating', (driver.rating ?? 0.0).toStringAsFixed(1), Icons.star),
           const SizedBox(height: 20),
-          Card(
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [secondaryRed.withOpacity(0.05), primaryYellow.withOpacity(0.05)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: secondaryRed.withOpacity(0.1)),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -261,17 +413,17 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
                     'Delivery Time Estimate',
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w700,
+                      color: greyText,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     _estimateDeliveryTime(driver.totalDeliveries ?? 0, driver.rating ?? 0.0),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.deepOrange,
+                      fontWeight: FontWeight.w800,
+                      color: secondaryRed,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -279,7 +431,7 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
                     'Based on ${driver.totalDeliveries ?? 0} deliveries and customer ratings',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade500,
+                      color: greyText.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -292,17 +444,50 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
   }
 
   Widget _buildStatItem(String title, String value, IconData icon) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: lightGrey),
+        boxShadow: [
+          BoxShadow(
+            color: black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListTile(
-        leading: Icon(icon, color: Colors.deepOrange),
-        title: Text(title, style: TextStyle(color: Colors.grey.shade600)),
-        trailing: Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.deepOrange,
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: primaryYellow.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: primaryYellow),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: greyText,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: secondaryRed.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: secondaryRed,
+            ),
           ),
         ),
       ),
@@ -359,15 +544,35 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Text(
-                'Our Delivery Team',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Our Delivery Team',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: black,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: secondaryRed.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${drivers.length} drivers',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: secondaryRed,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             
@@ -391,15 +596,28 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Text(
-            'Our Delivery Team',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 150,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: lightGrey,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              Container(
+                width: 80,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: lightGrey,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ],
           ),
         ),
         Padding(
@@ -418,63 +636,78 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
   }
 
   Widget _buildSkeletonCard() {
-    return Card(
-      elevation: 2,
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(30),
-              ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: lightGrey,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 120,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 120,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: lightGrey,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 80,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 80,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: lightGrey,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 100,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 100,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: lightGrey,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Container(
+            width: 70,
+            height: 30,
+            decoration: BoxDecoration(
+              color: lightGrey,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildErrorState(Object error, StackTrace stack) {
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -484,40 +717,76 @@ class _DeliveryMenSectionState extends ConsumerState<DeliveryMenSection> {
             'Our Delivery Team',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              fontWeight: FontWeight.w800,
+              color: black,
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Card(
-            elevation: 2,
+          child: Container(
+            decoration: BoxDecoration(
+              color: white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Failed to load delivery team',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: secondaryRed.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.error_outline,
+                      size: 32,
+                      color: secondaryRed,
                     ),
                   ),
                   const SizedBox(height: 12),
+                  Text(
+                    'Failed to load delivery team',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: greyText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please check your connection and try again',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: greyText.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: refresh,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
+                    icon: Icon(Icons.refresh, size: 18, color: white),
+                    label: const Text(
+                      'Retry',
+                      style: TextStyle(color: white),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      foregroundColor: Colors.white,
+                      backgroundColor: secondaryRed,
+                      foregroundColor: white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
                   ),
                 ],

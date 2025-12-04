@@ -16,7 +16,27 @@
     "not_available": "Not available",
     "retry": "Retry",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "suggest": "Suggest"
+
+  },
+    "store_suggestion": {
+    "title": "Missing a store?",
+    "subtitle": "Suggest stores you'd like to see in our app",
+    "store_name": "Store Name",
+    "store_name_hint": "Enter store name",
+    "store_name_required": "Store name is required",
+    "store_name_min_length": "Store name must be at least 2 characters",
+    "store_type": "Store Type",
+    "store_type_hint": "Select store type",
+    "store_type_required": "Store type is required",
+    "description": "Description (Optional)",
+    "description_hint": "Tell us more about this store...",
+    "submit": "Submit Suggestion",
+    "dismiss": "Dismiss",
+    "dismiss_permanently": "Don't show again",
+    "success_message": "Thank you! Your suggestion has been submitted.",
+    "error_message": "Failed to submit suggestion. Please try again."
 
   },
   "auth_page": {
@@ -196,7 +216,8 @@
     "location_required": "Location access is required for full app functionality"
   },
   "businesses_section":{
-    "Top_Rated_Businesses":"Top Rated Businesses"
+    "Top_Rated_Businesses":"Top Rated Businesses",
+    "Highest_rated_businesses_near_you":"Highest rated businesses near you"
   },
   "delivery_profile_page": {
     "my_account": "My Account",
@@ -628,6 +649,7 @@
     "home":"Home",
     "cart":"Cart",
     "search":"Search",
+    "browse_restaurants": "Browse Restaurants",
     "profile":"Profile",
     "your_cart": "Your Cart",
     "cart_empty": "Your cart is empty",
@@ -723,6 +745,13 @@
     "address": "Address",
     "items_count": "Items Count",
     "restaurant": "Restaurant",
+       "no_items": "No items",
+    "more_items": "More items",
+     "more_stores": "More stores",
+     "stores": "Stores",
+     "not_available": "Not available",
+     "estimated": "Estimated",
+     "order_summary": "ملخص الطلب",
     "estimates": {
       "preparing": "Preparing",
       "on_the_way": "On the way"
@@ -753,7 +782,9 @@
     "all_categories": "All",
     "businesses_found": " businesses found",
     "no_businesses_found": "No businesses found",
-    "try_different_keywords": "Try different keywords or categories"
+    "try_different_keywords": "Try different keywords or categories",
+    "loading_businesses": "Loading businesses...",
+    "of_total": " of total"
   },
   "language":{
      "error_changing_language":"Error changing language",

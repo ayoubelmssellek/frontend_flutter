@@ -25,6 +25,9 @@ class ProductCard extends ConsumerWidget {
   }
 
   void _showProductModal(BuildContext context) {
+    if (kDebugMode) {
+      print('📦 Showing product modal for product data : ${product}');
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -154,7 +157,7 @@ class ProductCard extends ConsumerWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 16,
-                              color: isBusinessOpen ? Colors.deepOrange : Colors.grey.shade500,
+                              color: isBusinessOpen ? Color(0xFFC63232) : Colors.grey.shade500,
                             ),
                           ),
                         ],
@@ -216,7 +219,7 @@ class ProductCard extends ConsumerWidget {
         width: 120,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.deepOrange,
+          color: Color(0xFFC63232),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
@@ -267,7 +270,7 @@ class ProductCard extends ConsumerWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: isBusinessOpen ? Colors.deepOrange : Colors.grey.shade300,
+          color: isBusinessOpen ? Color(0xFFC63232) : Colors.grey.shade300,
           borderRadius: BorderRadius.circular(18),
         ),
         child: IconButton(

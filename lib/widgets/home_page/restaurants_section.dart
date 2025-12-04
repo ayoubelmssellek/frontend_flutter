@@ -86,7 +86,7 @@ class ShopsList extends ConsumerWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    tr('Highest rated businesses near you'),
+                    tr('businesses_section.Highest_rated_businesses_near_you'),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,

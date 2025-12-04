@@ -16,7 +16,8 @@
     "not_available": "Non disponible",
     "retry": "Réessayer",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "suggest": "Suggérer"
 
   },
   "auth_page": {
@@ -74,6 +75,24 @@
     "register_delivery_subtitle": "Inscrivez-vous maintenant pour commencer la livraison des commandes",
     "upload_profile_photo": "Cliquez pour télécharger la photo de profil",
     "photo_hint": "Vous pouvez capturer une photo ou en sélectionner une de la galerie"
+  },
+    "store_suggestion": {
+    "title": "Un magasin manquant ?",
+    "subtitle": "Suggérez des magasins que vous aimeriez voir dans notre application",
+    "store_name": "Nom du magasin",
+    "store_name_hint": "Entrez le nom du magasin",
+    "store_name_required": "Le nom du magasin est requis",
+    "store_name_min_length": "Le nom du magasin doit comporter au moins 2 caractères",
+    "store_type": "Type de magasin",
+    "store_type_hint": "Sélectionnez le type de magasin",
+    "store_type_required": "Le type de magasin est requis",
+    "description": "Description (facultatif)",
+    "description_hint": "Dites-nous en plus sur ce magasin...",
+    "submit": "Soumettre la suggestion",
+    "dismiss": "Ignorer",
+    "dismiss_permanently": "Ne plus afficher",
+    "success_message": "Merci ! Votre suggestion a été soumise.",
+    "error_message": "Échec de la soumission de la suggestion. Veuillez réessayer."
   },
   "home_page": {
     "home": "Accueil",
@@ -196,7 +215,8 @@
   "location_required": "الوصول إلى الموقع مطلوب للوظائف الكاملة للتطبيق"
 },
 "businesses_section":{
-  "Top_Rated_Businesses":"Boutiques les mieux notées"
+  "Top_Rated_Businesses":"Boutiques les mieux notées",
+  "Highest_rated_businesses_near_you":"Les boutiques les mieux notées près de chez vous"
 },
 "delivery_profile_page": {
     "my_account": "Mon Compte",
@@ -567,6 +587,7 @@
   "checkout_page": {
   "checkout": "Paiement",
   "home": "Accueil",
+  "browse_restaurants": "Parcourir les restaurants",
   "cart": "Panier",
   "search": "Recherche",
   "profile": "Profil",
@@ -672,6 +693,13 @@
     "address": "Adresse",
     "items_count": "Nombre d'articles",
     "restaurant": "Restaurant",
+       "no_items": "Pas d'articles",
+    "more_items": "Plus d'articles",
+     "more_stores": "Plus de magasins",
+     "stores": "Magasins",
+     "not_available": "Indisponible",
+     "estimated": "Estimé",
+     "order_summary": "ملخص الطلب",
     "estimates": {
       "preparing": "En préparation",
       "on_the_way": "En route"
@@ -703,7 +731,9 @@
     "search":"Rechercher",
     "businesses_found": " commerces trouvés",
     "no_businesses_found": "Aucun commerce trouvé",
-    "try_different_keywords": "Essayez des mots-clés ou catégories différents"
+    "try_different_keywords": "Essayez des mots-clés ou catégories différents",
+    "of_total": " sur au total",
+    "loading_businesses": "Chargement des commerces..."
   },
   "language": {
     "error_changing_language": "Erreur lors du changement de langue",

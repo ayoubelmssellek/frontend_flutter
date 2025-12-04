@@ -23,6 +23,15 @@ import 'package:food_app/widgets/checkout/delivery_man_selection_widget.dart';
 import 'package:food_app/widgets/checkout/order_loading_widget.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+// Color Palette from Home Page
+const Color primaryYellow = Color(0xFFCFC000);
+const Color secondaryRed = Color(0xFFC63232);
+const Color accentYellow = Color(0xFFFFD600);
+const Color black = Color(0xFF000000);
+const Color white = Color(0xFFFFFFFF);
+const Color greyBg = Color(0xFFF8F8F8);
+const Color greyText = Color(0xFF666666);
+const Color lightGrey = Color(0xFFF0F0F0);
 
 class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({super.key});
@@ -76,14 +85,54 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text(_tr('checkout_page.checkout', 'Checkout')),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+      backgroundColor: greyBg,
+     appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(60), // Same height as SearchPage
+  child: Container(
+    decoration: BoxDecoration(
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(30),
+        bottomRight: Radius.circular(30),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: black.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(30),
+        bottomRight: Radius.circular(30),
+      ),
+      child: AppBar(
+        title: Text(
+          _tr('checkout_page.checkout', 'Checkout'),
+          style: const TextStyle(
+            color: black,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryYellow, accentYellow],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: black),
       ),
+    ),
+  ),
+),
+
+
       body: _buildBody(userAsync, cartService),
       bottomSheet: _buildBottomSheet(cartService, userAsync),
       bottomNavigationBar: _buildBottomNavigationBar(2),
@@ -93,10 +142,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   Widget _buildBottomNavigationBar(int currentIndex) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
+            color: black.withOpacity(0.08),
             blurRadius: 20,
             offset: const Offset(0, -2),
           ),
@@ -108,44 +157,104 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           if (index == 0) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => ClientHomePage()),
+              MaterialPageRoute(builder: (_) => const ClientHomePage()),
             );
           } else if (index == 1) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => SearchPage()),
+              MaterialPageRoute(builder: (_) => const SearchPage()),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => CheckoutPage()),
+              MaterialPageRoute(builder: (_) => const CheckoutPage()),
             );
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => ProfilePage()),
+              MaterialPageRoute(builder: (_) => const ProfilePage()),
             );
           }
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.deepOrange,
-        unselectedItemColor: Colors.grey.shade600,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        items:  [
+        backgroundColor: white,
+        selectedItemColor: secondaryRed,
+        unselectedItemColor: greyText,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 11,
+        ),
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 0 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.home_rounded,
+                size: 22,
+                color: currentIndex == 0 ? secondaryRed : greyText,
+              ),
+            ),
             label: _tr('checkout_page.home', 'Home'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.search),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 1 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.search_rounded,
+                size: 22,
+                color: currentIndex == 1 ? secondaryRed : greyText,
+              ),
+            ),
             label: _tr('checkout_page.search', 'Search'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 2 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.shopping_cart_rounded,
+                size: 22,
+                color: currentIndex == 2 ? secondaryRed : greyText,
+              ),
+            ),
             label: _tr('checkout_page.cart', 'Cart'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 3 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.person_rounded,
+                size: 22,
+                color: currentIndex == 3 ? secondaryRed : greyText,
+              ),
+            ),
             label: _tr('checkout_page.profile', 'Profile'),
           ),
         ],
@@ -159,21 +268,69 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
 
     if (cartService.isEmpty) {
-      return  Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shopping_cart_outlined, size: 70, color: Colors.grey),
-            SizedBox(height: 12),
-            Text(
-              _tr('checkout_page.cart_empty' , 'Your cart is empty'),
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.shopping_cart_outlined,
+                size: 48,
+                color: primaryYellow,
+              ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
+              _tr('checkout_page.cart_empty', 'Your cart is empty'),
+              style: const TextStyle(
+                fontSize: 18,
+                color: black,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
                 _tr('checkout_page.add_items_message', 'Add some items from restaurants to continue'),
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-              textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: greyText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ClientHomePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryRed,
+                foregroundColor: white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Text(_tr('checkout_page.browse_restaurants', 'Browse Restaurants')),
             ),
           ],
         ),
@@ -204,7 +361,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             if (isLoggedIn) UserInfoWidget(userData: userData['data']),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     const CartItemsWidget(),
@@ -254,13 +411,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -270,7 +427,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -283,7 +440,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: 120,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -292,7 +449,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: double.infinity,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -301,7 +458,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: 180,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -313,7 +470,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       width: 60,
                       height: 16,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: lightGrey,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -321,7 +478,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       width: 80,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: lightGrey,
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -339,13 +496,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -356,7 +513,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             width: 120,
             height: 20,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -369,7 +526,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           const SizedBox(height: 16),
           Container(
             height: 1,
-            color: Colors.grey.shade300,
+            color: lightGrey,
           ),
           const SizedBox(height: 16),
           Row(
@@ -379,7 +536,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                 width: 60,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: lightGrey,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -387,7 +544,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                 width: 80,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: lightGrey,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -406,7 +563,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           width: 100,
           height: 14,
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: lightGrey,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -414,7 +571,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           width: 60,
           height: 14,
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: lightGrey,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -444,13 +601,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -460,7 +617,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               shape: BoxShape.circle,
             ),
           ),
@@ -473,7 +630,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: 120,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -482,7 +639,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: 100,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -491,7 +648,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: double.infinity,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -502,7 +659,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -521,14 +678,18 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+            color: black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
           ),
         ],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
       ),
       child: SafeArea(
         child: userAsync.when(
@@ -563,7 +724,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: 60,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -572,7 +733,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   width: 100,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -583,7 +744,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             width: 120,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -596,34 +757,82 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          _tr('checkout_page.login_to_place_order', 'Login to place order'),
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[700],
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: secondaryRed.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _tr('checkout_page.total_label: ${total.toStringAsFixed(2)} MAD', 'Total: ${total.toStringAsFixed(2)} MAD'),
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.deepOrange,
+          child: Text(
+            _tr('checkout_page.login_to_place_order', 'Login to place order'),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: black,
+            ),
           ),
         ),
         const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _tr('checkout_page.total', 'Total'),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: black,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [secondaryRed, Color(0xFFE04B4B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: secondaryRed.withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                '${total.toStringAsFixed(2)} MAD',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: white,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: Colors.grey.shade300),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: lightGrey),
+                  backgroundColor: white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child:  Text(_tr('checkout_page.continue_browsing', 'Continue Browsing')),
+                child: Text(
+                  _tr('checkout_page.continue_browsing', 'Continue Browsing'),
+                  style: const TextStyle(
+                    color: black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -636,12 +845,19 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ref.refresh(currentUserProvider);
                 }),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: secondaryRed,
+                  foregroundColor: white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
-                child:  Text(
-                  _tr('checkout_page.login_now' , 'Login Now'),
-                  style: TextStyle(color: Colors.white),
+                child: Text(
+                  _tr('checkout_page.login_now', 'Login Now'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -675,7 +891,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_tr('checkout_page.invalid_user_account_message', 'Invalid user account. Please login again')),
-          backgroundColor: Colors.red,
+          backgroundColor: secondaryRed,
         ),
       );
       return;
@@ -685,8 +901,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     if (_selectedDeliveryOption == 'choose' && _selectedDeliveryDriver == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_tr('checkout_page.please_select_a_delivery_driver' , 'Please select a delivery driver')),
-          backgroundColor: Colors.orange,
+          content: Text(_tr('checkout_page.please_select_a_delivery_driver', 'Please select a delivery driver')),
+          backgroundColor: primaryYellow,
         ),
       );
       return;
@@ -738,7 +954,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_tr('${orderResult['message']}', '${orderResult['message']}')),
-            backgroundColor: Colors.red,
+            backgroundColor: secondaryRed,
           ),
         );
       }
@@ -749,7 +965,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_tr('checkout_page.error_processing_order : $e', 'Error processing order: $e')),
-          backgroundColor: Colors.red,
+          backgroundColor: secondaryRed,
         ),
       );
     } finally {
@@ -759,59 +975,142 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
   }
 
-  // ✅ UPDATED: Build order data with proper extras format
-  Future<Map<String, dynamic>> _buildOrderData(
-    Map<String, dynamic> user, 
-    CartService cartService,
-  ) async {
-    final location = await LocationManager().getStoredLocation();
-    String city = _tr('checkout_page.unknown_city', 'Unknown City');
-    String street = _tr('checkout_page.unknown_street', 'Unknown Street');
+// ✅ UPDATED: Build order data with proper extras format
+Future<Map<String, dynamic>> _buildOrderData(
+  Map<String, dynamic> user, 
+  CartService cartService,
+) async {
+  final location = await LocationManager().getStoredLocation();
+  
+  // Build address string only if we have valid location data
+  String? fullAddress;
+  if (location != null && (location.city?.isNotEmpty == true || location.street?.isNotEmpty == true)) {
+    final street = location.street?.isNotEmpty == true ? location.street : '';
+    final city = location.city?.isNotEmpty == true ? location.city : '';
     
-    if (location != null) {
-      city = location.city;
-      street = location.street;
+    if (street.isNotEmpty && city.isNotEmpty) {
+      fullAddress = '$street, $city';
+    } else if (street.isNotEmpty) {
+      fullAddress = street;
+    } else if (city.isNotEmpty) {
+      fullAddress = city;
     }
-    
-    final String fullAddress = '$street, $city';
-
-    final deliveryDriverId = _selectedDeliveryOption == 'choose' && _selectedDeliveryDriver != null 
-        ? _selectedDeliveryDriver!.id 
-        : null;
-
-    // ✅ UPDATED: Use the new order format that includes extras
-    final orderFormat = cartService.toOrderFormat();
-    
-    return {
-      "client_id": user['client_id'],
-      "delivery_driver_id": deliveryDriverId,
-      "address": fullAddress,
-      "products": orderFormat['products'], // This now includes extras properly
-    };
   }
+
+  final deliveryDriverId = _selectedDeliveryOption == 'choose' && _selectedDeliveryDriver != null 
+      ? _selectedDeliveryDriver!.id 
+      : null;
+
+  // ✅ UPDATED: Use the new order format that includes extras
+  final orderFormat = cartService.toOrderFormat();
+  
+  return {
+    "client_id": user['client_id'],
+    "delivery_driver_id": deliveryDriverId,
+    "address": fullAddress, // Will be null if address is unknown
+    "products": orderFormat['products'], // This now includes extras properly
+  };
+}
 
   void _showLoginRequiredDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title:  Text(_tr('checkout_page.login_required' , 'Login Required')),
-        content:  Text(_tr('checkout_page.login_required_message' , 'You need to login to place orders.')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child:  Text(_tr('checkout_page.cancel' , 'Cancel')),
+      builder: (_) => Dialog(
+        backgroundColor: white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: secondaryRed.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock,
+                  size: 30,
+                  color: secondaryRed,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _tr('checkout_page.login_required', 'Login Required'),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: black,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _tr('checkout_page.login_required_message', 'You need to login to place orders.'),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: greyText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: lightGrey),
+                        backgroundColor: white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        _tr('checkout_page.cancel', 'Cancel'),
+                        style: const TextStyle(
+                          color: black,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()))
+                          .then((_) {
+                            ref.refresh(currentUserProvider);
+                          });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: secondaryRed,
+                        foregroundColor: white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        _tr('checkout_page.login_now', 'Login Now'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()))
-                .then((_) {
-                  ref.refresh(currentUserProvider);
-                });
-            },
-            child:  Text(_tr('checkout_page.login_now' , 'Login Now')),
-          ),
-        ],
+        ),
       ),
     );
   }

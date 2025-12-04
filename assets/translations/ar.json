@@ -17,7 +17,10 @@
     "retry": "إعادة المحاولة",
     "yes": "نعم",
     "no": "لا",
-    "token_expired": "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى."
+    "token_expired": "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.",
+      "suggest": "اقترح"
+
+
   },
   "auth_page": {
     "welcome_back": "أهلا بعودتك",
@@ -75,6 +78,26 @@
     "upload_profile_photo": "انقر لرفع صورة الملف الشخصي",
     "photo_hint": "يمكنك التقاط صورة أو اختيارها من المعرض"
   },
+  
+  "store_suggestion": {
+    "title": "هل تفتقد متجرًا معينًا؟",
+    "subtitle": "اقترح المتاجر التي تود رؤيتها في تطبيقنا",
+    "store_name": "اسم المتجر",
+    "store_name_hint": "أدخل اسم المتجر",
+    "store_name_required": "اسم المتجر مطلوب",
+    "store_name_min_length": "يجب أن يكون اسم المتجر على الأقل حرفين",
+    "store_type": "نوع المتجر",
+    "store_type_hint": "اختر نوع المتجر",
+    "store_type_required": "نوع المتجر مطلوب",
+    "description": "الوصف (اختياري)",
+    "description_hint": "أخبرنا المزيد عن هذا المتجر...",
+    "submit": "تقديم الاقتراح",
+    "dismiss": "تجاهل",
+    "dismiss_permanently": "عدم الظهور مرة أخرى",
+    "success_message": "شكرًا! تم تقديم اقتراحك بنجاح.",
+    "error_message": "فشل في تقديم الاقتراح. الرجاء المحاولة مرة أخرى."
+  },
+
   "home_page": {
     "home": "الرئيسية",
     "search": "بحث",
@@ -139,7 +162,8 @@
     "refresh_location": "تحديث الموقع",
     "location_info": "يتم تحديث موقعك تلقائياً عند فتح التطبيق",
     "delivery_to": "توصيل إلى",
-    "getting_your_location": "جاري الحصول على موقعك..."
+    "getting_your_location": "جاري الحصول على موقعك...",
+    "close": "إغلاق"
   },
   "location_service": {
     "unknown_city": "مدينة غير معروفة",
@@ -155,7 +179,9 @@
     "location_required": "الوصول إلى الموقع مطلوب للوظائف الكاملة للتطبيق"
   },
   "businesses_section": {
-    "Top_Rated_Businesses": "أفضل المتاجر تقييمًا"
+    "Top_Rated_Businesses": "أفضل المتاجر تقييمًا",
+    "Highest_rated_businesses_near_you": "أفضل المتاجر تقييمًا بالقرب منك"
+
   },
 "delivery_profile_page": {
     "my_account": "حسابي",
@@ -294,6 +320,14 @@
     "address": "العنوان",
     "items_count": "عدد المنتجات",
     "restaurant": "المطعم",
+    "no_items": "لا توجد منتجات",
+    "more_items": "منتجات أخرى",
+     "more_stores": "متاجر أخرى",
+     "stores": "متاجر",
+     "not_available": "غير متوفر",
+     "estimated": "مقدر",
+     "order_summary": "ملخص الطلب",
+     
     "estimates": {
       "preparing": "قيد التحضير",
       "on_the_way": "في الطريق"
@@ -316,7 +350,10 @@
     "just_now": "الآن",
     "minutes_ago": "دقائق مضت",
     "hours_ago": "ساعات مضت",
-    "days_ago": "أيام مضت"
+    "days_ago": "أيام مضت",
+    "hour_short": "س",
+    "minutes": "د",
+    "estimated": "مقدر"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -870,6 +907,7 @@
   "checkout": "السلة",
   "home": "الرئيسية",
   "cart": "السلة",
+  "browse_restaurants": "تصفح المطاعم",
   "search": "بحث",
   "profile": "الملف الشخصي",
   "your_cart": "سلتك",
@@ -950,7 +988,9 @@
       "all_categories": "الكل",
       "businesses_found": " تم العثور على متاجر",
       "no_businesses_found": "لم يتم العثور على أي متاجر",
-      "try_different_keywords": "جرّب كلمات مفتاحية أو فئات مختلفة"
+      "try_different_keywords": "جرّب كلمات مفتاحية أو فئات مختلفة",
+      "of_total": " من الإجمالي ",
+      "loading_businesses": "جاري تحميل المتاجر..." 
   },
   "language": {
       "error_changing_language": "خطأ في تغيير اللغة",

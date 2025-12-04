@@ -322,6 +322,24 @@ class ApprovedDeliveryMenPage extends ConsumerWidget {
                       color: Colors.grey,
                     ),
                   ),
+                  const SizedBox(height: 30),
+                  // ADDED REFRESH BUTTON HERE
+                  ElevatedButton.icon(
+                    onPressed: () => ref.invalidate(approvedDeliveryMenProvider),
+                    icon: const Icon(Icons.refresh, size: 20),
+                    label: Text('approved_delivery_men_page.refresh'.tr()),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             );

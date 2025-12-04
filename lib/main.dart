@@ -22,15 +22,25 @@ void main() async {
   final String? savedLangCode = prefs.getString('locale');
   final Locale startLocale = savedLangCode != null ? Locale(savedLangCode) : const Locale('ar');
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+  print("🔥 Starting Firebase initialization...");
+
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp();
+    print("✅ Firebase initialized successfully");
+  } catch (e) {
+    print("❌ Firebase initialization error: $e");
+    print("⚠️  Make sure GoogleService-Info.plist is in ios/Runner directory");
+    print("⚠️  Enable Push Notifications in Xcode: Runner → Signing & Capabilities");
+  }
 
   // Initialize ApiClient
+  ApiClient.init();
 
-    ApiClient.init();
-
-  // Add this line back if you need background notifications
+  // Add background handler for FCM
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  print("🚀 Running the app...");
 
   runApp(
     EasyLocalization(
@@ -43,6 +53,7 @@ void main() async {
     ),
   );
 }
+
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
@@ -58,6 +69,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
+    print("📱 MyApp initState called");
     _initializeApp();
   }
 
@@ -65,6 +77,9 @@ class _MyAppState extends ConsumerState<MyApp> {
     try {
       print("🚀 Starting app initialization...");
       
+      // Add a small delay to ensure Firebase is fully initialized
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // 1. Initialize Notification Service FIRST
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
@@ -75,9 +90,18 @@ class _MyAppState extends ConsumerState<MyApp> {
       await fcmManager.initialize();
       print("✅ FCM Manager ready");
 
-      // 3. Request notification permissions
-      await fcmManager.requestPermissions();
-      print("✅ Notification permissions requested");
+      // 3. Request notification permissions with delay for iOS
+      // iOS needs the app to be fully running before requesting permissions
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await Future.delayed(const Duration(seconds: 1));
+        try {
+          await fcmManager.requestPermissions();
+          print("✅ Notification permissions requested");
+        } catch (e) {
+          print("⚠️ Could not request notification permissions: $e");
+          print("ℹ️ This might be expected on iOS if app hasn't fully started");
+        }
+      });
 
       // 4. Initialize App Service
       final appInitService = AppInitializationService(ref);
@@ -131,6 +155,8 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    print("🏗️ Building MyApp widget, isInitializing: $_isInitializing");
+
     if (_isInitializing) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,

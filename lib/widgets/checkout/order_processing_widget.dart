@@ -18,7 +18,9 @@ class OrderProcessingWidget extends StatelessWidget {
     return ElevatedButton(
       onPressed: isSubmitting ? null : onProcessOrder,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSubmitting ? Colors.grey : Colors.deepOrange,
+        backgroundColor: isSubmitting 
+            ? const Color(0xFFF0F0F0) // lightGrey
+            : const Color(0xFFC63232), // secondaryRed
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 2,
@@ -32,7 +34,7 @@ class OrderProcessingWidget extends StatelessWidget {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: Color(0xFF666666), // greyText
                   ),
                 ),
                 SizedBox(width: 8),
@@ -41,7 +43,7 @@ class OrderProcessingWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14, 
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: Color(0xFF666666), // greyText
                   ),
                 ),
               ],
@@ -49,14 +51,14 @@ class OrderProcessingWidget extends StatelessWidget {
           : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.shopping_bag_outlined, size: 18, color: Colors.white),
+                const Icon(Icons.shopping_bag_outlined, size: 18, color: Color(0xFFFFFFFF)), // white
                 const SizedBox(width: 6),
                 Text(
                   'Place Order - ${total.toStringAsFixed(2)} MAD',
                   style: const TextStyle(
                     fontSize: 14, 
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: Color(0xFFFFFFFF), // white
                   ),
                 ),
               ],
@@ -87,11 +89,11 @@ class LoginToOrderWidget extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              side: BorderSide(color: Colors.grey[300]!),
+              side: BorderSide(color: const Color(0xFFF0F0F0)), // lightGrey
             ),
             child: const Text(
               'Continue Browsing',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Color(0xFF666666)), // greyText
             ),
           ),
         ),
@@ -100,7 +102,7 @@ class LoginToOrderWidget extends StatelessWidget {
           child: ElevatedButton(
             onPressed: onLogin,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepOrange,
+              backgroundColor: const Color(0xFFC63232), // secondaryRed
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -108,7 +110,10 @@ class LoginToOrderWidget extends StatelessWidget {
             ),
             child: const Text(
               'Login to Order',
-              style: TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(
+                color: Color(0xFFFFFFFF), // white
+                fontSize: 14,
+              ),
             ),
           ),
         ),

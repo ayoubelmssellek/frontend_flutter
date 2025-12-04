@@ -123,8 +123,8 @@ android_notification_icons:
 
 # Configuration for splash screen
 flutter_native_splash:
-  color: "#FFA500"          # الخلفية البرتقالية
+  color: "#FFA500"
   image: assets/images/splash_img.png
   android: true
   ios: true
-  web: false
+  fill: true

@@ -160,6 +160,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
               final products = result['data'] as List<dynamic>;
               _products = products;
               
+              
               // Open modal if initialProductId is provided - ONLY ONCE
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (widget.initialProductId != null && 
@@ -295,7 +296,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                       return Container(
                         margin: const EdgeInsets.only(right: 8),
                         child: Material(
-                          color: sel ? Colors.deepOrange : Colors.transparent,
+                          color: sel ? Color(0xFFC63232) : Colors.transparent,
                           borderRadius: BorderRadius.circular(20),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(20),
@@ -306,10 +307,10 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: sel ? Colors.deepOrange : Colors.grey.shade300,
+                                  color: sel ? Color(0xFFC63232) : Colors.grey.shade300,
                                   width: 1.5,
                                 ),
-                                color: sel ? Colors.deepOrange : Colors.transparent,
+                                color: sel ? Color(0xFFC63232) : Colors.transparent,
                               ),
                               child: Text(
                                 cat,
@@ -498,7 +499,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                     ref.invalidate(businessProductsProvider(widget.shop.id.toString()));
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange,
+                    backgroundColor: Color(0xFFC63232), // secondaryRed
                     foregroundColor: Colors.white,
                   ),
                   child: Text(_tr("home_page.restaurant_home_page.try_again", "Try Again")),
@@ -603,7 +604,7 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                 return Container(
                   margin: const EdgeInsets.only(right: 8),
                   child: Material(
-                    color: sel ? Colors.deepOrange : Colors.transparent,
+                    color: sel ? Color(0xFFC63232) : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(20),
@@ -614,10 +615,10 @@ class _RestaurantProfilePageState extends ConsumerState<RestaurantProfile>
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: sel ? Colors.deepOrange : Colors.grey.shade300,
+                            color: sel ? Color(0xFFC63232) : Colors.grey.shade300,
                             width: 1.5,
                           ),
-                          color: sel ? Colors.deepOrange : Colors.transparent,
+                          color: sel ? Color(0xFFC63232) : Colors.transparent,
                         ),
                         child: Text(
                           cat,
@@ -695,7 +696,7 @@ Map<String, List<dynamic>> _groupProductsByCategory(List<dynamic> products) {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.deepOrange,
+                  color: Color(0xFFC63232), // secondaryRed
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

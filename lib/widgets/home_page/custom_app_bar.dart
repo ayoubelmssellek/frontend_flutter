@@ -6,6 +6,18 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/services/location_manager.dart';
 import 'package:food_app/services/location_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
+import 'package:url_launcher/url_launcher.dart';
+
+// Color Palette
+const Color primaryYellow = Color(0xFFCFC000);
+const Color secondaryRed = Color(0xFFC63232);
+const Color accentYellow = Color(0xFFFFD600);
+const Color black = Color(0xFF000000);
+const Color white = Color(0xFFFFFFFF);
+const Color greyBg = Color(0xFFF8F8F8);
+const Color greyText = Color(0xFF666666);
+const Color lightGrey = Color(0xFFF0F0F0);
 
 class HomeAppBar extends StatefulWidget {
   final VoidCallback? onLocationError;
@@ -33,12 +45,9 @@ class _HomeAppBarState extends State<HomeAppBar> {
   }
 
   void _initializeLocation() async {
-    // Listen for location updates
     _locationSub = _locationManager.locationStream.listen(
       _updateLocationFromStream,
     );
-
-    // Load initial location
     await _loadSavedLocation();
   }
 
@@ -47,7 +56,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
       setState(() {
         _city = location.city;
         _street = location.street;
-        _currentError = null; // Clear any previous errors
+        _currentError = null;
       });
     }
   }
@@ -79,7 +88,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
 
     try {
       await _locationService.refreshAndStoreLocation();
-      // Stream will update the UI automatically via _updateLocationFromStream
     } on LocationException catch (e) {
       _handleLocationException(e);
     } catch (e) {
@@ -101,7 +109,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
       });
     }
 
-    // Show appropriate dialog based on error type
     switch (exception.error) {
       case LocationError.serviceDisabled:
         _showEnableLocationDialog();
@@ -176,35 +183,50 @@ class _HomeAppBarState extends State<HomeAppBar> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.settings, color: Colors.deepOrange),
-            const SizedBox(width: 8),
-            Text('home_app_bar.location_settings'.tr()),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: secondaryRed.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.settings, color: secondaryRed, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'home_app_bar.location_settings'.tr(),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: black,
+              ),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'home_app_bar.location_settings_description'.tr(),
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+              _getSettingsDialogMessage(),
+              style: const TextStyle(fontSize: 14, color: greyText),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
+                color: greyBg,
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  Icon(Icons.info_outline_rounded, color: secondaryRed, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'home_app_bar.location_settings_hint'.tr(),
+                      _getSettingsDialogHint(),
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -216,14 +238,77 @@ class _HomeAppBarState extends State<HomeAppBar> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('common.cancel'.tr()),
+            child: Text(
+              'common.cancel'.tr(),
+              style: const TextStyle(color: greyText),
+            ),
           ),
           ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await Geolocator.openAppSettings();
-            },
+            onPressed: _openAppSettings,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: secondaryRed,
+              foregroundColor: white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: Text('home_app_bar.open_settings'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getSettingsDialogMessage() {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'home_app_bar.ios_location_settings_description'.tr();
+    }
+    return 'home_app_bar.location_settings_description'.tr();
+  }
+
+  String _getSettingsDialogHint() {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'home_app_bar.ios_location_settings_hint'.tr();
+    }
+    return 'home_app_bar.location_settings_hint'.tr();
+  }
+
+  Future<void> _openAppSettings() async {
+    Navigator.of(context).pop();
+    
+    try {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        const url = 'app-settings:';
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url));
+        } else {
+          await Geolocator.openAppSettings();
+        }
+      } else {
+        await Geolocator.openLocationSettings();
+      }
+    } catch (e) {
+      try {
+        await Geolocator.openAppSettings();
+      } catch (e) {
+        _showCannotOpenSettingsDialog();
+      }
+    }
+  }
+
+  void _showCannotOpenSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('home_app_bar.cannot_open_settings'.tr()),
+        content: Text(
+          'home_app_bar.manual_settings_instructions'.tr(),
+          style: const TextStyle(fontSize: 14, color: greyText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('common.ok'.tr()),
           ),
         ],
       ),
@@ -234,8 +319,15 @@ class _HomeAppBarState extends State<HomeAppBar> {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -246,25 +338,43 @@ class _HomeAppBarState extends State<HomeAppBar> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                gradient: LinearGradient(
+                  colors: [primaryYellow, accentYellow],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryYellow.withOpacity(0.3),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
               child: Icon(
                 Icons.location_off_rounded,
                 size: 40,
-                color: Colors.orange.shade600,
+                color: white,
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'location_service.enable_location_title'.tr(),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: black,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'location_service.enable_location_description'.tr(),
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              _getEnableLocationDescription(),
+              style: const TextStyle(
+                fontSize: 14,
+                color: greyText,
+                height: 1.4,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -273,6 +383,14 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: greyText,
+                      side: const BorderSide(color: lightGrey),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: Text('location_service.not_now'.tr()),
                   ),
                 ),
@@ -281,16 +399,16 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(context);
-                      await Geolocator.openLocationSettings();
-                      // Wait and check if GPS is now enabled
-                      await Future.delayed(const Duration(seconds: 2));
-                      final serviceEnabled =
-                          await Geolocator.isLocationServiceEnabled();
-                      if (serviceEnabled && mounted) {
-                        // GPS is enabled, try to get location
-                        await _refreshLocation();
-                      }
+                      await _openLocationSettings();
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: secondaryRed,
+                      foregroundColor: white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: Text('location_service.enable_location'.tr()),
                   ),
                 ),
@@ -302,12 +420,47 @@ class _HomeAppBarState extends State<HomeAppBar> {
     );
   }
 
+  String _getEnableLocationDescription() {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'location_service.ios_enable_location_description'.tr();
+    }
+    return 'location_service.enable_location_description'.tr();
+  }
+
+  Future<void> _openLocationSettings() async {
+    try {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        await Geolocator.openAppSettings();
+      } else {
+        await Geolocator.openLocationSettings();
+      }
+      
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (!kIsWeb) {
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled && mounted) {
+          await _refreshLocation();
+        }
+      }
+    } catch (e) {
+      print('Error opening location settings: $e');
+    }
+  }
+
   Widget _buildLocationPermissionDialog() {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -318,25 +471,43 @@ class _HomeAppBarState extends State<HomeAppBar> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                gradient: LinearGradient(
+                  colors: [primaryYellow, accentYellow],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryYellow.withOpacity(0.3),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
               child: Icon(
                 Icons.location_on_rounded,
                 size: 40,
-                color: Colors.blue.shade600,
+                color: white,
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'location_service.location_access_title'.tr(),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: black,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'location_service.location_access_description'.tr(),
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              _getLocationAccessDescription(),
+              style: const TextStyle(
+                fontSize: 14,
+                color: greyText,
+                height: 1.4,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -345,6 +516,14 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: greyText,
+                      side: const BorderSide(color: lightGrey),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: Text('location_service.deny'.tr()),
                   ),
                 ),
@@ -355,6 +534,14 @@ class _HomeAppBarState extends State<HomeAppBar> {
                       Navigator.pop(context);
                       await _refreshLocation();
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: secondaryRed,
+                      foregroundColor: white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: Text('location_service.allow'.tr()),
                   ),
                 ),
@@ -366,12 +553,26 @@ class _HomeAppBarState extends State<HomeAppBar> {
     );
   }
 
+  String _getLocationAccessDescription() {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'location_service.ios_location_access_description'.tr();
+    }
+    return 'location_service.location_access_description'.tr();
+  }
+
   Widget _buildManualPermissionDialog() {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -382,21 +583,39 @@ class _HomeAppBarState extends State<HomeAppBar> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                gradient: LinearGradient(
+                  colors: [secondaryRed, Colors.red.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: secondaryRed.withOpacity(0.3),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
-              child: Icon(Icons.settings, size: 40, color: Colors.red.shade600),
+              child: Icon(Icons.settings, size: 40, color: white),
             ),
             const SizedBox(height: 20),
             Text(
-              'location_service.manual_permission_title'.tr(),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              _getManualPermissionTitle(),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: black,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'location_service.manual_permission_description'.tr(),
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              _getManualPermissionDescription(),
+              style: const TextStyle(
+                fontSize: 14,
+                color: greyText,
+                height: 1.4,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -405,6 +624,14 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: greyText,
+                      side: const BorderSide(color: lightGrey),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: Text('common.cancel'.tr()),
                   ),
                 ),
@@ -413,8 +640,16 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(context);
-                      await Geolocator.openAppSettings();
+                      await _openAppSettings();
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: secondaryRed,
+                      foregroundColor: white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: Text('location_service.open_settings'.tr()),
                   ),
                 ),
@@ -424,6 +659,20 @@ class _HomeAppBarState extends State<HomeAppBar> {
         ),
       ),
     );
+  }
+
+  String _getManualPermissionTitle() {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'location_service.ios_manual_permission_title'.tr();
+    }
+    return 'location_service.manual_permission_title'.tr();
+  }
+
+  String _getManualPermissionDescription() {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'location_service.ios_manual_permission_description'.tr();
+    }
+    return 'location_service.manual_permission_description'.tr();
   }
 
   @override
@@ -444,26 +693,40 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 onTap: _showLocationDialog,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                    horizontal: 16,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    color: white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: lightGrey),
+                    boxShadow: [
+                      BoxShadow(
+                        color: black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.location_on,
-                        color:
-                            _currentError ==
-                                LocationError.permissionPermanentlyDenied
-                            ? Colors.red
-                            : Colors.deepOrange,
-                        size: 18,
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: secondaryRed.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.location_on_rounded,
+                          color: _currentError ==
+                                  LocationError.permissionPermanentlyDenied
+                              ? secondaryRed
+                              : secondaryRed,
+                          size: 20,
+                        ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,9 +735,9 @@ class _HomeAppBarState extends State<HomeAppBar> {
                               'home_app_bar.delivery_to'.tr(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey.shade600,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: greyText,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -484,31 +747,28 @@ class _HomeAppBarState extends State<HomeAppBar> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color:
-                                    _currentError ==
-                                        LocationError
-                                            .permissionPermanentlyDenied
-                                    ? Colors.red
-                                    : Colors.black,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: _currentError ==
+                                        LocationError.permissionPermanentlyDenied
+                                    ? secondaryRed
+                                    : black,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 8),
                       Icon(
-                        Icons.arrow_drop_down,
-                        color: Colors.grey.shade500,
-                        size: 20,
+                        Icons.arrow_drop_down_rounded,
+                        color: greyText,
+                        size: 24,
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-            // const SizedBox(width: 8),
-            // _buildNotificationIcon(),
           ],
         ),
       ),
@@ -525,40 +785,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
     }
     return '$_city, $_street';
   }
-
-  // Widget _buildNotificationIcon() {
-  //       return Container(
-  //         width: 40,
-  //         height: 40,
-  //         decoration: BoxDecoration(
-  //           color: Colors.grey.shade100,
-  //           shape: BoxShape.circle,
-  //         ),
-  //         child: Stack(
-  //           children: [
-  //             const Center(
-  //               child: Icon(Icons.notifications_none_rounded,
-  //                 color: Colors.grey, size: 20),
-  //             ),
-  //             Positioned(
-  //               top: 8,
-  //               right: 8,
-  //               child: Container(
-  //                 width: 8,
-  //                 height: 8,
-  //                 decoration: const BoxDecoration(
-  //                   shape: BoxShape.circle,
-  //                   color: Colors.deepOrange,
-  //                 ),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       );
-  //   }
-
-  }
-
+}
 
 class LocationDialog extends StatelessWidget {
   final String city;
@@ -581,16 +808,32 @@ class LocationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
-          Icon(
-            Icons.location_on,
-            color: hasPermanentError ? Colors.red : Colors.deepOrange,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: secondaryRed.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.location_on_rounded,
+              color: hasPermanentError ? secondaryRed : secondaryRed,
+              size: 22,
+            ),
           ),
-          const SizedBox(width: 10),
-          Text('home_app_bar.current_location'.tr(),
-               style: TextStyle(fontSize: 20)
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'home_app_bar.current_location'.tr(),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: black,
+              ),
+            ),
           ),
         ],
       ),
@@ -600,17 +843,18 @@ class LocationDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(12),
+              color: greyBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: lightGrey),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.location_pin,
-                  color: hasPermanentError ? Colors.red : Colors.deepOrange,
-                  size: 24,
+                  color: hasPermanentError ? secondaryRed : secondaryRed,
+                  size: 28,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,22 +864,21 @@ class LocationDialog extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: hasPermanentError ? Colors.red : Colors.black,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: hasPermanentError ? secondaryRed : black,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         isLoading
                             ? 'home_app_bar.updating_location'.tr()
                             : (hasPermanentError
-                                  ? 'home_app_bar.permission_permanently_denied'
-                                        .tr()
-                                  : 'home_app_bar.automatically_updated'.tr()),
-                        style: TextStyle(
+                                ? 'home_app_bar.permission_permanently_denied'.tr()
+                                : 'home_app_bar.automatically_updated'.tr()),
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: greyText,
                         ),
                       ),
                     ],
@@ -644,46 +887,75 @@ class LocationDialog extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           if (!hasPermanentError) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: isLoading ? null : onRefresh,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: secondaryRed,
+                  foregroundColor: white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
                 icon: isLoading
                     ? SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: white,
                         ),
                       )
-                    : const Icon(Icons.refresh, size: 18),
+                    : const Icon(Icons.refresh_rounded, size: 20),
                 label: Text(
                   isLoading
                       ? 'home_app_bar.updating'.tr()
                       : 'home_app_bar.refresh_location'.tr(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
           ],
           if (hasPermanentError) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: onOpenSettings,
-                icon: const Icon(Icons.settings, size: 18),
-                label: Text('home_app_bar.open_settings'.tr()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: secondaryRed,
+                  foregroundColor: white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                icon: const Icon(Icons.settings_rounded, size: 20),
+                label: Text(
+                  'home_app_bar.open_settings'.tr(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
           ],
           TextButton.icon(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, size: 18),
-            label: Text('common.close'.tr()),
+            icon: const Icon(Icons.close_rounded, size: 20),
+            label: Text(
+              'common.close'.tr(),
+              style: const TextStyle(color: greyText),
+            ),
           ),
         ],
       ),
