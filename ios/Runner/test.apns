@@ -1,0 +1,10 @@
+{
+  "Simulator Target Bundle": "com.oramadev.uniqque",
+  "aps": {
+    "alert": {
+      "title": "hi",
+      "body": "working"
+    },
+    "sound": "default"
+  }
+}
