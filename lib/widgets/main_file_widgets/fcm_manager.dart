@@ -1,7 +1,9 @@
+import 'dart:io' show Platform;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'notification_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Provider for FCM Manager
 final fcmManagerProvider = Provider<FCMManager>((ref) {
@@ -19,17 +21,16 @@ class FCMManager {
     try {
       print("🔧 Initializing FCM Manager...");
 
-      // IMPORTANT: Different handling for iOS vs Android
-      // iOS needs sound to be true for foreground notifications to work properly
+      // Disable auto notifications - we'll handle them manually
       await _messaging.setForegroundNotificationPresentationOptions(
-        alert: false, // We handle alerts manually via flutter_local_notifications
+        alert: false,
         badge: false,  
-        sound: false, // Keep false, we'll handle sound manually for consistency
+        sound: false,
       );
 
       print("✅ FCM auto-notifications disabled");
 
-      // Get and print FCM token
+      // Get FCM token
       final token = await getToken();
       if (token != null) {
         print("🔑 FCM Token: $token");
@@ -39,6 +40,10 @@ class FCMManager {
       _setupMessageListeners();
 
       print("✅ FCM Manager initialized");
+
+      // Request permissions
+      await Future.delayed(const Duration(seconds: 1));
+      await requestPermissions();
 
     } catch (e) {
       print("❌ Error initializing FCM Manager: $e");
@@ -56,7 +61,6 @@ class FCMManager {
       if (notification != null) {
         final bool isSilent = data['silent'] == 'true';
         
-        // Create notification content
         final String title = notification.title ?? 'طلب جديد 📦';
         final String body = notification.body ?? 'لديك طلب جديد';
         
@@ -68,13 +72,12 @@ class FCMManager {
             data: data,
           );
         } else {
-          // ALWAYS use SYSTEM DEFAULT sound
           await _notificationService.showNotification(
             title: title,
             body: body,
             orderId: data['order_id'] ?? data['orderId'] ?? data['id'] ?? 'unknown',
             data: data,
-            playSound: true, // This will use SYSTEM DEFAULT sound
+            playSound: true,
           );
         }
       }
@@ -110,41 +113,59 @@ class FCMManager {
     }
   }
 
-  // Request notification permissions - IMPORTANT for iOS
+  // Request notification permissions
   Future<void> requestPermissions() async {
     try {
-      // For iOS, we need to request permissions explicitly
-      // The settings may vary between platforms
-      final settings = await _messaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false, // Set to true if you need critical alerts
-        provisional: false, // Set to true for provisional notifications (iOS 12+)
-        sound: true,
-      );
-      
-      print('🔔 Notification permission status: ${settings.authorizationStatus}');
-      print('🔔 Notification permission granted: '
-          'alert: ${settings.alert}, '
-          'badge: ${settings.badge}, '
-          'sound: ${settings.sound}');
+      if (Platform.isIOS) {
+        print('📱 iOS: Requesting notification permission...');
+        
+        final settings = await _messaging.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
+        );
+        
+        print('🔔 iOS permission: ${settings.authorizationStatus}');
+            
+      } else if (Platform.isAndroid) {
+        print('📱 Android: Requesting notification permission...');
+        
+        // Simple permission request - permission_handler handles Android versions internally
+        final status = await Permission.notification.request();
+        print('🔔 Android permission: $status');
+      }
     } catch (e) {
-      print('❌ Error requesting notification permissions: $e');
+      print('❌ Error requesting permissions: $e');
+    }
+  }
+
+  // Check if notifications are enabled
+  Future<bool> areNotificationsEnabled() async {
+    try {
+      if (Platform.isIOS) {
+        final settings = await _messaging.getNotificationSettings();
+        return settings.authorizationStatus == AuthorizationStatus.authorized;
+      } else if (Platform.isAndroid) {
+        // Simple check - permission_handler handles all Android versions
+        final status = await Permission.notification.status;
+        return status.isGranted;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error checking notifications: $e');
+      return false;
     }
   }
 
   // Optional: Subscribe to topics if needed
   Future<void> subscribeToTopics(String userId, String userRole) async {
     try {
-      // Unsubscribe from all topics first to avoid duplicates
       await _messaging.unsubscribeFromTopic('all_users');
-      
-      // Subscribe to role-specific topic
       await _messaging.subscribeToTopic('role_${userRole.toLowerCase()}');
-      
-      // Subscribe to user-specific topic
       await _messaging.subscribeToTopic('user_$userId');
       
       print('✅ Subscribed to topics for user: $userId, role: $userRole');
@@ -157,11 +178,6 @@ class FCMManager {
 // Background handler
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // IMPORTANT: For iOS, make sure Firebase is initialized in background
   await Firebase.initializeApp();
   print("📩 Background message received: ${message.notification?.title}");
-  
-  // You can also handle background notifications here if needed
-  // Note: For iOS, background notifications are handled automatically when 
-  // proper entitlements and AppDelegate setup are in place
 }

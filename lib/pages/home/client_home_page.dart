@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:food_app/services/PhoneScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_app/pages/auth/token_expired_page.dart';
 import 'package:food_app/pages/cart/checkout_page.dart';
@@ -259,6 +260,7 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
   bool _hasShownStoreSuggestion = false;
   bool _showSuggestionBar = false;
   bool _isCheckingStorage = true;
+  Timer? _suggestionTimer; // Added timer variable
 
   @override
   void initState() {
@@ -283,8 +285,8 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
         _handleTabNavigation(widget.initialTab);
       }
       
-      // Check storage and show store suggestion bar after a delay
-      _checkAndShowStoreSuggestionBar();
+      // Initialize and check for store suggestion
+      _initializeStoreSuggestion();
     });
   }
 
@@ -293,10 +295,57 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     _mounted = false;
     _animationController.dispose();
     _hasHandledTokenNavigation = false;
+    _suggestionTimer?.cancel(); // Cancel timer on dispose
     super.dispose();
   }
 
-  // NEW: Check storage and show suggestion bar if needed
+  // NEW: Initialize store suggestion logic with timer
+  Future<void> _initializeStoreSuggestion() async {
+    if (!_mounted) return;
+    
+    setState(() {
+      _isCheckingStorage = true;
+    });
+    
+    try {
+      // Check if suggestion was already shown today
+      final shouldShow = await _shouldShowStoreSuggestion();
+      if (shouldShow && mounted) {
+        // Show after 1 minute delay
+        _suggestionTimer = Timer(const Duration(minutes: 1), () {
+          if (mounted && _showSuggestionBar) {
+            _showStoreSuggestionSheet();
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    } finally {
+      if (_mounted) {
+        setState(() {
+          _isCheckingStorage = false;
+        });
+      }
+    }
+  }
+
+  Future<bool> _shouldShowStoreSuggestion() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastShownDate = prefs.getString('store_suggestion_last_shown');
+    
+    if (lastShownDate == null) {
+      // Never shown before
+      return true;
+    }
+    
+    final lastDate = DateTime.parse(lastShownDate);
+    final now = DateTime.now();
+    
+    // Show only once per day
+    return now.difference(lastDate).inDays >= 1;
+  }
+
+  // NEW: Check storage and show store suggestion bar after a delay
   Future<void> _checkAndShowStoreSuggestionBar() async {
     if (!_mounted) return;
     
@@ -359,8 +408,13 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     }
   }
 
-  void _showStoreSuggestionSheet() {
+  void _showStoreSuggestionSheet() async {
     if (!_mounted) return;
+    
+    // Save the date when suggestion is shown
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    await prefs.setString('store_suggestion_last_shown', now.toIso8601String());
     
     showModalBottomSheet(
       context: context,
@@ -373,34 +427,58 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     );
   }
 
-  // UPDATED: Save to storage when suggestion is submitted
-  Future<void> _handleStoreSuggestion(String storeName) async {
-    if (kDebugMode) {
-      print('Store Suggestion Submitted: $storeName');
+Future<void> _handleStoreSuggestion(String storeName) async {
+  try {
+    // Get the result from the provider
+    final result = await ref.read(storeClientSubmissionProvider(storeName).future);
+    
+    // Check if the submission was successful
+    if (result['success'] == true) {
+      // Save to storage so it doesn't show again
+      await saveStoreSuggestionDismissed(true);
+      
+      // Hide the bar
+      if (_mounted) {
+        setState(() {
+          _showSuggestionBar = false;
+        });
+      }
+      
+      // Show success message
+      if (_mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr('store_suggestion.success_message')),
+            backgroundColor: secondaryRed,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } else {
+      // Handle failure
+      if (_mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? tr('store_suggestion.error_message')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
-    
-    // Save to storage so it doesn't show again
-    await saveStoreSuggestionDismissed(true);
-    
-    // Hide the bar
-    if (_mounted) {
-      setState(() {
-        _showSuggestionBar = false;
-      });
-    }
-    
-    // Show success message
+  } catch (e) {
+    // Handle error
     if (_mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(tr('store_suggestion.success_message')),
-          backgroundColor: secondaryRed,
+          content: Text(tr('store_suggestion.error_message')),
+          backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
       );
     }
   }
-
+}
   // UPDATED: Save to storage when dismissed
   Future<void> _handleDismissStoreSuggestion() async {
     // Save to storage so it doesn't show again
@@ -705,13 +783,13 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
                         ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 1),
                         child: Column(
                           children: [
-                            const SizedBox(height: 16),
                             
                             // Rating Section
                             const RatingSection(),
+                            ProductionPhoneAuth(),
                             
                             const SizedBox(height: 24),
                             
@@ -720,7 +798,6 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
                               onViewAllOrders: _navigateToAllOrders,
                             ),
                             
-                            const SizedBox(height: 24),
                             
                            
                             // Restaurants List
@@ -737,6 +814,8 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
                       ),
                     ),
                   ),
+              
+              
                 ],
               ),
             ),

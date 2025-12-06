@@ -6,7 +6,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:food_app/pages/delivery_admin_pages/admin_home_page.dart';
 import 'package:food_app/pages/home/client_home_page.dart';
 import 'package:food_app/pages/delivery/delivery_home_page.dart';
-import 'package:food_app/pages/home/restaurant_home_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/delivery_providers.dart';
 
@@ -138,9 +137,6 @@ class AppInitializationService {
     switch (role) {
       case 'client':
         return const ClientHomePage();
-      case 'restaurant':
-      case 'business_owner':
-        return const RestaurantHomePage();
       case 'delivery_driver':
       case 'delivery_man':
       case 'delivery':

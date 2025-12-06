@@ -544,7 +544,39 @@ Future<Map<String, dynamic>> resetPassword({
   }
 
 
+  // store client submission store name method
+  Future<Map<String, dynamic>> storeClientSubmission({
+    required String storeName,
+  }) async {
+    try {      
+      final data = {
+        'description': storeName,
+      };
 
+      final res = await ApiClient.dio.post(
+        '/feature-request',
+        data: data,
+      );
+      
+      return {
+        'success': true,
+        'message': res.data['message'] ?? 'Store name submitted successfully',
+      };
+    } on DioException catch (e) {
+      
+      String errorMessage = 'Failed to submit store name';
+      if (e.response?.data != null && e.response!.data is Map) {
+        final errorData = e.response!.data as Map;
+        errorMessage = errorData['message']?.toString() ?? 
+                     errorData['errors']?.values.first?.first?.toString() ?? 
+                     errorMessage;
+      }
+      
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      return {'success': false, 'message': 'Failed to submit store name: $e'};
+    }
+  }
 
 
   /// 🧩 دالة مساعدة لمعالجة أخطاء Dio

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/image_helper.dart';
@@ -135,11 +134,6 @@ class BusinessTypesSection extends ConsumerWidget {
                     return const SizedBox(); // Skip this item
                   }
 
-                  // Count businesses for this business type
-                  // final businessCount = backendBusinessOwners
-                  //     .where((business) => business['business_type'] == typeName)
-                  //     .length;
-
                   return GestureDetector(
                     onTap: () {
                       onBusinessTypeSelected(typeName);
@@ -149,7 +143,7 @@ class BusinessTypesSection extends ConsumerWidget {
                           builder: (_) => CategoryDetailsPage(
                             categoryName: typeName,
                             businessTypeId: typeId,
-                            categoryColor: secondaryRed,
+                            categoryColor: primaryYellow, // Using primaryYellow for AppBar
                           ),
                         ),
                       );
@@ -197,32 +191,6 @@ class BusinessTypesSection extends ConsumerWidget {
                                       color: isSelected ? secondaryRed : greyText,
                                     ),
                                   ),
-                                
-                                // Business Count Badge
-                                // if (businessCount > 0)
-                                //   Positioned(
-                                //     top: 4,
-                                //     right: 4,
-                                //     child: Container(
-                                //       width: 20,
-                                //       height: 20,
-                                //       decoration: BoxDecoration(
-                                //         color: secondaryRed,
-                                //         shape: BoxShape.circle,
-                                //         border: Border.all(color: white, width: 2),
-                                //       ),
-                                //       child: Center(
-                                //         child: Text(
-                                //           businessCount > 9 ? '9+' : businessCount.toString(),
-                                //           style: const TextStyle(
-                                //             fontSize: 9,
-                                //             color: white,
-                                //             fontWeight: FontWeight.w800,
-                                //           ),
-                                //         ),
-                                //       ),
-                                //     ),
-                                //   ),
                               ],
                             ),
                           ),
@@ -286,7 +254,9 @@ class BusinessTypesSection extends ConsumerWidget {
           ],
         )),
       ),
-    );
+
+
+    );  
   }
 
   // Helper function to get icon for category

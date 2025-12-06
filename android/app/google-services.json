@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "96860959043",
-    "project_id": "flutterapp-64479",
-    "storage_bucket": "flutterapp-64479.firebasestorage.app"
+    "project_number": "1083482588570",
+    "project_id": "uniqque-9ff71",
+    "storage_bucket": "uniqque-9ff71.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:96860959043:android:026081d8dd5fc3a5e77ff6",
+        "mobilesdk_app_id": "1:1083482588570:android:4c06f43f8a9372b2f22623",
         "android_client_info": {
           "package_name": "com.oramadev.uniqque"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAYmF0qU916PUmKjfeGo_JNeLnT9BdLuns"
+          "current_key": "AIzaSyD5fIbRMXKqgJBnHlJ3PE6TilPtFcaH_oM"
         }
       ],
       "services": {

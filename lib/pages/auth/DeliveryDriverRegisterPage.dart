@@ -241,8 +241,8 @@ Future<void> _register() async {
           // ❌ WhatsApp failed - navigate to client homepage directly
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'تم التسجيل بنجاح! سيتم تفعيل حسابك قريباً'),
-              backgroundColor: Colors.orange,
+              content: Text(result['message'] ?? 'تم التسجيل بنجاح'),
+              backgroundColor: Colors.green,
               duration: const Duration(seconds: 4),
             ),
           );
@@ -342,7 +342,7 @@ Future<void> _register() async {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.deepOrange),
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFFC63232)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -480,13 +480,13 @@ Future<void> _register() async {
                         height: 56,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepOrange,
+                            backgroundColor: Color(0xFFC63232),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           onPressed: _isLoading ? null : _register,
                           child: _isLoading
                               ? const CircularProgressIndicator(color: Colors.white)
-                              : Text("auth_page.delivery_register_title".tr(), style: const TextStyle(fontSize: 18)),
+                              : Text("auth_page.delivery_register_title".tr(), style: const TextStyle(fontSize: 18,color: Colors.white)),
                         ),
                       ),
                       const SizedBox(height: 24),

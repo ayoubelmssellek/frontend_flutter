@@ -6,6 +6,16 @@ import 'package:food_app/widgets/home_page/ShopCard.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+// Color Palette
+const Color primaryYellow = Color(0xFFCFC000);
+const Color secondaryRed = Color(0xFFC63232);
+const Color accentYellow = Color(0xFFFFD600);
+const Color black = Color(0xFF000000);
+const Color white = Color(0xFFFFFFFF);
+const Color greyBg = Color(0xFFF8F8F8);
+const Color greyText = Color(0xFF666666);
+const Color lightGrey = Color(0xFFF0F0F0);
+
 class CategoryDetailsPage extends ConsumerStatefulWidget {
   final String categoryName;
   final int businessTypeId;
@@ -55,29 +65,34 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
     final businessOwnersAsync = ref.watch(businessOwnersProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: white,
       appBar: AppBar(
         title: Text(
           widget.categoryName,
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: black,
           ),
         ),
-        backgroundColor: widget.categoryColor,
+        flexibleSpace: Container(
+           decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFCFC000), Color(0xFFFFD600)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(25.0),
+            bottomRight: Radius.circular(25.0),
+          ),
+        ),
+        ),
+        toolbarHeight: kToolbarHeight + 15, // Add 15px height
         elevation: 0,
         centerTitle: false,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Icon(
-              Icons.category_rounded,
-              color: Colors.white.withOpacity(0.9),
-            ),
-          ),
-        ],
+        iconTheme: const IconThemeData(color: black),
+      
       ),
       body: businessOwnersAsync.when(
         loading: () => _buildModernLoadingState(),
@@ -116,12 +131,12 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
         // Header with business count
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: white,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.shade100,
+                color: lightGrey,
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -135,10 +150,10 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: widget.categoryColor.withOpacity(0.1),
+                  color: secondaryRed.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: widget.categoryColor.withOpacity(0.2),
+                    color: secondaryRed.withOpacity(0.2),
                   ),
                 ),
                 child: Row(
@@ -146,7 +161,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                     Icon(
                       Icons.store_rounded,
                       size: 16,
-                      color: widget.categoryColor,
+                      color: secondaryRed,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -154,37 +169,39 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: widget.categoryColor,
+                        color: secondaryRed,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(),
-              Icon(
-                Icons.filter_list_rounded,
-                color: Colors.grey.shade500,
-                size: 20,
-              ),
+           
             ],
           ),
         ),
 
         // Businesses list
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: shops.length,
-            itemBuilder: (context, index) {
-              final shop = shops[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: ShopCard(
-                  shop: shop,
-                  onTap: () => _navigateToShopPage(context, shop),
-                ),
-              );
+          child: RefreshIndicator(
+            backgroundColor: primaryYellow,
+            color: white,
+            onRefresh: () async {
+              ref.refresh(businessOwnersProvider);
             },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: shops.length,
+              itemBuilder: (context, index) {
+                final shop = shops[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: ShopCard(
+                    shop: shop,
+                    onTap: () => _navigateToShopPage(context, shop),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -199,10 +216,10 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: white,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.shade100,
+                color: lightGrey,
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -214,16 +231,16 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                 width: 120,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: lightGrey,
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
               const Spacer(),
               Container(
-                width: 20,
-                height: 20,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: lightGrey,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -242,11 +259,11 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                 child: Container(
                   height: 120,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: white,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.shade200,
+                        color: lightGrey,
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -260,7 +277,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                         height: 100,
                         margin: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
+                          color: lightGrey,
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -275,7 +292,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                                 width: 150,
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
+                                  color: lightGrey,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -285,7 +302,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                                 width: 80,
                                 height: 14,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
+                                  color: lightGrey,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -295,7 +312,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                                 width: double.infinity,
                                 height: 12,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
+                                  color: lightGrey,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -304,7 +321,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                                 width: 200,
                                 height: 12,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
+                                  color: lightGrey,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -314,7 +331,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                                 width: 60,
                                 height: 20,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
+                                  color: lightGrey,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
@@ -344,22 +361,22 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: secondaryRed.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.error_outline_rounded,
                 size: 40,
-                color: Colors.red.shade400,
+                color: secondaryRed,
               ),
             ),
             const SizedBox(height: 24),
-             Text(
+            Text(
               _tr("category_details_page.Something_went_wrong", "Something went wrong"),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Colors.black87,
+                color: black,
               ),
             ),
             const SizedBox(height: 12),
@@ -367,7 +384,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
               error,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: greyText,
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -375,12 +392,11 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                // ignore: unused_result
                 ref.refresh(businessOwnersProvider);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: widget.categoryColor,
-                foregroundColor: Colors.white,
+                backgroundColor: secondaryRed,
+                foregroundColor: white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -389,10 +405,11 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
                   horizontal: 32,
                   vertical: 14,
                 ),
+                minimumSize: const Size(double.infinity, 50),
               ),
               child: Text(
                 _tr("category_details_page.Try_Again", "Try Again"),
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
               ),
             ),
           ],
@@ -412,13 +429,13 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: lightGrey,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.search_off_rounded,
                 size: 50,
-                color: Colors.grey.shade400,
+                color: greyText,
               ),
             ),
             const SizedBox(height: 24),
@@ -427,7 +444,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: Colors.black87,
+                color: black,
               ),
             ),
             const SizedBox(height: 12),
@@ -435,7 +452,7 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
               _tr("category_details_page.We_couldn't_find_any_businesses_in_this_category", "We couldn't find any businesses in this category."),
               style: TextStyle(
                 fontSize: 15,
-                color: Colors.grey.shade600,
+                color: greyText,
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -443,7 +460,28 @@ class _CategoryDetailsPageState extends ConsumerState<CategoryDetailsPage> {
             const SizedBox(height: 8),
             Text(
               _tr("category_details_page.Please_check_back_later", "Please check back later."),
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              style: TextStyle(fontSize: 14, color: greyText),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryRed,
+                foregroundColor: white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 14,
+                ),
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: Text(
+                _tr("category_details_page.Go_Back", "Go Back"),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
             ),
           ],
         ),

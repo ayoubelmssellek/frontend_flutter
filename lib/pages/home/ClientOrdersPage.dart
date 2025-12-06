@@ -139,6 +139,7 @@ Future<void> _loadOrders() async {
         ),
         backgroundColor: const Color(0xFFCFC000),
         foregroundColor: Colors.white,
+        toolbarHeight: kToolbarHeight + 15, // Add 15px height
         elevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(

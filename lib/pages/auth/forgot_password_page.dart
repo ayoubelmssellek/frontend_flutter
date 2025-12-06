@@ -122,7 +122,7 @@ Future<void> _sendResetCode() async {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.deepOrange),
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFFC63232)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -161,7 +161,7 @@ Future<void> _sendResetCode() async {
                             ),
                           ),
                           child: const Icon(Icons.lock_reset,
-                              size: 40, color: Colors.deepOrange),
+                              size: 40, color: Color(0xFFC63232)),
                         ),
                         const SizedBox(height: 24),
                         Text(
@@ -224,7 +224,7 @@ Future<void> _sendResetCode() async {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _sendResetCode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepOrange,
+                          backgroundColor: Color(0xFFC63232)  ,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

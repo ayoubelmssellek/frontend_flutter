@@ -89,18 +89,18 @@ class RestaurantInfo extends StatelessWidget {
                   Icons.location_on,
                   shop.location!,
                 ),
-              if (shop.businessType.isNotEmpty && shop.businessType != 'General')
-                _buildInfoChip(
-                  Icons.category,
-                  shop.businessType,
-                ),
-              // Add categories as chips if available
-              ...shop.categories.take(2).map((category) => 
-                _buildInfoChip(
-                  Icons.local_offer,
-                  category,
-                )
-              ).toList(),
+              // if (shop.businessType.isNotEmpty && shop.businessType != 'General')
+              //   _buildInfoChip(
+              //     Icons.category,
+              //     shop.businessType,
+              //   ),
+              // // Add categories as chips if available
+              // ...shop.categories.take(2).map((category) => 
+              //   _buildInfoChip(
+              //     Icons.local_offer,
+              //     category,
+              //   )
+              // ).toList(),
             ],
           ),
         ],

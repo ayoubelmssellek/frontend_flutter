@@ -496,7 +496,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               children: [
                 Container(
                   width: 100,
-                  height: 100,
+                  height: 80,
                   decoration: BoxDecoration(
                     color: white,
                     shape: BoxShape.circle,
@@ -514,7 +514,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     color: primaryYellow,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 10),
                 Text(
                   _tr('search_page.no_businesses_found', 'No businesses found'),
                   style: const TextStyle(
@@ -535,7 +535,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () {
                     setState(() {

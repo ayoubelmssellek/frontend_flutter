@@ -7,7 +7,6 @@ import 'package:food_app/pages/delivery/not_approved_page.dart';
 import 'package:food_app/pages/delivery_admin_pages/admin_home_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import '../home/client_home_page.dart';
-import '../home/restaurant_home_page.dart';
 import 'reset_password_page.dart';
 
 class VerifyPage extends ConsumerStatefulWidget {
@@ -365,13 +364,7 @@ void _navigateToDeliveryHome() {
           (route) => false,
         );
         break;
-      case 'restaurant':
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const RestaurantHomePage()),
-          (route) => false,
-        );
-        break;
+   
       case 'delivery_driver':
       case 'change_number_delivery_driver':
         Navigator.pushAndRemoveUntil(
@@ -503,7 +496,7 @@ void _navigateToDeliveryHome() {
         leading: IconButton(
           icon: Icon(
             isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
-            color: Colors.deepOrange,
+            color: Color(0xFFC63232),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -543,7 +536,7 @@ void _navigateToDeliveryHome() {
                             ? Icons.lock_reset 
                             : Icons.verified_user,
                         size: 40,
-                        color: Colors.deepOrange,
+                        color: Color(0xFFC63232),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -638,10 +631,10 @@ void _navigateToDeliveryHome() {
                       height: 56,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepOrange,
+                          backgroundColor: Color(0xFFC63232),
                           foregroundColor: Colors.white,
                           elevation: 4,
-                          shadowColor: Colors.deepOrange.withOpacity(0.3),
+                          shadowColor: Color(0xFFC63232).withOpacity(0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -680,7 +673,7 @@ void _navigateToDeliveryHome() {
                         : _isResending
                             ? const CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(Colors.deepOrange),
+                                valueColor: AlwaysStoppedAnimation(Color(0xFFC63232)),
                               )
                             : TextButton(
                                 onPressed: _resendCode,
@@ -689,7 +682,7 @@ void _navigateToDeliveryHome() {
                                       ? "إعادة إرسال الرمز" 
                                       : "إعادة إرسال الرمز",
                                   style: const TextStyle(
-                                    color: Colors.deepOrange,
+                                    color: Color(0xFFC63232),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

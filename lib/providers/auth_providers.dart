@@ -258,6 +258,15 @@ final changePhoneNumberProvider = FutureProvider.family<Map<String, dynamic>, St
     };
   }
 });
+// store client submission store name provider
+ final storeClientSubmissionProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, storeName) async {
+  final authRepo = ref.read(authRepositoryProvider);
+  final result = await authRepo.storeClientSubmission(
+    storeName: storeName,
+  );
+  return result;
+});
+ 
 
 /// ✅ Verify Code Provider - الإصدار المصحح
 final verifyCodeProvider =

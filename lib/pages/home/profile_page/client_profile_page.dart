@@ -317,13 +317,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(_tr("profile_page.profile", "Profile")),
+    backgroundColor: Colors.grey.shade50,
+appBar: AppBar(
+  title: Text(_tr("profile_page.profile", "Profile")),
+  backgroundColor: Colors.transparent,
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFFCFC000), Color(0xFFFFD600)],
       ),
+      // borderRadius: const BorderRadius.only(
+      //   bottomLeft: Radius.circular(25.0),
+      //   bottomRight: Radius.circular(25.0),
+      // ),
+    ),
+  ),
+  toolbarHeight: kToolbarHeight + 15,
+  elevation: 0,
+  iconTheme: const IconThemeData(color: Color(0xFF000000)),
+  // REMOVE THE BOTTOM PROPERTY
+),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
-        color: Colors.deepOrange,
+        color: Color(0xFFC63232),
         backgroundColor: Colors.white,
         child: _buildContent(profileState),
       ),
@@ -332,12 +348,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Widget _buildBottomNavigationBar(int currentIndex) {
+    const Color secondaryRed = Color(0xFFC63232);
+    const Color white = Color(0xFFFFFFFF);
+    const Color black = Color(0xFF000000);
+    const Color greyText = Color(0xFF666666);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
+            color: black.withOpacity(0.08),
             blurRadius: 20,
             offset: const Offset(0, -2),
           ),
@@ -370,25 +391,85 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.deepOrange,
-        unselectedItemColor: Colors.grey.shade600,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        backgroundColor: white,
+        selectedItemColor: secondaryRed,
+        unselectedItemColor: greyText,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 11,
+        ),
         items: [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.home),
-            label: _tr("home_page.home", "Home"),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 0 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.home_rounded,
+                size: 22,
+                color: currentIndex == 0 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.home','Home'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.search),
-            label: _tr("home_page.search", "Search"),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 1 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.search_rounded,
+                size: 22,
+                color: currentIndex == 1 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.search','Search'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.shopping_cart),
-            label: _tr("home_page.cart", "Cart"),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 2 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.shopping_cart_rounded,
+                size: 22,
+                color: currentIndex == 2 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.cart','Cart'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.person),
-            label: _tr("home_page.profile", "Profile"),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: currentIndex == 3 
+                    ? secondaryRed.withOpacity(0.1) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.person_rounded,
+                size: 22,
+                color: currentIndex == 3 ? secondaryRed : greyText,
+              ),
+            ),
+            label: _tr('home_page.profile','Profile'),
           ),
         ],
       ),
@@ -461,6 +542,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Widget _buildSkeletonLoading() {
+    const Color greyBg = Color(0xFFF8F8F8);
+    const Color lightGrey = Color(0xFFF0F0F0);
+    const Color black = Color(0xFF000000);
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -473,6 +558,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: black.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Column(
               children: [
@@ -481,7 +573,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -491,7 +583,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   width: 150,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -501,7 +593,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   width: 120,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -526,12 +618,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Widget _buildSectionSkeleton(String title, int itemCount) {
+    const Color white = Color(0xFFFFFFFF);
+    const Color black = Color(0xFF000000);
+    const Color lightGrey = Color(0xFFF0F0F0);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: white,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,7 +644,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             width: 120,
             height: 20,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -555,6 +658,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Widget _buildMenuItemSkeleton() {
+    const Color lightGrey = Color(0xFFF0F0F0);
+    const Color lighterGrey = Color(0xFFF8F8F8);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -564,7 +670,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -578,7 +684,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   width: double.infinity,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: lightGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -587,7 +693,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   width: 150,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: lighterGrey,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -600,7 +706,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             width: 16,
             height: 16,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: lightGrey,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -622,7 +728,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     
     return RefreshIndicator(
       onRefresh: _handleRefresh,
-      color: Colors.deepOrange,
+      color: Color(0xFFC63232),
       backgroundColor: Colors.white,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -634,10 +740,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFC63232).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.error_outline,
+                      size: 40,
+                      color: Color(0xFFC63232),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -645,7 +759,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
+                      color: Color(0xFF000000),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -653,7 +767,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     state.errorMessage ?? _tr("profile_page.Failed_to_load_user_data", "Failed to load user data"),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: Color(0xFF666666),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -671,30 +785,43 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: Color(0xFFC63232),
                           foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: Text(_tr("profile_page.retry", "Retry")),
                       ),
                       const SizedBox(width: 12),
-                      TextButton(
+                      OutlinedButton(
                         onPressed: () async {
                           print("👤 Guest mode button pressed");
                           try {
-                             ref.read(profileStateProvider.notifier).setGuestMode();
+                            ref.read(profileStateProvider.notifier).setGuestMode();
                             print("✅ setGuestMode() called successfully");
                             
                             // Show confirmation
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(_tr("profile_page.guest_mode_activated", "Guest mode activated")),
-                                backgroundColor: Colors.green,
+                                backgroundColor: Color(0xFF4CAF50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             );
                           } catch (e) {
                             print("❌ Error calling setGuestMode(): $e");
                           }
-                        },               
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Color(0xFFC63232),
+                          side: BorderSide(color: Color(0xFFC63232)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),               
                         child: Text(_tr("profile_page.continue_as_guest", "Continue as Guest")),
                       ),
                     ],
@@ -710,81 +837,212 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   void _logout(BuildContext context, WidgetRef ref) {
     bool isLoading = false;
+    const Color primaryYellow = Color(0xFFCFC000);
+    const Color secondaryRed = Color(0xFFC63232);
+    const Color accentYellow = Color(0xFFFFD600);
+    const Color black = Color(0xFF000000);
+    const Color white = Color(0xFFFFFFFF);
+    const Color greyText = Color(0xFF666666);
     
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
-            title: Text(_tr("profile_page.logout", "Logout")),
-            content: isLoading 
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(_tr("profile_page.logging_out", "Logging out...")),
-                    ],
-                  )
-                : Text(_tr("profile_page.logout_confirmation", "Are you sure you want to logout?")),
-            actions: isLoading 
-                ? []
-                : [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(_tr("profile_page.cancel", "Cancel")),
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header with gradient
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [primaryYellow, accentYellow],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () async {
-                        setState(() => isLoading = true);
-                        
-                        try {
-                          final authRepo = ref.read(authRepositoryProvider);
-                          await authRepo.logout();
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _tr("profile_page.logout", "Logout"),
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, color: black),
+                          onPressed: isLoading ? null : () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isLoading) ...[
+                          SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(secondaryRed),
+                              strokeWidth: 3,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _tr("profile_page.logging_out", "Logging out..."),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: greyText,
+                            ),
+                          ),
+                        ] else ...[
+                          // Message
+                          Text(
+                            _tr("profile_page.logout_confirmation", "Are you sure you want to logout?"),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: greyText,
+                            ),
+                          ),
+                          const SizedBox(height: 30),
                           
-                          // ✅ Clear secure storage
-                          await SecureStorage.deleteToken();
-                          
-                          ref.read(authStateProvider.notifier).state = false;
-                          ref.read(profileStateProvider.notifier).setGuestMode();
-                          
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LoginPage()),
-                              (route) => false,
-                            );
-                          }
-                          
-                        } catch (e) {
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            if (ErrorHandlerService.handleApiError(
-                              error: e,
-                              context: context,
-                              customMessage: _tr("profile_page.session_expired_message", "Session expired during logout."),
-                              skipGuestModeErrors: true,
-                            )) {
-                              return;
-                            }
-                            
-                            // Even if API logout fails, clear local storage
-                            await SecureStorage.deleteToken();
-                            ref.read(profileStateProvider.notifier).setGuestMode();
-                            
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(_tr("profile_page.logged_out_locally", "Logged out locally")),
-                                backgroundColor: Colors.orange,
+                          // Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: Size(double.infinity, 50),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    side: BorderSide(color: greyText),
+                                    foregroundColor: greyText,
+                                  ),
+                                  child: Text(
+                                    _tr("profile_page.cancel", "Cancel"),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            );
-                          }
-                        }
-                      },
-                      child: Text(_tr("profile_page.logout", "Logout"), style: const TextStyle(color: Colors.red)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    setState(() => isLoading = true);
+                                    
+                                    try {
+                                      final authRepo = ref.read(authRepositoryProvider);
+                                      await authRepo.logout();
+                                      
+                                      // ✅ Clear secure storage
+                                      await SecureStorage.deleteToken();
+                                      
+                                      ref.read(authStateProvider.notifier).state = false;
+                                      ref.read(profileStateProvider.notifier).setGuestMode();
+                                      
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        Navigator.pushAndRemoveUntil(
+                                          context,
+                                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                                          (route) => false,
+                                        );
+                                      }
+                                      
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        if (ErrorHandlerService.handleApiError(
+                                          error: e,
+                                          context: context,
+                                          customMessage: _tr("profile_page.session_expired_message", "Session expired during logout."),
+                                          skipGuestModeErrors: true,
+                                        )) {
+                                          return;
+                                        }
+                                        
+                                        // Even if API logout fails, clear local storage
+                                        await SecureStorage.deleteToken();
+                                        ref.read(profileStateProvider.notifier).setGuestMode();
+                                        
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(_tr("profile_page.logged_out_locally", "Logged out locally")),
+                                            backgroundColor: Color(0xFFFF9800),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: secondaryRed,
+                                    foregroundColor: white,
+                                    minimumSize: Size(double.infinity, 50),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    _tr("profile_page.logout", "Logout"),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
           );
         },
       ),

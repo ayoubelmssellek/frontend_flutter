@@ -16,16 +16,23 @@ class FeatureItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Color palette from SearchPage
+    const Color primaryYellow = Color(0xFFCFC000);
+    const Color secondaryRed = Color(0xFFC63232);
+    const Color black = Color(0xFF000000);
+    const Color white = Color(0xFFFFFFFF);
+    const Color greyText = Color(0xFF666666);
+
     return Material(
       type: MaterialType.transparency, // This makes the Material transparent
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: black.withOpacity(0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -36,27 +43,28 @@ class FeatureItem extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.deepOrange.withOpacity(0.1),
+              color: primaryYellow.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Colors.deepOrange),
+            child: Icon(icon, color: secondaryRed),
           ),
           title: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
+              color: black,
             ),
           ),
           subtitle: Text(
             subtitle,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: greyText,
             ),
           ),
           trailing: Icon(Icons.arrow_forward_ios_rounded, 
-              size: 16, color: Colors.grey.shade400),
+              size: 16, color: greyText),
           onTap: onTap,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),

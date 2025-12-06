@@ -1,8 +1,9 @@
+import 'dart:io' show Platform;
 import 'dart:ui';
-
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
+import 'package:permission_handler/permission_handler.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
@@ -128,6 +129,14 @@ class NotificationService {
     try {
       print("🔔 Showing notification: $title");
 
+      // Check permission before showing notification (especially for Android 13+)
+      final canShowNotification = await _checkAndRequestPermissionIfNeeded();
+      
+      if (!canShowNotification) {
+        print("⚠️ Cannot show notification - permission not granted");
+        return;
+      }
+
       // Android notification details - USE SYSTEM DEFAULT SOUND
       final AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
@@ -194,6 +203,16 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     try {
+      print("🔔 Showing silent notification: $title");
+
+      // Check permission before showing notification
+      final canShowNotification = await _checkAndRequestPermissionIfNeeded();
+      
+      if (!canShowNotification) {
+        print("⚠️ Cannot show notification - permission not granted");
+        return;
+      }
+
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
         'orders_channel',
@@ -239,6 +258,101 @@ class NotificationService {
     }
   }
 
+  // Check and request permission if needed
+  Future<bool> _checkAndRequestPermissionIfNeeded() async {
+    try {
+      if (Platform.isAndroid) {
+        // For Android, check notification permission
+        final status = await Permission.notification.status;
+        
+        print('🔔 Current Android notification permission status: $status');
+        
+        if (status.isDenied) {
+          // Request permission
+          print('📱 Requesting Android notification permission...');
+          final newStatus = await Permission.notification.request();
+          print('🔔 After request - Android notification permission status: $newStatus');
+          
+          return newStatus.isGranted;
+        } else if (status.isPermanentlyDenied) {
+          print('❌ Android notification permission permanently denied');
+          return false;
+        } else if (status.isGranted) {
+          return true;
+        }
+      } else if (Platform.isIOS) {
+        // For iOS, we rely on the initialization settings
+        // The permission was requested during initialization
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      print('❌ Error checking/requesting notification permission: $e');
+      return false;
+    }
+  }
+
+  // Request Android notification permission (for Android 13+)
+  Future<void> requestAndroidNotificationPermission() async {
+    try {
+      if (Platform.isAndroid) {
+        print('📱 Requesting Android notification permission...');
+        
+        final status = await Permission.notification.status;
+        print('🔔 Current Android notification permission status: $status');
+        
+        if (status.isDenied) {
+          final newStatus = await Permission.notification.request();
+          print('🔔 After request - Android notification permission status: $newStatus');
+          
+          if (newStatus.isGranted) {
+            print('✅ Android notification permission granted');
+          } else if (newStatus.isPermanentlyDenied) {
+            print('❌ Android notification permission permanently denied');
+            print('ℹ️ User needs to enable notifications in app settings');
+          }
+        } else if (status.isGranted) {
+          print('✅ Android notification permission already granted');
+        } else if (status.isPermanentlyDenied) {
+          print('❌ Android notification permission permanently denied');
+          print('ℹ️ User needs to enable notifications in app settings');
+        }
+      }
+    } catch (e) {
+      print('❌ Error requesting Android notification permission: $e');
+    }
+  }
+
+  // Check if notifications are enabled
+  Future<bool> areNotificationsEnabled() async {
+    try {
+      if (Platform.isAndroid) {
+        final status = await Permission.notification.status;
+        return status.isGranted;
+      } else if (Platform.isIOS) {
+        final androidPlugin = _notificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        
+        if (androidPlugin != null) {
+          try {
+            final granted = await androidPlugin.areNotificationsEnabled();
+            return granted ?? true; // Default to true if null
+          } catch (e) {
+            print('⚠️ Could not check Android notification status, assuming granted: $e');
+            return true;
+          }
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error checking if notifications are enabled: $e');
+      return false;
+    }
+  }
+
   // Clear all notifications
   Future<void> clearAllNotifications() async {
     try {
@@ -267,6 +381,26 @@ class NotificationService {
       }
     } catch (e) {
       print('❌ Error requesting iOS notification permissions: $e');
+    }
+  }
+
+  // Check Android notification permission status
+  Future<bool?> checkAndroidNotificationPermission() async {
+    try {
+      if (Platform.isAndroid) {
+        final androidPlugin = _notificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        
+        if (androidPlugin != null) {
+          final granted = await androidPlugin.areNotificationsEnabled();
+          return granted;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error checking Android notification permission: $e');
+      return null;
     }
   }
 

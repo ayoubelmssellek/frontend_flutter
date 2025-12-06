@@ -10,8 +10,15 @@ import 'package:food_app/services/language_selector.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/pages/auth/verify_page.dart';
 import 'package:food_app/pages/auth/forgot_password_page.dart';
-import 'package:food_app/core/secure_storage.dart'; // ✅ ADDED
+import 'package:food_app/widgets/main_file_widgets/fcm_manager.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+// Import the new dialog files
+import '../profile_page_dialogs/update_profile_dialog.dart';
+import '../profile_page_dialogs/change_password_dialog.dart';
+import '../profile_page_dialogs/change_phone_dialog.dart';
+import '../profile_page_dialogs/help_center_dialog.dart';
+import '../profile_page_dialogs/contact_support_dialog.dart';
 class ClientProfile extends ConsumerStatefulWidget {
   final VoidCallback onLogout;
   final VoidCallback onRefresh;
@@ -50,16 +57,18 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
 
     print('🔄 [ClientProfile] Rebuilding with name: ${userData['name']}');
 
-    return Column(
-      children: [
-        _buildUserHeader(context, userData),
-        _buildAccountSection(context, userData),
-        _buildSecuritySection(context, userData),
-        _buildSettingsSection(context),
-        _buildSupportSection(context),
-        _buildLogoutButton(context),
-        const SizedBox(height: 20),
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildUserHeader(context, userData),
+          _buildAccountSection(context, userData),
+          _buildSecuritySection(context, userData),
+          _buildSettingsSection(context),
+          _buildSupportSection(context),
+          _buildLogoutButton(context),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 
@@ -123,91 +132,116 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
   }
 
   Widget _buildUserHeader(BuildContext context, Map<String, dynamic> userData) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+ return Container(
+  width: double.infinity,
+  padding: const EdgeInsets.all(20),
+  decoration: BoxDecoration(
+    gradient: const LinearGradient(
+      colors: [Color(0xFFCFC000), Color(0xFFFFD600)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderRadius: const BorderRadius.only(
+      bottomLeft: Radius.circular(25.0),
+      bottomRight: Radius.circular(25.0),
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.1),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
       ),
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.deepOrange,
-                    width: 2,
+    ],
+  ),
+  child: Row(
+    children: [
+      // Avatar
+      Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: CustomNetworkImage(
+            imageUrl: ImageHelper.getImageUrl(userData['avatar']),
+            width: 70,
+            height: 70,
+            fit: BoxFit.cover,
+            placeholder: 'avatar',
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 70,
+                height: 70,
+                color: Color(0xFFC63232),
+                child: Center(
+                  child: Icon(
+                    Icons.person_rounded,
+                    size: 30,
+                    color: Colors.white,
                   ),
                 ),
-                child: ClipOval(
-                  child: CustomNetworkImage(
-                    imageUrl: ImageHelper.getImageUrl(userData['avatar']),
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    placeholder: 'avatar',
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.deepOrange.shade100,
-                        child: Center(
-                          child: Icon(
-                            Icons.person_rounded,
-                            size: 40,
-                            color: Colors.deepOrange,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+              );
+            },
+          ),
+        ),
+      ),
+      const SizedBox(width: 16),
+      
+      // User Info
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              userData['name'] ?? 'No Name',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            userData['name'] ?? 'No Name',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            userData['number_phone'] ?? 'No Phone',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.phone_rounded,
+                  size: 14,
+                  color: Colors.black87.withOpacity(0.7),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  userData['number_phone'] ?? 'No Phone',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87.withOpacity(0.7),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ),
-          // // ✅ ADDED: Refresh button in header
-          // const SizedBox(height: 16),
-          // OutlinedButton.icon(
-          //   onPressed: widget.onRefresh,
-          //   icon: Icon(Icons.refresh, size: 18),
-          //   label: Text(_tr("profile_page.refresh_profile", "Refresh Profile")),
-          //   style: OutlinedButton.styleFrom(
-          //     foregroundColor: Colors.deepOrange,
-          //     side: BorderSide(color: Colors.deepOrange.withOpacity(0.3)),
-          //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          //   ),
-          // ),
-        ],
+          ],
+        ),
       ),
-    );
+    ],
+  ),
+);
+ 
+ 
   }
 
   Widget _buildAccountSection(BuildContext context, Map<String, dynamic> userData) {
@@ -264,7 +298,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
           icon: Icons.notifications_rounded,
           title: 'Notifications',
           subtitle: 'Manage your notifications',
-          onTap: () {},
+          onTap: () => _showNotificationSettingsPopup(context),
         ),
         FeatureItem(
           icon: Icons.security_rounded,
@@ -273,6 +307,386 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
           onTap: () {},
         ),
       ],
+    );
+  }
+
+  void _showNotificationSettingsPopup(BuildContext context) {
+    // Color palette from SearchPage
+    const Color primaryYellow = Color(0xFFCFC000);
+    const Color secondaryRed = Color(0xFFC63232);
+    const Color accentYellow = Color(0xFFFFD600);
+    const Color black = Color(0xFF000000);
+    const Color white = Color(0xFFFFFFFF);
+    const Color greyBg = Color(0xFFF8F8F8);
+    const Color greyText = Color(0xFF666666);
+    const Color lightGrey = Color(0xFFF0F0F0);
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with gradient
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryYellow, accentYellow],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Notification Settings',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: black,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: black),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final fcmManager = ref.watch(fcmManagerProvider);
+                    return FutureBuilder<bool>(
+                      future: fcmManager.areNotificationsEnabled(),
+                      builder: (context, snapshot) {
+                        final notificationsEnabled = snapshot.data ?? false;
+                        
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Status Card
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: notificationsEnabled 
+                                  ? Color(0xFFE8F5E9) // Light green
+                                  : Color(0xFFFFF3E0), // Light orange
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: notificationsEnabled 
+                                    ? Color(0xFF4CAF50).withOpacity(0.2)
+                                    : Color(0xFFFF9800).withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: notificationsEnabled 
+                                        ? Color(0xFF4CAF50)
+                                        : Color(0xFFFF9800),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      notificationsEnabled 
+                                        ? Icons.notifications_active
+                                        : Icons.notifications_off,
+                                      color: white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          notificationsEnabled
+                                            ? 'Notifications are enabled'
+                                            : 'Notifications are disabled',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                            color: notificationsEnabled 
+                                              ? Color(0xFF2E7D32)
+                                              : Color(0xFFEF6C00),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          notificationsEnabled
+                                            ? 'You will receive order updates and alerts'
+                                            : 'You may miss important order updates',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: greyText,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            // Enable/Disable Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final fcmManager = ref.read(fcmManagerProvider);
+                                  
+                                  if (notificationsEnabled) {
+                                    // Show confirmation for disabling
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: Text(
+                                          'Disable Notifications?',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: black,
+                                          ),
+                                        ),
+                                        content: Text(
+                                          'You will no longer receive order updates and alerts. Are you sure?',
+                                          style: TextStyle(color: greyText),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: Text(
+                                              'Cancel',
+                                              style: TextStyle(color: greyText),
+                                            ),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: secondaryRed,
+                                              foregroundColor: white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            child: Text('Disable'),
+                                          ),
+                                        ],
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                    );
+                                    
+                                    if (confirmed == true) {
+                                      // Open app settings for user to disable
+                                      await openAppSettings();
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                      }
+                                    }
+                                  } else {
+                                    // Request permission to enable
+                                    await fcmManager.requestPermissions();
+                                    
+                                    // Check if permission was granted
+                                    final newStatus = await fcmManager.areNotificationsEnabled();
+                                    
+                                    if (!newStatus) {
+                                      // Show guide to enable in settings
+                                      if (context.mounted) {
+                                        await showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text(
+                                              'Enable Notifications',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                color: black,
+                                              ),
+                                            ),
+                                            content: Text(
+                                              'To receive notifications, please enable them in your device settings.',
+                                              style: TextStyle(color: greyText),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text(
+                                                  'Cancel',
+                                                  style: TextStyle(color: greyText),
+                                                ),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () async {
+                                                  await openAppSettings();
+                                                  Navigator.pop(context);
+                                                  if (context.mounted) {
+                                                    Navigator.pop(context);
+                                                  }
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: secondaryRed,
+                                                  foregroundColor: white,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                ),
+                                                child: Text('Open Settings'),
+                                              ),
+                                            ],
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      // Success - refresh UI
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Notifications enabled successfully!'),
+                                            backgroundColor: Color(0xFF4CAF50),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: notificationsEnabled 
+                                    ? secondaryRed
+                                    : primaryYellow,
+                                  foregroundColor: white,
+                                  minimumSize: Size(double.infinity, 50),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      notificationsEnabled ? Icons.notifications_off : Icons.notifications_active,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      notificationsEnabled ? 'Turn Off Notifications' : 'Turn On Notifications',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            // Open System Settings Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  await openAppSettings();
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: Size(double.infinity, 50),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  side: BorderSide(
+                                    color: secondaryRed,
+                                    width: 2,
+                                  ),
+                                  foregroundColor: secondaryRed,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.settings_rounded,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'Open System Settings',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            // Info text
+                            Text(
+                              'Notifications are controlled by your device settings. '
+                              'You can enable or disable them at any time.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: greyText,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -344,7 +758,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
 
     showDialog(
       context: context,
-      builder: (context) => _UpdateProfileDialog(
+      builder: (context) => UpdateProfileDialog(
         currentName: userData['name'] ?? '',
         currentAvatar: userData['avatar'],
         onSave: (name, avatar) async {
@@ -420,25 +834,30 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
     );
   }
 
-  void _showChangePasswordDialog(BuildContext context) {
-    // ✅ CHECK: Verify we still have valid user data
-    if (!_checkTokenBeforeAction(context)) return;
+void _showChangePasswordDialog(BuildContext context) {
+  // ✅ CHECK: Verify we still have valid user data
+  if (!_checkTokenBeforeAction(context)) return;
 
-    showDialog(
-      context: context,
-      builder: (context) => _ChangePasswordDialog(
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ChangePasswordPage(
         onChangePassword: (currentPassword, newPassword, confirmPassword) async {
           if (currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('profile_page.fill_all_fields'.tr())),
-            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('profile_page.fill_all_fields'.tr())),
+              );
+            }
             return false;
           }
 
           if (newPassword != confirmPassword) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('profile_page.passwords_not_match'.tr())),
-            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('profile_page.passwords_not_match'.tr())),
+              );
+            }
             return false;
           }
 
@@ -450,58 +869,51 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
             }).future);
             
             if (result['success'] == true) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.password_updated'.tr()),
-                  backgroundColor: Colors.green,
-                ),
-              );
               return true;
             } else {
               // ✅ CHECK: If token error, handle it
               final message = result['message'] ?? '';
               if (message.toLowerCase().contains('token')) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+                return false;
+              }
+              
+              return false;
+            }
+          } catch (e) {
+            // ✅ CHECK: Handle token errors
+            if (e.toString().toLowerCase().contains('token')) {
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
                     backgroundColor: Colors.orange,
                   ),
                 );
-                return false;
               }
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.password_update_failed'.tr()),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return false;
-            }
-          } catch (e) {
-            // ✅ CHECK: Handle token errors
-            if (e.toString().toLowerCase().contains('token')) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
-                  backgroundColor: Colors.orange,
-                ),
-              );
               return false;
             }
             
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('profile_page.password_update_error'.tr()),
-                backgroundColor: Colors.red,
-              ),
-            );
             return false;
           }
         },
+        onForgotPassword: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showChangePhoneDialog(BuildContext context, Map<String, dynamic> user) {
     // ✅ CHECK: Verify we still have valid user data
@@ -512,7 +924,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
     
     showDialog(
       context: context,
-      builder: (context) => _ChangePhoneDialog(
+      builder: (context) => ChangePhoneDialog(
         currentPhone: currentPhone,
         onChangePhone: (newPhone) async {
           if (newPhone.isEmpty) {
@@ -527,7 +939,6 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
             
             if (result['success'] == true) {
               // Navigate to verification page for phone change
-              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -588,508 +999,14 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
   void _showHelpCenter(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_tr('profile_page.help_center', 'Help Center')),
-        content: Text(_tr('profile_page.find_answers_faqs', 'Find answers to frequently asked questions and get help with common issues.')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(_tr('common.close', 'Close')),
-          ),
-        ],
-      ),
+      builder: (context) => const HelpCenterDialog(),
     );
   }
 
   void _showContactSupport(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_tr('profile_page.contact_support', 'Contact Support')),
-        content: Text(_tr('profile_page.support_team_available', 'Our support team is available 24/7 to help you with any issues or questions.')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(_tr('common.close', 'Close')),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Update Profile Dialog Class (Name & Avatar)
-class _UpdateProfileDialog extends StatefulWidget {
-  final String currentName;
-  final String? currentAvatar;
-  final Future<bool> Function(String name, String? avatar) onSave;
-
-  const _UpdateProfileDialog({
-    required this.currentName,
-    this.currentAvatar,
-    required this.onSave,
-  });
-
-  @override
-  State<_UpdateProfileDialog> createState() => _UpdateProfileDialogState();
-}
-
-class _UpdateProfileDialogState extends State<_UpdateProfileDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController.text = widget.currentName;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final success = await widget.onSave(
-        _nameController.text.trim(),
-        null,
-      );
-
-      if (success && mounted) {
-        Navigator.pop(context);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'profile_page.update_profile'.tr(),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Name Field
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'profile_page.name'.tr(),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.person),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'profile_page.name_required'.tr();
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      child: Text('common.cancel'.tr()),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text('common.save'.tr()),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Change Password Dialog Class with Forgot Password Link
-class _ChangePasswordDialog extends StatefulWidget {
-  final Future<bool> Function(String currentPassword, String newPassword, String confirmPassword) onChangePassword;
-
-  const _ChangePasswordDialog({required this.onChangePassword});
-
-  @override
-  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
-}
-
-class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _currentPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
-  bool _obscureCurrentPassword = true;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
-
-  @override
-  void dispose() {
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final success = await widget.onChangePassword(
-        _currentPasswordController.text,
-        _newPasswordController.text,
-        _confirmPasswordController.text,
-      );
-
-      if (success && mounted) {
-        Navigator.pop(context);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value != _newPasswordController.text) {
-      return 'profile_page.passwords_not_match'.tr();
-    }
-    return null;
-  }
-
-  void _navigateToForgotPassword(BuildContext context) {
-    Navigator.pop(context);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'profile_page.change_password'.tr(),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Current Password
-              TextFormField(
-                controller: _currentPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'profile_page.current_password'.tr(),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureCurrentPassword ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _obscureCurrentPassword = !_obscureCurrentPassword;
-                      });
-                    },
-                  ),
-                ),
-                obscureText: _obscureCurrentPassword,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'profile_page.current_password_required'.tr();
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // New Password
-              TextFormField(
-                controller: _newPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'profile_page.new_password'.tr(),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureNewPassword ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _obscureNewPassword = !_obscureNewPassword;
-                      });
-                    },
-                  ),
-                ),
-                obscureText: _obscureNewPassword,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'profile_page.new_password_required'.tr();
-                  }
-                  if (value.length < 6) {
-                    return 'profile_page.password_min_length'.tr();
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Confirm Password
-              TextFormField(
-                controller: _confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'profile_page.confirm_password'.tr(),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _obscureConfirmPassword = !_obscureConfirmPassword;
-                      });
-                    },
-                  ),
-                ),
-                obscureText: _obscureConfirmPassword,
-                validator: _validateConfirmPassword,
-              ),
-              
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => _navigateToForgotPassword(context),
-                  child: Text(
-                    'auth.forgot_password'.tr(),
-                    style: TextStyle(
-                      color: Colors.deepOrange,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      child: Text('common.cancel'.tr()),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _changePassword,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text('profile_page.change_password'.tr()),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Change Phone Dialog Class with Verification Navigation
-class _ChangePhoneDialog extends StatefulWidget {
-  final String currentPhone;
-  final Future<bool> Function(String newPhone) onChangePhone;
-
-  const _ChangePhoneDialog({
-    required this.currentPhone,
-    required this.onChangePhone,
-  });
-
-  @override
-  State<_ChangePhoneDialog> createState() => _ChangePhoneDialogState();
-}
-
-class _ChangePhoneDialogState extends State<_ChangePhoneDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _phoneController.text = widget.currentPhone;
-  }
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _changePhone() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final success = await widget.onChangePhone(_phoneController.text.trim());
-
-      if (success && mounted) {
-        // Navigation is handled in the parent
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(20),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'profile_page.change_phone'.tr(),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${'profile_page.current'.tr()}: ${widget.currentPhone}',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Phone Field
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'profile_page.new_phone'.tr(),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.phone),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'profile_page.phone_required'.tr();
-                  }
-                  if (value.length < 10) {
-                    return 'profile_page.phone_valid'.tr();
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      child: Text('common.cancel'.tr()),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _changePhone,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text('profile_page.send_code'.tr()),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (context) => const ContactSupportDialog(),
     );
   }
 }

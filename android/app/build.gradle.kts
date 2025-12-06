@@ -34,8 +34,8 @@ android {
         applicationId = "com.oramadev.uniqque"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = 14
-        versionName = "1.0.1"
+        versionCode = 16
+        versionName = "1.0.0"
         
         // ✅ CORRECT KOTLIN DSL SYNTAX
         multiDexEnabled = true
@@ -67,6 +67,7 @@ dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
     
     // Firebase BOM
+    implementation("com.google.firebase:firebase-auth-ktx") // ← ADD THIS LINE
     implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
     implementation("com.google.firebase:firebase-messaging") {
         exclude(group = "com.google.firebase", module = "firebase-analytics")

@@ -13,6 +13,9 @@ class SectionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Color palette from SearchPage
+    const Color black = Color(0xFF000000);
+    
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -20,10 +23,10 @@ class SectionWidget extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: black,
             ),
           ),
           const SizedBox(height: 16),

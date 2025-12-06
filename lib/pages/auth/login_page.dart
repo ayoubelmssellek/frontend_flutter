@@ -13,7 +13,6 @@ import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/providers/delivery_providers.dart';
 import '../home/client_home_page.dart';
-import '../home/restaurant_home_page.dart';
 import 'client_register_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -269,9 +268,7 @@ Future<void> _login() async {
       case 'client':
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ClientHomePage()));
         break;
-      case 'restaurant':
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const RestaurantHomePage()));
-        break;
+     
       case 'delivery_driver':
         Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const DeliveryHomePage()), (route) => false);
         break;
@@ -342,7 +339,7 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                                 width: 2),
                           ),
                           child: const Icon(Icons.lock,
-                              size: 40, color: Colors.deepOrange),
+                              size: 40, color: Color(0xFFC63232)),
                         ),
                         const SizedBox(height: 24),
                         const Text(
@@ -413,7 +410,7 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                                 onPressed: () { 
                                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordPage()));
                                 },
-                                child: Text('auth_page.forgot_password_btn'.tr(), style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600)),
+                                child: Text('auth_page.forgot_password_btn'.tr(), style: const TextStyle(color: Color(0xFFC63232), fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),
@@ -424,7 +421,7 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _login,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepOrange,
+                                backgroundColor: const Color(0xFFC63232),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
@@ -454,7 +451,7 @@ Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
                                 onPressed: () {
                                   Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage()));
                                 },
-                                child: Text("auth_page.sign_up".tr(), style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600)),
+                                child: Text("auth_page.sign_up".tr(), style: const TextStyle(color: Color(0xFFC63232), fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),

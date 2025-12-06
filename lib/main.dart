@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,9 +11,13 @@ import 'package:food_app/services/location_service_widget.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/widgets/main_file_widgets/app_initialization_service.dart';
 import 'package:food_app/widgets/main_file_widgets/loading_widget.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_app/widgets/main_file_widgets/notification_service.dart';
 import 'package:food_app/widgets/main_file_widgets/fcm_manager.dart';
+import 'package:food_app/services/network_service.dart'; // Add this import
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +31,6 @@ void main() async {
   print("🔥 Starting Firebase initialization...");
 
   try {
-    // Initialize Firebase
     await Firebase.initializeApp();
     print("✅ Firebase initialized successfully");
   } catch (e) {
@@ -34,10 +39,8 @@ void main() async {
     print("⚠️  Enable Push Notifications in Xcode: Runner → Signing & Capabilities");
   }
 
-  // Initialize ApiClient
   ApiClient.init();
 
-  // Add background handler for FCM
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   print("🚀 Running the app...");
@@ -54,6 +57,14 @@ void main() async {
   );
 }
 
+// Create NetworkService Provider
+final networkServiceProvider = Provider<NetworkService>((ref) {
+  return NetworkService();
+});
+
+// Create Network Status Provider
+final networkStatusProvider = StateProvider<bool>((ref) => true);
+
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
@@ -65,45 +76,52 @@ class _MyAppState extends ConsumerState<MyApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   AppInitializationResult? _appInitResult;
   bool _isInitializing = true;
+  bool _notificationsEnabled = false;
+  String _permissionStatus = 'Checking...';
+  bool _hasShownNetworkDialog = false; // Track if dialog is already shown
 
   @override
   void initState() {
     super.initState();
     print("📱 MyApp initState called");
     _initializeApp();
+    _startNetworkListener();
   }
 
   Future<void> _initializeApp() async {
     try {
       print("🚀 Starting app initialization...");
       
-      // Add a small delay to ensure Firebase is fully initialized
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // 1. Initialize Notification Service FIRST
+      // 1. Get NetworkService instance
+      final networkService = ref.read(networkServiceProvider);
+      
+      // 2. Check initial network connection using NetworkService
+      final isConnected = await networkService.isConnected();
+      ref.read(networkStatusProvider.notifier).state = isConnected;
+      
+      if (!isConnected && !_hasShownNetworkDialog) {
+        _hasShownNetworkDialog = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          networkService.showNoConnectionDialog(_navigatorKey.currentContext!);
+        });
+      }
+
+      // 3. Initialize Notification Service
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
       print("✅ Notification Service ready");
 
-      // 2. Initialize FCM Manager SECOND
+      // 4. Initialize FCM Manager
       final fcmManager = ref.read(fcmManagerProvider);
       await fcmManager.initialize();
       print("✅ FCM Manager ready");
 
-      // 3. Request notification permissions with delay for iOS
-      // iOS needs the app to be fully running before requesting permissions
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await Future.delayed(const Duration(seconds: 1));
-        try {
-          await fcmManager.requestPermissions();
-          print("✅ Notification permissions requested");
-        } catch (e) {
-          print("⚠️ Could not request notification permissions: $e");
-          print("ℹ️ This might be expected on iOS if app hasn't fully started");
-        }
-      });
+      // 5. Check notification permission status
+      await _checkNotificationPermissionStatus(fcmManager);
 
-      // 4. Initialize App Service
+      // 6. Initialize App Service
       final appInitService = AppInitializationService(ref);
       final result = await appInitService.initializeApp(navKey: _navigatorKey);
       
@@ -133,6 +151,81 @@ class _MyAppState extends ConsumerState<MyApp> {
           isLoading: false,
         );
       });
+    }
+  }
+void _startNetworkListener() {
+  final networkService = ref.read(networkServiceProvider);
+  
+  // Use the stream that returns bool (connected or not)
+  networkService.connectionStream.listen((bool isConnected) {
+    // Update provider
+    ref.read(networkStatusProvider.notifier).state = isConnected;
+    
+    // Show/hide dialog using NetworkService
+    if (!isConnected && !_hasShownNetworkDialog) {
+      _hasShownNetworkDialog = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        networkService.showNoConnectionDialog(_navigatorKey.currentContext!);
+      });
+    } else if (isConnected) {
+      _hasShownNetworkDialog = false;
+    }
+  });
+}
+
+  Future<void> _checkNotificationPermissionStatus(FCMManager fcmManager) async {
+    try {
+      print("🔔 Checking notification permission status...");
+      
+      _notificationsEnabled = await fcmManager.areNotificationsEnabled();
+      
+      if (Platform.isIOS) {
+        final settings = await FirebaseMessaging.instance.getNotificationSettings();
+        _permissionStatus = _getIOSPermissionStatus(settings.authorizationStatus);
+      } else if (Platform.isAndroid) {
+        final status = await Permission.notification.status;
+        _permissionStatus = _getAndroidPermissionStatus(status);
+      }
+      
+      print('📱 Platform: ${Platform.operatingSystem}');
+      print('🔔 Notification Status: $_permissionStatus');
+      print('🔔 Enabled: $_notificationsEnabled');
+      
+    } catch (e) {
+      print('❌ Error checking notification permission status: $e');
+      _permissionStatus = 'Error: $e';
+    }
+  }
+
+  String _getIOSPermissionStatus(AuthorizationStatus status) {
+    switch (status) {
+      case AuthorizationStatus.authorized:
+        return 'Authorized';
+      case AuthorizationStatus.denied:
+        return 'Denied';
+      case AuthorizationStatus.notDetermined:
+        return 'Not Determined';
+      case AuthorizationStatus.provisional:
+        return 'Provisional';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String _getAndroidPermissionStatus(PermissionStatus status) {
+    switch (status) {
+      case PermissionStatus.granted:
+        return 'Granted';
+      case PermissionStatus.denied:
+        return 'Denied';
+      case PermissionStatus.restricted:
+        return 'Restricted';
+      case PermissionStatus.limited:
+        return 'Limited';
+      case PermissionStatus.permanentlyDenied:
+        return 'Permanently Denied';
+      default:
+        return 'Unknown';
     }
   }
 
