@@ -44,13 +44,17 @@ class AuthRepository {
     return {'success': false, 'message': 'حدث خطأ أثناء تسجيل الدخول: $e'};
   }
 }
+// FIXED VERSION of registerClient function
 Future<Map<String, dynamic>> registerClient({
   required String name,
   required String phone,
   required String password,
   required String passwordConfirmation,
+  required String firebaseUid,
 }) async {
   try {
+    print('📡 Registering client with Firebase UID: $firebaseUid');
+    
     final res = await ApiClient.dio.post(
       '/client-register',
       data: {
@@ -58,110 +62,152 @@ Future<Map<String, dynamic>> registerClient({
         'number_phone': phone,
         'password': password,
         'password_confirmation': passwordConfirmation,
+        'firebase_uid': firebaseUid,
       },
     );
 
     final data = res.data;
-    final token = data['token'];
+    print('📥 Registration response: $data');
+    
+    if (data == null) {
+      return {'success': false, 'message': 'لم يتم استلام استجابة من الخادم'};
+    }
 
-      if (token == null) {
-        return {'success': false, 'message': 'لم يتم استلام رمز الدخول من الخادم'};
-      }
+    final token = data['token'] ?? data['access_token'];
+    
+    if (token == null) {
+      return {
+        'success': false, 
+        'message': data['message'] ?? 'لم يتم استلام رمز الدخول من الخادم'
+      };
+    }
 
-      await SecureStorage.setToken(token);
-      await ApiClient.setAuthHeader();
+    await SecureStorage.setToken(token);
+    await ApiClient.setAuthHeader();
+    
     return {
       'success': true, 
-      'whatsapp_status':data['whatsapp_status'],
       'message': data['message'] ?? 'تم إنشاء الحساب بنجاح ✅',
-      'user': data['user'], // 🔧 Add this line to return user data
-      'token': data['token'], // Optional: if you need the token
+      'user': data['user'] ?? data['data'] ?? {},
+      'token': token,
     };
   } on DioException catch (e) {
+    print('❌ Dio error during registration: $e');
     return _handleDioError(e);
   } catch (e) {
-    return {'success': false, 'message': 'حدث خطأ أثناء التسجيل: $e'};
+    print('❌ General error during registration: $e');
+    return {
+      'success': false, 
+      'message': 'حدث خطأ أثناء التسجيل: ${e.toString()}'
+    };
   }
 }
-// Add this method to your existing AuthRepository class
-Future<Map<String, dynamic>> registerDeliveryDriver({
+
+Future<Map<String, dynamic>> registerDeliveryDriverWithFirebase({
   required String name,
   required String phone,
   required String password,
   required String passwordConfirmation,
+  required String firebaseUid,
   File? avatar,
 }) async {
   try {
-    var formData = FormData.fromMap({
+    print('🚚 Starting delivery driver registration with Firebase UID: $firebaseUid');
+    
+    // Create form data
+    final formData = FormData.fromMap({
       'name': name,
       'number_phone': phone,
       'password': password,
       'password_confirmation': passwordConfirmation,
-      // Remove role_id from here - backend handles it automatically
+      'firebase_uid': firebaseUid,
     });
 
     // Add avatar file if exists
     if (avatar != null) {
-      formData.files.add(MapEntry(
-        'avatar',
-        await MultipartFile.fromFile(avatar.path),
-      ));
+      try {
+        // Check if file exists
+        if (await avatar.exists()) {
+          formData.files.add(MapEntry(
+            'avatar',
+            await MultipartFile.fromFile(
+              avatar.path,
+              filename: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            ),
+          ));
+          print('📸 Avatar file added: ${avatar.path}');
+        } else {
+          print('⚠️ Avatar file does not exist at path: ${avatar.path}');
+        }
+      } catch (e) {
+        print('⚠️ Could not add avatar: $e');
+        // Continue without avatar
+      }
     }
 
+    // Use the correct endpoint
     final res = await ApiClient.dio.post(
       '/delivery-driver-register',
       data: formData,
     );
-          final data = res.data;
-      final token = data['token'];
-
-      if (token == null) {
-        return {'success': false, 'message': 'لم يتم استلام رمز الدخول من الخادم'};
+    
+    final data = res.data;
+    print('📥 API Response: $data');
+    
+    // Check if success is true
+    if (data['success'] == true) {
+      final token = data['token']?.toString();
+      
+      if (token == null || token.isEmpty) {
+        print('⚠️ Token is null or empty in response');
+        return {
+          'success': false, 
+          'message': data['message']?.toString() ?? 'لم يتم استلام رمز الدخول من الخادم'
+        };
       }
 
+      // Store token
       await SecureStorage.setToken(token);
       await ApiClient.setAuthHeader();
 
-    return {
-      'success': true, 
-      'whatsapp_status':data['whatsapp_status'],
-      'message': data['message'] ?? 'تم إنشاء الحساب بنجاح ✅',
-      'user': data['user'], // 🔧 Add this line to return user data
-      'token': data['token'], // Optional: if you need the token
-    };
+      return {
+        'success': true, 
+        'message': data['message']?.toString() ?? 'تم إنشاء حساب السائق بنجاح ✅',
+        'user': data['user'] ?? {},
+        'token': token,
+      };
+    } else {
+      return {
+        'success': false,
+        'message': data['message']?.toString() ?? 'فشل تسجيل السائق',
+      };
+    }
   } on DioException catch (e) {
-    return _handleDioError(e);
+    print('❌ DioException in registerDeliveryDriverWithFirebase: $e');
+    print('❌ Response: ${e.response?.data}');
+    
+    if (e.response?.statusCode == 422) {
+      // Validation errors
+      final errors = e.response?.data['errors'] ?? {};
+      String errorMessage = 'بيانات غير صالحة';
+      
+      if (errors.containsKey('number_phone')) {
+        errorMessage = 'رقم الهاتف مستخدم بالفعل';
+      } else if (errors.containsKey('email')) {
+        errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
+      } else if (errors.containsKey('password')) {
+        errorMessage = 'كلمة المرور غير صالحة';
+      }
+      
+      return {'success': false, 'message': errorMessage};
+    }
+    
+    return {'success': false, 'message': 'خطأ في الاتصال بالخادم'};
   } catch (e) {
-    return {'success': false, 'message': 'حدث خطأ أثناء تسجيل الموصل: $e'};
+    print('❌ General error in registerDeliveryDriverWithFirebase: $e');
+    return {'success': false, 'message': 'حدث خطأ أثناء تسجيل السائق'};
   }
 }
-
-/// ✅ التحقق من الكود
-Future<Map<String, dynamic>> verifyCode({
-  required String phone,
-  required String code,
-}) async {
-    try {
-      final res = await ApiClient.dio.post(
-        '/verify-number',
-        data: {
-          'number_phone': phone,
-          'verification_code': code,  // تأكد أن هذا مطابق لما في الواجهة
-        },
-      );
-
-      return {
-        'success': true,
-        'message': res.data['message'] ?? 'تم التحقق بنجاح ✅',
-        'data': res.data,
-      };
-    } on DioException catch (e) {
-      return _handleDioError(e);
-    } catch (e) {
-      return {'success': false, 'message': 'حدث خطأ أثناء التحقق: $e'};
-    }
-  }
-
   /// ✅ جلب المستخدم الحالي
 Future<Map<String, dynamic>> getCurrentUser() async {
   try {
@@ -509,39 +555,6 @@ Future<Map<String, dynamic>> resetPassword({
     }
   }
 
-  Future<Map<String, dynamic>> verifyPhoneChange({
-    required String phoneNumber,
-    required String verificationCode,
-  }) async {
-    try {      
-      final data = {
-        'number_phone': phoneNumber,
-        'verification_code': verificationCode,
-      };
-
-      final res = await ApiClient.dio.post(
-        '/verify-phone-change',
-        data: data,
-      );      
-      return {
-        'success': true,
-        'message': res.data['message'] ?? 'Phone number changed successfully',
-      };
-    } on DioException catch (e) {
-      
-      String errorMessage = 'Failed to verify phone number';
-      if (e.response?.data != null && e.response!.data is Map) {
-        final errorData = e.response!.data as Map;
-        errorMessage = errorData['message']?.toString() ?? 
-                     errorData['errors']?.values.first?.first?.toString() ?? 
-                     errorMessage;
-      }
-      
-      return {'success': false, 'message': errorMessage};
-    } catch (e) {
-      return {'success': false, 'message': 'Failed to verify phone number: $e'};
-    }
-  }
 
 
   // store client submission store name method
@@ -577,6 +590,91 @@ Future<Map<String, dynamic>> resetPassword({
       return {'success': false, 'message': 'Failed to submit store name: $e'};
     }
   }
+
+
+// ADD NEW method for Firebase verification
+Future<Map<String, dynamic>> verifyFirebaseToken({
+  required String firebaseUid,
+  required String purpose,
+  required String phone, // This is the NEW phone
+  int? userId,
+  String? oldPhone,
+}) async {
+  try {
+    final data = {
+      'firebase_uid': firebaseUid,
+      'purpose': purpose,
+      'phone': phone, // Send as 'phone' (new phone)
+      if (userId != null) 'user_id': userId,
+      if (oldPhone != null) 'old_phone': oldPhone, // Current phone
+    };
+
+    print('📤 Sending to API: $data');
+
+    final res = await ApiClient.dio.post(
+      '/verify-firebase-token',
+      data: data,
+    );
+
+    return {
+      'success': true,
+      'message': res.data['message'] ?? 'تم التحقق بنجاح ✅',
+      'data': res.data,
+    };
+  } on DioException catch (e) {
+    return _handleDioError(e);
+  } catch (e) {
+    return {'success': false, 'message': 'حدث خطأ أثناء التحقق: $e'};
+  }
+}
+     // **NEW: Check if phone number already exists before sending OTP**
+  Future<Map<String, dynamic>> checkPhoneExists(String phoneNumber) async {
+    try {
+      final res = await ApiClient.dio.post(
+        '/check-phone',
+        data: {'number_phone': phoneNumber},
+      );
+
+      final data = res.data;
+      return {
+        'success': true,
+        'exists': data['exists'] ?? false,
+      };
+    } on DioException catch (e) {
+      return _handleDioError(e);
+    } catch (e) {
+      return {'success': false, 'message': 'حدث خطأ أثناء التحقق من رقم الهاتف: $e'};
+    } 
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   /// 🧩 دالة مساعدة لمعالجة أخطاء Dio

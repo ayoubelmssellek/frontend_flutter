@@ -1,4 +1,5 @@
 // Alternative version with better organization
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,24 @@ import 'approved_delivery_men_page.dart';
 import 'admin_profile_page.dart';
 import '../delivery/available_orders_page.dart';
 import '../delivery/my_orders_page.dart';
+import 'package:connectivity_plus/connectivity_plus.dart'; // ADD IMPORT
+
+// ADD: Simple NetworkService for Admin Page
+class AdminNetworkService {
+  final Connectivity _connectivity = Connectivity();
+
+  Future<bool> isConnected() async {
+    final connectivityResult = await _connectivity.checkConnectivity();
+    return connectivityResult != ConnectivityResult.none;
+  }
+
+  Stream<bool> get connectionStream {
+    return _connectivity.onConnectivityChanged
+        .map((List<ConnectivityResult> results) {
+      return results.any((result) => result != ConnectivityResult.none);
+    });
+  }
+}
 
 // ✅ ADDED: Admin Home State Provider - Same pattern as DeliveryHomePage
 final adminHomeStateProvider = StateNotifierProvider<AdminHomeStateNotifier, AdminHomeState>((ref) {
@@ -190,6 +209,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   int _currentIndex = 0;
   bool _isTogglingStatus = false;
   bool _hasHandledTokenNavigation = false;
+  
+  // ADD: Network service and connectivity variables
+  final AdminNetworkService _networkService = AdminNetworkService();
+  StreamSubscription<bool>? _connectionSubscription;
+  bool _hasInternet = true;
 
   // Use a getter so the pages are constructed at build-time (after
   // EasyLocalization is initialized). Constructing them as a field caused
@@ -286,6 +310,9 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
     if (kDebugMode) {
       print('🎯 AdminHomePage initState called');
     }
+    
+    // ADD: Initialize connectivity
+    _initConnectivity();
   }
 
   @override
@@ -294,7 +321,83 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
       print('🗑️ AdminHomePage dispose called');
     }
     _hasHandledTokenNavigation = false;
+    
+    // ADD: Cancel connectivity subscription
+    _connectionSubscription?.cancel();
+    
     super.dispose();
+  }
+
+  // ADD: Initialize connectivity monitoring
+  Future<void> _initConnectivity() async {
+    // Check initial connection
+    _hasInternet = await _networkService.isConnected();
+    
+    // Listen for changes
+    _connectionSubscription = _networkService.connectionStream.listen(
+      (hasConnection) {
+        if (!mounted) return;
+        
+        setState(() {
+          _hasInternet = hasConnection;
+        });
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            _hasInternet = false;
+          });
+        }
+      },
+    );
+  }
+
+  // ADD: Build No Internet Widget (simple)
+  Widget _buildNoInternetWidget() {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Simple WiFi Off Icon
+              Icon(
+                Icons.wifi_off_rounded,
+                size: 80,
+                color: Colors.blue.shade700,
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Simple Title
+              const Text(
+                'No Internet Connection',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Simple Message
+              const Text(
+                'Please check your internet connection and try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // Set initial status based on user data - EXACTLY like DeliveryHomePage
@@ -330,6 +433,19 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
 
   Future<void> _toggleStatus() async {
     if (_isTogglingStatus) return;
+
+    // Check internet before toggling
+    if (!_hasInternet) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No internet connection'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
 
     // ✅ FIXED: Try both data sources to get user ID
     int? userId;
@@ -451,6 +567,36 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
     // For token errors, return empty container (navigation will handle it)
     if (adminState.hasTokenError) {
       return const Scaffold(body: SizedBox.shrink());
+    }
+
+    // Show No Internet Screen if no connection
+    if (!_hasInternet) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: _buildNoInternetWidget(),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            if (mounted) {
+              setState(() => _currentIndex = index);
+            }
+          },
+          items: [
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.admin_panel_settings),
+              label: 'admin_home_page.admin'.tr(),
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.delivery_dining),
+              label: 'admin_home_page.delivery'.tr(),
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.person),
+              label: 'admin_home_page.profile'.tr(),
+            ),
+          ],
+        ),
+      );
     }
 
     return adminState.isLoading
@@ -719,4 +865,4 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
         return Colors.blue.shade700;
     }
   }
-}   
+}

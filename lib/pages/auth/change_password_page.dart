@@ -5,7 +5,7 @@ import 'package:food_app/providers/auth_providers.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ChangePasswordPage extends ConsumerStatefulWidget {
-  const ChangePasswordPage({super.key});
+  const ChangePasswordPage({super.key}); // Remove the required callbacks
 
   @override
   ConsumerState<ChangePasswordPage> createState() => _ChangePasswordPageState();
@@ -21,6 +21,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -33,7 +34,10 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final passwordData = {
@@ -41,7 +45,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
         'new_password': _newPasswordController.text,
         'confirm_password': _confirmPasswordController.text,
       };
-
+       
       final result = await ref.read(changePasswordProvider(passwordData).future);
       
       if (result['success'] == true) {
@@ -49,27 +53,44 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message'] ?? 'delivery_profile_page.password_changed'.tr()),
-              backgroundColor: Colors.green,
+              backgroundColor: const Color(0xFFCFC000), // primaryYellow
+              duration: const Duration(seconds: 2),
             ),
           );
           Navigator.pop(context); // Go back to profile page
         }
       } else {
+        final errorMessage = result['message'] ?? 'delivery_profile_page.password_change_failed'.tr();
+        
+        setState(() {
+          _errorMessage = errorMessage;
+        });
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'delivery_profile_page.password_change_failed'.tr()),
-              backgroundColor: Colors.red,
+              content: Text(errorMessage),
+              backgroundColor: const Color(0xFFC63232), // secondaryRed
+              duration: const Duration(seconds: 3),
             ),
           );
         }
       }
     } catch (e) {
+      print('❌ Change password error: $e');
+      
+      final errorMessage = 'delivery_profile_page.password_change_error'.tr();
+      
+      setState(() {
+        _errorMessage = errorMessage;
+      });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('delivery_profile_page.password_change_error'.tr()),
-            backgroundColor: Colors.red,
+            content: Text(errorMessage),
+            backgroundColor: const Color(0xFFC63232), // secondaryRed
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -88,6 +109,9 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   }
 
   String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'delivery_profile_page.confirm_password_required'.tr();
+    }
     if (value != _newPasswordController.text) {
       return 'delivery_profile_page.passwords_not_match'.tr();
     }
@@ -102,13 +126,13 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.deepOrange),
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFFC63232)), // secondaryRed
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'delivery_profile_page.change_password'.tr(),
-          style: TextStyle(
-            color: Colors.grey.shade800,
+          style: const TextStyle(
+            color: Colors.black87,
             fontWeight: FontWeight.w700,
             fontSize: 20,
           ),
@@ -137,34 +161,62 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                     const SizedBox(height: 8),
                     Text(
                       'delivery_profile_page.change_password_description'.tr(),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
-                        color: Colors.grey.shade600,
+                        color: Color(0xFF666666), // greyText
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 40),
 
+                // Error Message Display
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFC63232).withOpacity(0.1), // secondaryRed with opacity
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFC63232)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Color(0xFFC63232)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: Color(0xFFC63232),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                if (_errorMessage != null) const SizedBox(height: 20),
+
                 // Current Password Field
                 TextFormField(
                   controller: _currentPasswordController,
                   decoration: InputDecoration(
                     labelText: 'delivery_profile_page.current_password'.tr(),
-                    labelStyle: TextStyle(color: Colors.grey.shade600),
+                    labelStyle: const TextStyle(color: Color(0xFF666666)), // greyText
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: const BorderSide(color: Color(0xFFF0F0F0)), // lightGrey
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.deepOrange),
+                      borderSide: const BorderSide(color: Color(0xFFCFC000)), // primaryYellow
                     ),
-                    prefixIcon: Icon(Icons.lock, color: Colors.grey.shade500),
+                    prefixIcon: const Icon(Icons.lock, color: Color(0xFF666666)), // greyText
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureCurrentPassword ? Icons.visibility : Icons.visibility_off,
-                        color: Colors.grey.shade500,
+                        color: const Color(0xFF666666), // greyText
                       ),
                       onPressed: () {
                         setState(() {
@@ -173,7 +225,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                       },
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade50,
+                    fillColor: const Color(0xFFF8F8F8), // greyBg
                   ),
                   obscureText: _obscureCurrentPassword,
                   validator: (value) {
@@ -190,20 +242,20 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                   controller: _newPasswordController,
                   decoration: InputDecoration(
                     labelText: 'delivery_profile_page.new_password'.tr(),
-                    labelStyle: TextStyle(color: Colors.grey.shade600),
+                    labelStyle: const TextStyle(color: Color(0xFF666666)), // greyText
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: const BorderSide(color: Color(0xFFF0F0F0)), // lightGrey
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.deepOrange),
+                      borderSide: const BorderSide(color: Color(0xFFCFC000)), // primaryYellow
                     ),
-                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade500),
+                    prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF666666)), // greyText
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureNewPassword ? Icons.visibility : Icons.visibility_off,
-                        color: Colors.grey.shade500,
+                        color: const Color(0xFF666666), // greyText
                       ),
                       onPressed: () {
                         setState(() {
@@ -212,18 +264,30 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                       },
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade50,
+                    fillColor: const Color(0xFFF8F8F8), // greyBg
                   ),
                   obscureText: _obscureNewPassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'delivery_profile_page.new_password_required'.tr();
                     }
-                    if (value.length < 6) {
+                    if (value.length < 8) {
                       return 'delivery_profile_page.password_min_length'.tr();
                     }
+                  
                     return null;
                   },
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    'delivery_profile_page.password_hint'.tr(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF666666), // greyText
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -232,20 +296,20 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                   controller: _confirmPasswordController,
                   decoration: InputDecoration(
                     labelText: 'delivery_profile_page.confirm_password'.tr(),
-                    labelStyle: TextStyle(color: Colors.grey.shade600),
+                    labelStyle: const TextStyle(color: Color(0xFF666666)), // greyText
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: const BorderSide(color: Color(0xFFF0F0F0)), // lightGrey
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.deepOrange),
+                      borderSide: const BorderSide(color: Color(0xFFCFC000)), // primaryYellow
                     ),
-                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade500),
+                    prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF666666)), // greyText
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                        color: Colors.grey.shade500,
+                        color: const Color(0xFF666666), // greyText
                       ),
                       onPressed: () {
                         setState(() {
@@ -254,7 +318,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                       },
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade50,
+                    fillColor: const Color(0xFFF8F8F8), // greyBg
                   ),
                   obscureText: _obscureConfirmPassword,
                   validator: _validateConfirmPassword,
@@ -268,23 +332,25 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _changePassword,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
+                      backgroundColor: const Color(0xFFCFC000), // primaryYellow
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 2,
+                      shadowColor: const Color(0xFFCFC000).withOpacity(0.3),
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 24,
+                            height: 24,
                             child: CircularProgressIndicator(
                               color: Colors.white,
-                              strokeWidth: 2,
+                              strokeWidth: 3,
                             ),
                           )
                         : Text(
-                            'delivery_profile_page.change_password'.tr(),
+                            'delivery_profile_page.change_password_button'.tr(),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -301,12 +367,15 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                     child: Text(
                       'delivery_profile_page.forgot_password'.tr(),
                       style: const TextStyle(
-                        color: Colors.deepOrange,
+                        color: Color(0xFFC63232), // secondaryRed
                         fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
                     ),
                   ),
                 ),
+                
+
               ],
             ),
           ),
@@ -314,4 +383,5 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
       ),
     );
   }
+
 }

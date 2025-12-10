@@ -896,6 +896,18 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       );
       return;
     }
+    //check if location is set
+    final location = await LocationManager().getStoredLocation();
+    // ignore: unnecessary_null_comparison
+    if (location == null || (location.city == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_tr('checkout_page.location_not_set_message', 'Please set your delivery location in profile')),
+          backgroundColor: secondaryRed,
+        ),
+      );
+      return;
+    }
 
     // Validate delivery option
     if (_selectedDeliveryOption == 'choose' && _selectedDeliveryDriver == null) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:food_app/pages/auth/change_password_page.dart';
+import 'package:food_app/pages/auth/change_phone_page.dart';
 import 'package:food_app/pages/home/ClientOrdersPage.dart';
 import 'package:food_app/pages/home/profile_page/client_profile_page.dart';
 import 'package:food_app/pages/home/profile_page/widgets/feature_item.dart';
@@ -8,15 +10,12 @@ import 'package:food_app/pages/home/profile_page/widgets/section_widget.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:food_app/services/language_selector.dart';
 import 'package:food_app/core/image_helper.dart';
-import 'package:food_app/pages/auth/verify_page.dart';
 import 'package:food_app/pages/auth/forgot_password_page.dart';
 import 'package:food_app/widgets/main_file_widgets/fcm_manager.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 // Import the new dialog files
 import '../profile_page_dialogs/update_profile_dialog.dart';
-import '../profile_page_dialogs/change_password_dialog.dart';
-import '../profile_page_dialogs/change_phone_dialog.dart';
 import '../profile_page_dialogs/help_center_dialog.dart';
 import '../profile_page_dialogs/contact_support_dialog.dart';
 class ClientProfile extends ConsumerStatefulWidget {
@@ -838,164 +837,34 @@ void _showChangePasswordDialog(BuildContext context) {
   // ✅ CHECK: Verify we still have valid user data
   if (!_checkTokenBeforeAction(context)) return;
 
+  // Navigate to the ChangePasswordPage
   Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (context) => ChangePasswordPage(
-        onChangePassword: (currentPassword, newPassword, confirmPassword) async {
-          if (currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('profile_page.fill_all_fields'.tr())),
-              );
-            }
-            return false;
-          }
+      builder: (context) => const ChangePasswordPage(),
+    ),
+  );
+}
+ void _showChangePhoneDialog(BuildContext context, Map<String, dynamic> user) {
+  // ✅ CHECK: Verify we still have valid user data
+  if (!_checkTokenBeforeAction(context)) return;
 
-          if (newPassword != confirmPassword) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('profile_page.passwords_not_match'.tr())),
-              );
-            }
-            return false;
-          }
-
-          try {
-            final result = await ref.read(changePasswordProvider({
-              'current_password': currentPassword,
-              'password': newPassword,
-              'password_confirmation': confirmPassword,
-            }).future);
-            
-            if (result['success'] == true) {
-              return true;
-            } else {
-              // ✅ CHECK: If token error, handle it
-              final message = result['message'] ?? '';
-              if (message.toLowerCase().contains('token')) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
-                return false;
-              }
-              
-              return false;
-            }
-          } catch (e) {
-            // ✅ CHECK: Handle token errors
-            if (e.toString().toLowerCase().contains('token')) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
-              return false;
-            }
-            
-            return false;
-          }
-        },
-        onForgotPassword: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
-          );
-        },
+  final currentPhone = user['number_phone'] ?? '';
+  final userId = user['id'] as int? ?? 0;
+  final userRole = user['role_name']?.toString().toLowerCase() ?? 'client';
+  
+  // Navigate to dedicated ChangePhonePage instead of showing dialog
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ChangePhonePage(
+        userId: userId,
+        currentPhone: currentPhone,
+        userRole: 'client',
       ),
     ),
   );
 }
-
-  void _showChangePhoneDialog(BuildContext context, Map<String, dynamic> user) {
-    // ✅ CHECK: Verify we still have valid user data
-    if (!_checkTokenBeforeAction(context)) return;
-
-    final currentPhone = user['number_phone'] ?? '';
-    final userId = user['id'];
-    
-    showDialog(
-      context: context,
-      builder: (context) => ChangePhoneDialog(
-        currentPhone: currentPhone,
-        onChangePhone: (newPhone) async {
-          if (newPhone.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('profile_page.phone_required'.tr())),
-            );
-            return false;
-          }
-
-          try {
-            final result = await ref.read(changePhoneNumberProvider(newPhone).future);
-            
-            if (result['success'] == true) {
-              // Navigate to verification page for phone change
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VerifyPage(
-                    userType: 'phone_change',
-                    phoneNumber: newPhone,
-                    userId: userId,
-                  ),
-                ),
-              );
-              return true;
-            } else {
-              // ✅ CHECK: If token error, handle it
-              final message = result['message'] ?? '';
-              if (message.toLowerCase().contains('token')) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-                return false;
-              }
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'profile_page.phone_change_failed'.tr()),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return false;
-            }
-          } catch (e) {
-            // ✅ CHECK: Handle token errors
-            if (e.toString().toLowerCase().contains('token')) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_tr("profile_page.session_expired_message", "Your session has expired.")),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-              return false;
-            }
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('profile_page.phone_change_error'.tr()),
-                backgroundColor: Colors.red,
-              ),
-            );
-            return false;
-          }
-        },
-      ),
-    );
-  }
-
   void _showHelpCenter(BuildContext context) {
     showDialog(
       context: context,

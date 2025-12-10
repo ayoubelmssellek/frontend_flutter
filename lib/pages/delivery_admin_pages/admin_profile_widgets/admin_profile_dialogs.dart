@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/pages/auth/change_password_page.dart';
+import 'package:food_app/pages/auth/change_phone_page.dart';
 import 'package:food_app/pages/auth/verify_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,60 +75,21 @@ class AdminProfileDialogs {
 
   static void showChangePhoneDialog(BuildContext context, Map<String, dynamic> user, WidgetRef ref) {
     final currentPhone = user['number_phone'] ?? '';
+    final userId = user['id'] as int? ?? 0;
+    final userRole = user['role_name']?.toString().toLowerCase() ?? 'admin';
     
-    showDialog(
-      context: context,
-      builder: (context) => _ChangePhoneDialog(
-        currentPhone: currentPhone,
-        onChangePhone: (newPhone) async {
-          if (newPhone.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('admin_profile_page.phone_required'.tr())),
-            );
-            return false;
-          }
-
-          try {
-            // ✅ FIXED: Use the result properly
-            final result = await ref.read(changePhoneNumberProvider(newPhone).future);
-            
-            if (result['success'] == true) {
-              // Navigate to verification page for phone change
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VerifyPage(
-                    userType: 'phone_change',
-                    phoneNumber: newPhone,
-                    userId: user['id'],
-                  ),
-                ),
-              );
-              return true;
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'admin_profile_page.phone_change_failed'.tr()),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return false;
-            }
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('admin_profile_page.phone_change_error'.tr() + ': $e'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            return false;
-          }
-        },
+    // Navigate to dedicated ChangePhonePage instead of showing dialog
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChangePhonePage(
+          userId: userId,
+          currentPhone: currentPhone.toString(),
+          userRole: 'admin_delivery_driver',
+        ),
       ),
     );
   }
-
   static void showLanguageDialog(BuildContext context) {
     final currentLocale = context.locale;
 

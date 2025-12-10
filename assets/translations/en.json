@@ -335,6 +335,7 @@
 }
 ,
   "admin_profile_page": {
+      "role_admin_delivery_driver": "Admin / Delivery Driver",
     "profile_management": "Profile Management",
     "update_profile_info": "Update Profile Info",
     "full_name": "Full Name",
@@ -667,6 +668,22 @@
     "cancel" : "Cancel",
     "pending" : "pending",
     "not_assigned" : "Not assigned"
+  },
+    "change_phone_page":{
+  "title":  "Change Phone Number",
+  "description": "A verification code will be sent to the new number to confirm ownership",
+  "current_phone": "Current Phone Number",
+  "new_phone": "New Phone Number",
+  "new_phone_hint": "Enter the new phone number",
+  "send_code": "Send Verification Code",
+  "cancel": "Cancel",
+  "phone_required": "Phone number is required",
+  "phone_invalid": "Phone number must start with 06 and be 10 digits long",
+  "phone_exists": "This phone number is already in use",
+  "phone_same": "This is already the current phone number",
+  "quota_exceeded": "Maximum number of attempts exceeded",
+  "network_error": "Network error, please try again",
+  "send_error": "Failed to send verification code"
   },
   "guest_profile_page": {
     "You_are_Guest": "You are Guest",

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:food_app/core/image_helper.dart';
 import 'package:food_app/pages/auth/change_password_page.dart';
+import 'package:food_app/pages/auth/change_phone_page.dart';
 import 'package:food_app/pages/auth/forgot_password_page.dart';
 import 'package:food_app/pages/auth/verify_page.dart';
 import 'package:food_app/providers/auth_providers.dart';
@@ -75,61 +76,27 @@ class ProfileDialogs {
     );
   }
 
-  static void showChangePhoneDialog(BuildContext context, Map<String, dynamic> user, WidgetRef ref) {
-    final currentPhone = user['number_phone'] ?? '';
-    
-    showDialog(
-      context: context,
-      builder: (context) => _ChangePhoneDialog(
-        currentPhone: currentPhone,
-        onChangePhone: (newPhone) async {
-          if (newPhone.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('delivery_profile_page.phone_required'.tr())),
-            );
-            return false;
-          }
+// In profile_dialogs.dart, update the showChangePhoneDialog method:
+static void showChangePhoneDialog(BuildContext context, Map<String, dynamic> user, WidgetRef ref) {
+  final currentPhone = user['number_phone'] ?? '';
+  final userId = user['id'] as int? ?? 0;
+  
+  // Navigate to dedicated ChangePhonePage
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ChangePhonePage(
+        userId: userId,
+        currentPhone: currentPhone.toString(),
+        userRole: 'delivery_driver',
 
-          try {
-            final result = await ref.read(changePhoneNumberProvider(newPhone).future);
-            
-            if (result['success'] == true) {
-              // Navigate to verification page for phone change
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VerifyPage(
-                    userType: 'phone_change',
-                    phoneNumber: newPhone,
-                    userId: user['id'],
-                  ),
-                ),
-              );
-              return true;
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message'] ?? 'delivery_profile_page.phone_change_failed'.tr()),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return false;
-            }
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('delivery_profile_page.phone_change_error'.tr()),
-                backgroundColor: Colors.red,
-              ),
-            );
-            return false;
-          }
-        },
       ),
-    );
-  }
+    ),
+  );
+}
 
+
+ 
   static void showForgotPasswordDialog(BuildContext context) {
     Navigator.push(
       context,

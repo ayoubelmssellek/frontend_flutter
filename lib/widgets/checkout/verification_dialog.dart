@@ -142,7 +142,7 @@ class VerificationDialog {
 
           try {
             // ✅ FIXED: Always use the provider to send verification code
-            final result = await ref.read(changePhoneNumberProvider(newPhone).future);
+            final result = await ref.read(verifyFirebaseTokenProvider(newPhone as Map<String, dynamic>).future);
             
             if (result['success'] == true) {
               Navigator.pop(context);
@@ -150,7 +150,7 @@ class VerificationDialog {
                 context,
                 MaterialPageRoute(
                   builder: (_) => VerifyPage(
-                    userType: 'phone_change',
+                    flowType: 'phone_change',
                     phoneNumber: newPhone,
                     userId: userId,
                   ),

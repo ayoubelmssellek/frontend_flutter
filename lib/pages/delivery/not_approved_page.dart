@@ -6,6 +6,7 @@ import 'package:food_app/pages/auth/verify_page.dart';
 import 'package:food_app/services/error_handler_service.dart';
 import '../../providers/auth_providers.dart';
 import 'delivery_home_page.dart';
+import 'package:food_app/pages/auth/change_phone_page.dart'; // Add this import
 
 class NotApprovedPage extends ConsumerStatefulWidget {
   final String status;
@@ -26,9 +27,6 @@ class NotApprovedPage extends ConsumerStatefulWidget {
 class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
   bool _isRefreshing = false;
   bool _hasHandledTokenNavigation = false;
-  final TextEditingController _phoneController = TextEditingController();
-  bool _isLoading = false;
-  bool _useCurrentNumber = true;
   late String _currentStatus;
   bool _hasInitializedFromApi = false;
   bool _shouldUseVerifyPageStatus = true;
@@ -49,16 +47,12 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
       print('🎯 NotApprovedPage entered directly, loading status from API...');
     }
 
-    final currentPhone = widget.user['number_phone']?.toString() ?? '';
-    _phoneController.text = currentPhone;
-
     print('🎯 Initial user data: ${widget.user}');
   }
 
   @override
   void dispose() {
     print('🎯 NotApprovedPage disposed');
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -87,86 +81,6 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         _currentStatus = 'error';
         _hasInitializedFromApi = true;
       });
-    }
-  }
-
-  Future<void> _verifyPhoneNumber() async {
-    if (_phoneController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('not_approved_page.enter_phone'.tr())),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final result = await ref.read(
-        changePhoneNumberProvider(_phoneController.text.trim()).future,
-      );
-
-      if (result['success'] == true) {
-        final whatsappStatus = result['whatsapp_status']
-            ?.toString()
-            .toLowerCase();
-        print('📱 WhatsApp Status from update: $whatsappStatus');
-
-        if (whatsappStatus == 'failed') {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  result['message'] ?? 'not_approved_page.phone_updated'.tr(),
-                ),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-            await _refreshStatus();
-          }
-        } else {
-          if (mounted) {
-            final userId = widget.user['id'] as int?;
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => VerifyPage(
-                  phoneNumber: _phoneController.text.trim(),
-                  userType: 'change_number_delivery_driver',
-                  userId: userId,
-                ),
-              ),
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message']),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'not_approved_page.failed_update_phone'.tr(
-                namedArgs: {'error': e.toString()},
-              ),
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 
@@ -236,7 +150,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
             const SnackBar(
               content: Text('Failed to refresh account status'),
               backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -321,7 +235,7 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                   '🎉 Your account has been approved! Click "Go to Home" to continue.',
                 ),
                 backgroundColor: Colors.green,
-                duration: Duration(seconds: 4),
+                duration: const Duration(seconds: 4),
               ),
             );
           }
@@ -377,6 +291,234 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
         setState(() => _isRefreshing = false);
       }
     }
+  }
+
+  Widget _buildUnverifiedContent(Map<String, dynamic> user) {
+    final currentPhone = user['number_phone']?.toString() ?? '';
+    final userId = user['id'] as int? ?? 0;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('not_approved_page.phone_verification_required'.tr()),
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Status Icon
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.orange,
+                    width: 3,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.phone_android,
+                  size: 60,
+                  color: Colors.orange,
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Title
+              Text(
+                'not_approved_page.phone_unverified'.tr(),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Description
+              Text(
+                'not_approved_page.verification_needed_desc'.tr(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Current Phone Card
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        'not_approved_page.current_phone_on_file'.tr(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        currentPhone.isNotEmpty
+                            ? currentPhone
+                            : 'not_approved_page.no_phone_number'.tr(),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.orange,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'not_approved_page.unverified_status'.tr(),
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+        
+              // Button to Change Phone Page
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _navigateToChangePhonePage(userId, currentPhone);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepOrange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                    shadowColor: Colors.deepOrange.withOpacity(0.3),
+                  ),
+                  child: Text(
+                    'not_approved_page.go_to_change_phone'.tr(),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Refresh Status Button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: OutlinedButton(
+                  onPressed: _refreshStatus,
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: const BorderSide(
+                      color: Colors.deepOrange,
+                      width: 2,
+                    ),
+                  ),
+                  child: Text(
+                    'not_approved_page.refresh_status'.tr(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepOrange,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoteItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.orange,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+
+    );
+  }
+
+  void _navigateToChangePhonePage(int userId, String currentPhone) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChangePhonePage(
+          userId: userId,
+          currentPhone: currentPhone,
+          userRole: 'delivery_driver',
+        ),
+      ),
+    );
   }
 
   @override
@@ -696,7 +838,11 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _verifyPhoneNumber,
+                      onPressed: () {
+                        final userId = currentUser['id'] as int? ?? 0;
+                        final currentPhone = currentUser['number_phone']?.toString() ?? '';
+                        _navigateToChangePhonePage(userId, currentPhone);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepOrange,
                         foregroundColor: Colors.white,
@@ -704,209 +850,17 @@ class _NotApprovedPageState extends ConsumerState<NotApprovedPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Verify Phone Number',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                      child: Text(
+                        'not_approved_page.go_to_change_phone'.tr(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUnverifiedContent(Map<String, dynamic> user) {
-    final currentPhone = user['number_phone']?.toString() ?? '';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('not_approved_page.phone_verification_required'.tr()),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
-      ),
-      body: GestureDetector(
-        onTap: () {
-          // Dismiss keyboard when tapping outside
-          FocusScope.of(context).unfocus();
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight:
-                  MediaQuery.of(context).size.height -
-                  MediaQuery.of(context).padding.top -
-                  kToolbarHeight,
-            ),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  const Center(
-                    child: Icon(
-                      Icons.phone_android,
-                      size: 80,
-                      color: Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'not_approved_page.phone_verification_required'.tr(),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'not_approved_page.verification_needed_desc'.tr(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  Text(
-                    'not_approved_page.current_phone_on_file'.tr(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Text(
-                      currentPhone.isNotEmpty
-                          ? currentPhone
-                          : 'not_approved_page.no_phone_number'.tr(),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _useCurrentNumber,
-                        onChanged: (value) {
-                          setState(() {
-                            _useCurrentNumber = value ?? true;
-                            if (_useCurrentNumber) {
-                              _phoneController.text = currentPhone;
-                            } else {
-                              _phoneController.clear();
-                            }
-                          });
-                        },
-                      ),
-                      Text(
-                        'not_approved_page.use_current_number'.tr(),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-
-                  if (!_useCurrentNumber) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      'not_approved_page.enter_new_phone'.tr(),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        hintText: 'not_approved_page.enter_phone_hint'.tr(),
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.phone),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 8),
-                  Text(
-                    'not_approved_page.verification_code_message'.tr(),
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-
-                  const Spacer(),
-
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _verifyPhoneNumber,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'not_approved_page.verify_phone_button'.tr(),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: MediaQuery.of(context).viewInsets.bottom > 0
-                        ? 20
-                        : 40,
-                  ),
-                ],
-              ),
             ),
           ),
         ),

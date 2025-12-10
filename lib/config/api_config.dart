@@ -1,3 +1,3 @@
 // lib/config/api_config.dart
-const String baseApiUrl = 'https://api.uniqque.online/api';
+const String baseApiUrl = 'http://192.168.1.7:8000/api';
 

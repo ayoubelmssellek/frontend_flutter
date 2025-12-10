@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:food_app/services/PhoneScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_app/pages/auth/token_expired_page.dart';
 import 'package:food_app/pages/cart/checkout_page.dart';
@@ -22,6 +21,7 @@ import 'package:food_app/widgets/home_page/delivery_men_section.dart';
 import 'package:food_app/widgets/home_page/orders_section.dart';
 import 'package:food_app/widgets/home_page/rating_section.dart';
 import 'package:food_app/widgets/home_page/restaurants_section.dart';
+import 'package:connectivity_plus/connectivity_plus.dart'; // ADD THIS IMPORT
 
 // Color Palette from Logo
 const Color primaryYellow = Color(0xFFCFC000);
@@ -32,6 +32,25 @@ const Color white = Color(0xFFFFFFFF);
 const Color greyBg = Color(0xFFF8F8F8);
 const Color greyText = Color(0xFF666666);
 const Color lightGrey = Color(0xFFF0F0F0);
+
+// ADDED: Simple NetworkService class
+class NetworkService {
+  final Connectivity _connectivity = Connectivity();
+
+  // Check if device has internet connection
+  Future<bool> isConnected() async {
+    final connectivityResult = await _connectivity.checkConnectivity();
+    return connectivityResult != ConnectivityResult.none;
+  }
+
+  // Listen to connectivity changes
+  Stream<bool> get connectionStream {
+    return _connectivity.onConnectivityChanged
+        .map((List<ConnectivityResult> results) {
+      return results.any((result) => result != ConnectivityResult.none);
+    });
+  }
+}
 
 // UPDATED: Provider for storing user's store suggestion preference with shared_preferences
 final storeSuggestionDismissedProvider = FutureProvider<bool>((ref) async {
@@ -261,6 +280,11 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
   bool _showSuggestionBar = false;
   bool _isCheckingStorage = true;
   Timer? _suggestionTimer; // Added timer variable
+  
+  // ADDED: NetworkService and connectivity variables
+  final NetworkService _networkService = NetworkService();
+  StreamSubscription<bool>? _connectionSubscription;
+  bool _hasInternet = true;
 
   @override
   void initState() {
@@ -274,6 +298,9 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
     _animationController.forward();
+    
+    // ADDED: Initialize connectivity
+    _initConnectivity();
     
     // Load orders when home page initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -296,7 +323,32 @@ class _ClientHomePageState extends ConsumerState<ClientHomePage>
     _animationController.dispose();
     _hasHandledTokenNavigation = false;
     _suggestionTimer?.cancel(); // Cancel timer on dispose
+    _connectionSubscription?.cancel(); // Cancel connectivity subscription
     super.dispose();
+  }
+
+  // ADDED: Initialize connectivity monitoring
+  Future<void> _initConnectivity() async {
+    // Check initial connection
+    _hasInternet = await _networkService.isConnected();
+    
+    // Listen for changes
+    _connectionSubscription = _networkService.connectionStream.listen(
+      (hasConnection) {
+        if (!_mounted) return;
+        
+        setState(() {
+          _hasInternet = hasConnection;
+        });
+      },
+      onError: (error) {
+        if (_mounted) {
+          setState(() {
+            _hasInternet = false;
+          });
+        }
+      },
+    );
   }
 
   // NEW: Initialize store suggestion logic with timer
@@ -580,6 +632,19 @@ Future<void> _handleStoreSuggestion(String storeName) async {
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
     
+    // Check internet before refresh
+    if (!_hasInternet) {
+      if (_mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No internet connection'),
+            backgroundColor: secondaryRed,
+          ),
+        );
+      }
+      return;
+    }
+    
     setState(() => _isRefreshing = true);
     
     try {
@@ -690,6 +755,17 @@ Future<void> _handleStoreSuggestion(String storeName) async {
   }
 
   void _handleTabNavigation(int index) {
+    // Check internet before navigation
+    if (!_hasInternet && _mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No internet connection'),
+          backgroundColor: secondaryRed,
+        ),
+      );
+      return;
+    }
+    
     switch (index) {
       case 0:
         setState(() => _currentIndex = index);
@@ -706,6 +782,56 @@ Future<void> _handleStoreSuggestion(String storeName) async {
     }
   }
 
+  // ADDED: No Internet Widget (simple - without Retry button)
+  Widget _buildNoInternetWidget() {
+    return Scaffold(
+      backgroundColor: greyBg,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Simple WiFi Off Icon
+              Icon(
+                Icons.wifi_off_rounded,
+                size: 80,
+                color: secondaryRed,
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Simple Title
+              const Text(
+                'No Internet Connection',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Simple Message
+              const Text(
+                'Please check your internet connection and try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: greyText,
+                  height: 1.5,
+                ),
+              ),
+              
+              // REMOVED: Retry Button
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final clientHomeState = ref.watch(clientHomeStateProvider);
@@ -717,6 +843,113 @@ Future<void> _handleStoreSuggestion(String storeName) async {
       return const Scaffold(body: SizedBox.shrink());
     }
 
+    // Show No Internet Screen if no connection
+    if (!_hasInternet) {
+      return Scaffold(
+        backgroundColor: greyBg,
+        body: _buildNoInternetWidget(),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: white,
+            boxShadow: [
+              BoxShadow(
+                color: black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => _handleTabNavigation(index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: white,
+            selectedItemColor: secondaryRed,
+            unselectedItemColor: greyText,
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 11,
+            ),
+            items: [
+              BottomNavigationBarItem(
+                icon: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: _currentIndex == 0 
+                        ? secondaryRed.withOpacity(0.1) 
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.home_rounded,
+                    size: 22,
+                    color: _currentIndex == 0 ? secondaryRed : greyText,
+                  ),
+                ),
+                label: _tr('home_page.home','Home'),
+              ),
+              BottomNavigationBarItem(
+                icon: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: _currentIndex == 1 
+                        ? secondaryRed.withOpacity(0.1) 
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 22,
+                    color: _currentIndex == 1 ? secondaryRed : greyText,
+                  ),
+                ),
+                label: _tr('home_page.search','Search'),
+              ),
+              BottomNavigationBarItem(
+                icon: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: _currentIndex == 2 
+                        ? secondaryRed.withOpacity(0.1) 
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.shopping_cart_rounded,
+                    size: 22,
+                    color: _currentIndex == 2 ? secondaryRed : greyText,
+                  ),
+                ),
+                label: _tr('home_page.cart','Cart'),
+              ),
+              BottomNavigationBarItem(
+                icon: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: _currentIndex == 3 
+                        ? secondaryRed.withOpacity(0.1) 
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.person_rounded,
+                    size: 22,
+                    color: _currentIndex == 3 ? secondaryRed : greyText,
+                  ),
+                ),
+                label: _tr('home_page.profile','Profile'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Normal content when there IS internet
     return Scaffold(
       key: ValueKey(context.locale),
       backgroundColor: greyBg,
@@ -756,18 +989,23 @@ Future<void> _handleStoreSuggestion(String storeName) async {
                           // Your original HomeAppBar widget
                           const HomeAppBar(),
                           
-                          // Add some padding below the app bar
-                          const SizedBox(height: 16),
-                          
-                          // Categories Section moved inside the yellow header
-                          BusinessTypesSection(
-                            selectedBusinessType: _selectedBusinessType,
-                            onBusinessTypeSelected: (businessType) {
-                              setState(() => _selectedBusinessType = businessType);
-                            },
-                          ),
-                          
-                          const SizedBox(height: 24),
+                          // Only show BusinessTypesSection when we have internet
+                          // This section needs internet to load categories
+                          if (_hasInternet)
+                            Column(
+                              children: [
+                                const SizedBox(height: 16),
+                                BusinessTypesSection(
+                                  selectedBusinessType: _selectedBusinessType,
+                                  onBusinessTypeSelected: (businessType) {
+                                    setState(() => _selectedBusinessType = businessType);
+                                  },
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                            )
+                          else
+                            const SizedBox(height: 24), // Just add padding if no internet
                         ],
                       ),
                     ),
@@ -786,43 +1024,63 @@ Future<void> _handleStoreSuggestion(String storeName) async {
                         padding: const EdgeInsets.symmetric(horizontal: 1),
                         child: Column(
                           children: [
-                            
-                            // Rating Section
-                            const RatingSection(),
-                            ProductionPhoneAuth(),
-                            
-                            const SizedBox(height: 24),
-                            
-                            // Orders Section
-                            OrdersSection(
-                              onViewAllOrders: _navigateToAllOrders,
-                            ),
-                            
-                            
-                           
-                            // Restaurants List
-                            ShopsList(selectedCategory: _selectedBusinessType),
-                            
-                            const SizedBox(height: 24),
-                        
-                            // Delivery Men Section
-                            const DeliveryMenSection(),
-                            
-                            const SizedBox(height: 32),
+                            // Only show sections when we have internet
+                            if (_hasInternet) ...[
+                              // Rating Section
+                              const RatingSection(),
+                              // ProductionPhoneAuth(),
+                              
+                              const SizedBox(height: 24),
+                              
+                              // Orders Section
+                              OrdersSection(
+                                onViewAllOrders: _navigateToAllOrders,
+                              ),
+                              
+                              // Restaurants List
+                              ShopsList(selectedCategory: _selectedBusinessType),
+                              
+                              const SizedBox(height: 24),
+                          
+                              // Delivery Men Section
+                              const DeliveryMenSection(),
+                              
+                              const SizedBox(height: 32),
+                            ] else ...[
+                              // Show empty space when no internet
+                              const SizedBox(height: 100),
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.wifi_off_rounded,
+                                      size: 60,
+                                      color: greyText,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Connect to internet to see content',
+                                      style: TextStyle(color: greyText),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                            ],
                           ],
                         ),
                       ),
                     ),
                   ),
-              
-              
                 ],
               ),
             ),
           ),
           
           // Store Suggestion Bar at the bottom
-          if (!_isCheckingStorage && 
+          // Only show if we have internet
+          if (_hasInternet && 
+              !_isCheckingStorage && 
               storeSuggestionDismissedAsync.value == false && 
               _showSuggestionBar)
             Positioned(

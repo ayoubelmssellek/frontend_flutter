@@ -54,36 +54,115 @@ final currentUserProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   }
 });
 
-/// ✅ Register Provider
-final registerProvider =
-    FutureProvider.family<Map<String, dynamic>, Map<String, String>>(
-        (ref, creds) async {
-  final repo = ref.read(authRepositoryProvider);
-  final result = await repo.registerClient(
-    name: creds['name']!,
-    phone: creds['number_phone']!,
-    password: creds['password']!,
-    passwordConfirmation: creds['password_confirmation']!,
-  );
-  return result;
-});
+/// ✅ Register Client with Firebase Provider
+final registerClientProvider =
+    FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>(
+  (ref, creds) async {
+    final repo = ref.read(authRepositoryProvider);
+    
+    final result = await repo.registerClient(
+      name: creds['name']!,
+      phone: creds['phone']!,
+      password: creds['password']!,
+      passwordConfirmation: creds['password_confirmation']!,
+      firebaseUid: creds['firebase_uid']!,
+    );
+    
+    // ✅ Ensure consistent response format
+    final response = _ensureSuccessField(result);
+    
+    if (response['success'] == true) {
+      ref.read(authStateProvider.notifier).state = true;
+    }
+    
+    return response;
+  },
+);
 
-/// ✅ Delivery Driver Register Provider
-final deliveryDriverRegisterProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, creds) async {
-  final repo = ref.read(authRepositoryProvider);
-  final result = await repo.registerDeliveryDriver(
-    name: creds['name']!,
-    phone: creds['number_phone']!,
-    password: creds['password']!,
-    passwordConfirmation: creds['password_confirmation']!,
-    avatar: creds['avatar'],
-  );
-  return result;
-});
+/// ✅ Delivery Driver Register with Firebase Provider
+final deliveryDriverRegisterProvider = 
+    FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>(
+  (ref, creds) async {
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      
+      final name = creds['name']?.toString();
+      final phone = creds['phone']?.toString();
+      final password = creds['password']?.toString();
+      final passwordConfirmation = creds['password_confirmation']?.toString();
+      final firebaseUid = creds['firebase_uid']?.toString();
+      final avatar = creds['avatar'];
 
- 
+      // Validate required fields
+      if (name == null || name.isEmpty) {
+        return {'success': false, 'message': 'الاسم مطلوب'};
+      }
+      
+      if (phone == null || phone.isEmpty) {
+        return {'success': false, 'message': 'رقم الهاتف مطلوب'};
+      }
+      
+      if (password == null || password.isEmpty) {
+        return {'success': false, 'message': 'كلمة المرور مطلوبة'};
+      }
+      
+      if (passwordConfirmation == null || passwordConfirmation.isEmpty) {
+        return {'success': false, 'message': 'تأكيد كلمة المرور مطلوب'};
+      }
+      
+      if (firebaseUid == null || firebaseUid.isEmpty) {
+        return {'success': false, 'message': 'معرف Firebase مطلوب'};
+      }
 
+      print('🚚 Registering delivery driver...');
+      
+      final result = await repo.registerDeliveryDriverWithFirebase(
+        name: name,
+        phone: phone,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+        firebaseUid: firebaseUid,
+        avatar: avatar is File ? avatar : null,
+      );
+      
+      // ✅ Ensure consistent response format
+      final response = _ensureSuccessField(result);
+      
+      if (response['success'] == true) {
+        await ApiClient.setAuthHeader();
+        ref.read(authStateProvider.notifier).state = true;
+      }
+      
+      return response;
+      
+    } catch (e) {
+      print('❌ Error in deliveryDriverRegisterProvider: $e');
+      return {
+        'success': false,
+        'message': 'حدث خطأ أثناء التسجيل: ${e.toString()}'
+      };
+    }
+  },
+);
 
+// ✅ Helper function to ensure consistent response format
+Map<String, dynamic> _ensureSuccessField(Map<String, dynamic> response) {
+  // If response already has success field, return as-is
+  if (response.containsKey('success')) {
+    return response;
+  }
+  
+  // Determine success based on presence of user and token
+  final hasUser = response.containsKey('user') && response['user'] != null;
+  final hasToken = response.containsKey('token') && response['token'] != null;
+  final hasSuccessMessage = response.containsKey('message') && 
+      (response['message'] as String).contains('تم إنشاء');
+  
+  return {
+    ...response,
+    'success': hasUser && hasToken && hasSuccessMessage,
+  };
+}
 /// ✅ Business Types Provider
 final businessTypesProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repo = ref.read(businessRepositoryProvider);
@@ -102,12 +181,7 @@ final businessProductsProvider = FutureProvider.family<Map<String, dynamic>, Str
   return await authRepository.getBusinessProducts(businessId);
 });
 
-// forget password provider
-final forgotPasswordProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, phoneNumber) async {
-  final authRepo = ref.read(authRepositoryProvider);
-  final result = await authRepo.forgotPassword(phoneNumber);
-  return result;
-});
+
 
 /// ✅ Reset Password Provider
 final resetPasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, data) async {
@@ -244,20 +318,6 @@ final changePasswordProvider = FutureProvider.family<Map<String, dynamic>, Map<S
   }
 });
 
-// Phone Number Change Provider
-final changePhoneNumberProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, phoneNumber) async {  
-  try {
-    final authRepo = ref.read(authRepositoryProvider);
-    
-    final result = await authRepo.changePhoneNumber(phoneNumber: phoneNumber);    
-    return result;
-  } catch (e) {
-    return {
-      'success': false,
-      'message': 'Error changing phone number: $e',
-    };
-  }
-});
 // store client submission store name provider
  final storeClientSubmissionProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, storeName) async {
   final authRepo = ref.read(authRepositoryProvider);
@@ -268,24 +328,33 @@ final changePhoneNumberProvider = FutureProvider.family<Map<String, dynamic>, St
 });
  
 
-/// ✅ Verify Code Provider - الإصدار المصحح
-final verifyCodeProvider =
-    FutureProvider.family<Map<String, dynamic>, Map<String, String>>(
-        (ref, creds) async {
-  final repo = ref.read(authRepositoryProvider);
-  
-  // 🔧 استخدم الأسماء الصحيحة
-  final String? phone = creds['number_phone'];
-  final String? code = creds['verification_code']; // 🔥 تغيير من 'code' إلى 'verification_code'
-  
-  if (phone == null || code == null) {
-    return {
-      'success': false,
-      'message': 'رقم الهاتف أو كود التحقق مطلوب'
-    };
-  }
-  
-  final result = await repo.verifyCode(phone: phone, code: code);
-  return result;
-});
+/// ✅ NEW: For Firebase token verification
+final verifyFirebaseTokenProvider =
+    FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>(
+  (ref, data) async {
+    final repo = ref.read(authRepositoryProvider);
+    
+    final result = await repo.verifyFirebaseToken(
+      firebaseUid: data['firebase_uid']!,
+      purpose: data['purpose']!,
+      phone: data['phone']!, // This is the new phone
+      userId: data['user_id'],
+      oldPhone: data['old_phone'], // This is the current/old phone
+    );
+    
+    return result;
+  },
+);
 
+    // **NEW: Check if phone number already exists before sending OTP**
+
+  final checkPhoneProvider =
+    FutureProvider.family<Map<String, dynamic>, String>(  
+  (ref, phoneNumber) async {
+      final repo = ref.read(authRepositoryProvider);
+      
+      final result = await repo.checkPhoneExists(phoneNumber);
+      
+      return result;
+    },
+);

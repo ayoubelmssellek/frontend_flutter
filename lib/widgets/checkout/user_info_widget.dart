@@ -85,6 +85,7 @@ class _UserInfoWidgetState extends ConsumerState<UserInfoWidget> {
         }
       }
     } catch (e) {
+      // Handle error silently
     }
   }
 
@@ -186,7 +187,6 @@ class _UserInfoWidgetState extends ConsumerState<UserInfoWidget> {
         isLoading: _isLoadingLocation,
         onRefresh: _refreshLocation,
         hasPermanentError: _currentError == core_service.LocationError.permissionPermanentlyDenied,
-        onOpenSettings: _showLocationSettingsDialog,
       ),
     );
   }
@@ -216,160 +216,6 @@ class _UserInfoWidgetState extends ConsumerState<UserInfoWidget> {
       backgroundColor: Colors.transparent,
       builder: (_) => _buildManualPermissionDialog(),
     );
-  }
-
-  void _showLocationSettingsDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: secondaryRed.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.settings, color: secondaryRed, size: 30),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'home_app_bar.location_settings'.tr(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: black,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _getSettingsDialogMessage(),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: greyText,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: primaryYellow.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryYellow.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: primaryYellow, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _getSettingsDialogHint(),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: greyText,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: const BorderSide(color: lightGrey),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'common.cancel'.tr(),
-                        style: const TextStyle(
-                          color: black,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        Navigator.pop(context);
-                        await _openAppSettings();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: secondaryRed,
-                        foregroundColor: white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'home_app_bar.open_settings'.tr(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getSettingsDialogMessage() {
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return 'home_app_bar.ios_location_settings_description'.tr();
-    }
-    return 'home_app_bar.location_settings_description'.tr();
-  }
-
-  String _getSettingsDialogHint() {
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return 'home_app_bar.ios_location_settings_hint'.tr();
-    }
-    return 'home_app_bar.location_settings_hint'.tr();
-  }
-
-  Future<void> _openAppSettings() async {
-    try {
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        // iOS: Open app settings directly
-        await Geolocator.openAppSettings();
-      } else {
-        // Android: Try location settings first, fallback to app settings
-        try {
-          await Geolocator.openLocationSettings();
-        } catch (e) {
-          await Geolocator.openAppSettings();
-        }
-      }
-    } catch (e) {
-      // Fallback to app settings
-      try {
-        await Geolocator.openAppSettings();
-      } catch (e) {
-        print('Error opening settings: $e');
-      }
-    }
   }
 
   void _showVerificationDialog({bool autoShow = false}) {
@@ -500,7 +346,7 @@ class _UserInfoWidgetState extends ConsumerState<UserInfoWidget> {
         // iOS: Open app settings (location settings are within app settings)
         await Geolocator.openAppSettings();
       } else {
-        // Android: Open location settings directly
+        // Android: Open location settings directly for GPS enablement
         await Geolocator.openLocationSettings();
       }
       
@@ -688,7 +534,7 @@ class _UserInfoWidgetState extends ConsumerState<UserInfoWidget> {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(context);
-                      await _openAppSettings();
+                      await Geolocator.openAppSettings();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: secondaryRed,
@@ -962,7 +808,6 @@ class LocationDialog extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onRefresh;
   final bool hasPermanentError;
-  final VoidCallback onOpenSettings;
 
   const LocationDialog({
     super.key,
@@ -971,7 +816,6 @@ class LocationDialog extends StatelessWidget {
     required this.isLoading,
     required this.onRefresh,
     required this.hasPermanentError,
-    required this.onOpenSettings,
   });
 
   @override
@@ -1056,68 +900,35 @@ class LocationDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            if (!hasPermanentError) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : onRefresh,
-                  icon: isLoading 
-                      ? SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: white,
-                          ),
-                        )
-                      : Icon(Icons.refresh, size: 16),
-                  label: Text(isLoading ? tr('home_app_bar.updating_location') : tr('home_app_bar.refresh_location')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: secondaryRed,
-                    foregroundColor: white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
+            // ALWAYS show refresh button (like appbar)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isLoading ? null : onRefresh,
+                icon: isLoading 
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: white,
+                        ),
+                      )
+                    : Icon(Icons.refresh, size: 16),
+                label: Text(isLoading ? tr('home_app_bar.updating_location') : tr('home_app_bar.refresh_location')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: secondaryRed,
+                  foregroundColor: white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  elevation: 0,
                 ),
               ),
-              const SizedBox(height: 8),
-            ],
-            
-            if (hasPermanentError) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: onOpenSettings,
-                  icon: const Icon(Icons.settings, size: 16),
-                  label: const Text('Open Settings'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: secondaryRed,
-                    foregroundColor: white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-            
-            Text(
-              hasPermanentError
-                  ? tr('home_app_bar.location_access_required')
-                  : tr('home_app_bar.automatically_updated'),
-              style: const TextStyle(
-                fontSize: 11,
-                color: greyText,
-              ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(

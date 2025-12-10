@@ -619,7 +619,9 @@
     "camera": "الكاميرا",
     "current": "الحالي",
     "new_phone": "رقم الهاتف الجديد",
-    "send_code": "إرسال الرمز"
+    "send_code": "إرسال الرمز",
+     "role_admin_delivery_driver": "مسؤول / سائق توصيل"
+
   },
   "delivery_home_page": {
     "failed_to_check_auth": "فشل التحقق من حالة المصادقة",
@@ -967,6 +969,23 @@
   "Our_support_team_is_available_24_7_to_help_you_with_any_issues_or_questions": "فريق الدعم لدينا متاح 24/7 لمساعدتك في أي مشاكل أو استفسارات.",
   "Read_our_privacy_policy_to_understand_how_we_protect_and_use_your_data": "اقرأ سياسة الخصوصية الخاصة بنا لفهم كيفية حماية بياناتك واستخدامها.",
   "Read_our_terms_and_conditions_to_understand_the_rules_and_guidelines_for_using_our_app": "اقرأ الشروط والأحكام الخاصة بنا لفهم القواعد والإرشادات الخاصة باستخدام تطبيقنا."
+  },
+  
+    "change_phone_page":{
+  "title": "تغيير رقم الهاتف",
+  "description": "سيتم إرسال رمز تحقق إلى الرقم الجديد لتأكيد الملكية",
+  "current_phone": "رقم الهاتف الحالي",
+  "new_phone": "رقم الهاتف الجديد",
+  "new_phone_hint": "أدخل رقم الهاتف الجديد",
+  "send_code": "إرسال رمز التحقق",
+  "cancel": "إلغاء",
+  "phone_required": "رقم الهاتف مطلوب",
+  "phone_invalid": "رقم الهاتف يجب أن يبدأ بـ 06 ويتكون من 10 أرقام",
+  "phone_exists": "رقم الهاتف مستخدم بالفعل",
+  "phone_same": "هذا هو رقم الهاتف الحالي بالفعل",
+  "quota_exceeded": "تم تجاوز الحد الأقصى للمحاولات",
+  "network_error": "خطأ في الاتصال بالشبكة",
+  "send_error": "فشل إرسال رمز التحقق"
   },
   "category_details_page": {
     "businesses_found": "تم العثور على {} نشاطًا",

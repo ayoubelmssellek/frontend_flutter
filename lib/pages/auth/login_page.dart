@@ -86,7 +86,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('current_user');
-      await prefs.remove('cart_items');
       await SecureStorage.deleteToken();
       
       ref.read(authStateProvider.notifier).state = false;
@@ -216,7 +215,7 @@ Future<void> _login() async {
     ref.invalidate(currentUserProvider);
     
     // Wait for providers to refresh with new user data
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 200));
 
     if (!mounted) {
       print('⚠️ Widget not mounted, cannot navigate');

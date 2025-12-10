@@ -26,8 +26,11 @@ class ApiClient {
           '/business-types',
           '/login',
           '/client-register',
-          '/verify-number',
-          '/business-owners',   
+          '/delivery-driver-register',
+          '/business-owners', 
+          '/check-phone',
+          '/verify-firebase-token',
+      
         ];
         
         final needsAuth = !publicEndpoints.any((endpoint) => 

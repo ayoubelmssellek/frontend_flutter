@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:food_app/core/api_client.dart';
+import 'package:food_app/core/firebase_auth_service.dart';
 import 'package:food_app/pages/delivery/delivery_home_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -31,6 +33,8 @@ class _DeliveryDriverRegisterPageState extends ConsumerState<DeliveryDriverRegis
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  String? _errorMessage;
+  String? _imageError;
   File? _avatarImage;
 
   late AnimationController _animationController;
@@ -73,7 +77,7 @@ class _DeliveryDriverRegisterPageState extends ConsumerState<DeliveryDriverRegis
       
       // Clear shared preferences
       await prefs.remove('current_user');
-      await prefs.remove('cart_items');
+      await prefs.remove('firebase_blocked_until');
       
       // Clear secure storage
       await SecureStorage.deleteToken();
@@ -94,30 +98,6 @@ class _DeliveryDriverRegisterPageState extends ConsumerState<DeliveryDriverRegis
     }
   }
 
-  // ✅ ADDED: Save user data to local storage
-  Future<void> _saveUserToLocalStorage(Map<String, dynamic> userData) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('current_user', json.encode(userData));
-      
-      // ✅ ADDED: Save to SecureStorage
-      final userId = userData['client_id'] ?? userData['id'];
-      if (userId != null) {
-        await SecureStorage.setUserId(userId.toString());
-      }
-      
-      if (kDebugMode) {
-        print('💾 Delivery driver user data saved to local storage');
-        print('🆔 Saved User ID: $userId');
-        print('👤 Saved User Role: ${userData['role_name']}');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error saving delivery driver user data: $e');
-      }
-    }
-  }
-
   // ✅ UPDATED: Image picking with camera option
   Future<void> _pickImage() async {
     showModalBottomSheet(
@@ -127,16 +107,16 @@ class _DeliveryDriverRegisterPageState extends ConsumerState<DeliveryDriverRegis
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('من المعرض'),
+                leading: const Icon(Icons.photo_library, color: Color(0xFF666666)),
+                title: Text('من المعرض', style: TextStyle(color: Colors.grey.shade800)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromGallery();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('التقاط صورة'),
+                leading: const Icon(Icons.camera_alt, color: Color(0xFF666666)),
+                title: Text('التقاط صورة', style: TextStyle(color: Colors.grey.shade800)),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromCamera();
@@ -155,6 +135,7 @@ class _DeliveryDriverRegisterPageState extends ConsumerState<DeliveryDriverRegis
     if (image != null) {
       setState(() {
         _avatarImage = File(image.path);
+        _imageError = null; // Clear image error when image is selected
       });
     }
   }
@@ -165,171 +146,189 @@ class _DeliveryDriverRegisterPageState extends ConsumerState<DeliveryDriverRegis
     if (image != null) {
       setState(() {
         _avatarImage = File(image.path);
+        _imageError = null; // Clear image error when image is selected
       });
     }
   }
 
-Future<void> _register() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() => _isLoading = true);
-
-  final creds = {
-    'name': _nameController.text.trim(),
-    'number_phone': _whatsappController.text.trim(),
-    'password': _passwordController.text.trim(),
-    'password_confirmation': _confirmPasswordController.text.trim(),
-    'avatar': _avatarImage,
-  };
-
-  try {
-    // ✅ STEP 1: Clear old user data before register
-    await _clearOldUserData();
-
-    final result = await ref.read(deliveryDriverRegisterProvider(creds).future);
-    if (kDebugMode) {
-      print('🔑 Response result: $result');
+    // Validate image is selected (REQUIRED)
+    if (_avatarImage == null) {
+      setState(() {
+        _imageError = 'الصورة الشخصية مطلوبة';
+      });
+      _showError('الصورة الشخصية مطلوبة');
+      return;
     }
 
-    if (result['success'] == true) {
-      // ✅ Handle both success formats
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message']), backgroundColor: Colors.green),
-      );
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-      // ✅ STEP 2: Store token if available
-      if (result['token'] != null) {
-        await SecureStorage.setToken(result['token']);
-        // ✅ CRITICAL: Update API client headers immediately
-        await ApiClient.setAuthHeader();
-      }
+    final name = _nameController.text.trim();
+    final phone = _whatsappController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+    final avatar = _avatarImage;
 
-      // ✅ STEP 3: Set auth state to true
-      ref.read(authStateProvider.notifier).state = true;
-
-      // ✅ STEP 4: Extract user data directly from register response
-      final userData = result['user'];
-      if (userData == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User data is null in response')),
-          );
-        }
-        return;
-      }
-
-      // ✅ STEP 5: Save user data to local storage
-      await _saveUserToLocalStorage(userData);
-      
-      // ✅ STEP 6: Extract user ID from the response user data
-      final int? userId = userData['id'] as int?;
-      
-      print('🔑 DeliveryDriverRegisterPage - Response userId: $userId');
-      print('👤 DeliveryDriverRegisterPage - User Data: $userData');
-
-      // ✅ STEP 7: SEND FCM TOKEN AFTER SUCCESSFUL REGISTRATION
-      await _sendFcmTokenForUser(userData);
-      
-      // ✅ STEP 8: CHECK WHATSAPP STATUS FROM RESPONSE AND NAVIGATE ACCORDINGLY
-      final whatsappStatus = result['whatsapp_status']?.toString().toLowerCase();
-      if (kDebugMode) {
-        print('📱 WhatsApp Status from response: $whatsappStatus');
-      }
-
-      if (mounted) {
-        if (whatsappStatus == 'failed') {
-          // ❌ WhatsApp failed - navigate to client homepage directly
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'تم التسجيل بنجاح'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-          
-          // ✅ CRITICAL: Invalidate providers to force refresh with new auth state
-          ref.invalidate(currentUserProvider);
-          ref.invalidate(deliveryHomeStateProvider);
-          
-          // ✅ Add a small delay to ensure auth state is fully set
-          // await Future.delayed(const Duration(milliseconds: 500));
-          
-           Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (_) => const DeliveryHomePage(fromNotApproved: true),
-              ),
-              (route) => false,
-            );
-        } else {
-          // ✅ WhatsApp success - navigate to verify page
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => VerifyPage(
-                phoneNumber: _whatsappController.text.trim(),
-                userType: 'delivery_driver',
-                userId: userId, 
-              ),
-            ),
-          );
-        }
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Registration failed'), backgroundColor: Colors.red),
-      );
-    }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('فشل التسجيل: $e'), backgroundColor: Colors.red),
-    );
-    
-    // Ensure auth state is false on error
-    ref.read(authStateProvider.notifier).state = false;
-  } finally {
-    setState(() => _isLoading = false);
-  }
-}
-  // ✅ METHOD TO SEND FCM TOKEN FOR ALL USER TYPES
-  Future<void> _sendFcmTokenForUser(Map<String, dynamic> userData) async {
     try {
-      // ✅ Force refresh: delete old token first
-      await FirebaseMessaging.instance.deleteToken();
+      // ✅ STEP 1: Clear old user data before register
+      await _clearOldUserData();
 
-      // ثم جلب token جديد
-      final fcmToken = await FirebaseMessaging.instance.getToken();
-
-      if (fcmToken != null) {
-        if (kDebugMode) {
-          print('🚀 Sending FCM token for user: ${userData['id']}');
+      if (kDebugMode) {
+        print("📸 Avatar file path: ${avatar?.path}");
+        print("📸 Avatar file exists: ${avatar?.existsSync()}");
+      }
+      
+      // **Check if phone number already exists before sending OTP**
+      try {
+        final checkResult = await ref.refresh(checkPhoneProvider(phone).future);
+        
+        if (checkResult['exists'] == true) {
+          // Phone number already exists, show error immediately
+          setState(() {
+            _errorMessage = 'رقم الهاتف مستخدم بالفعل';
+          });
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('رقم الهاتف مستخدم بالفعل'),
+                backgroundColor: const Color(0xFFC63232), // secondaryRed
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
         }
+      } catch (e) {
+        print('⚠️ Phone check failed, continuing with registration: $e');
+        // Continue with registration even if check fails
+      }
 
-        final result = await ref.read(updateFcmTokenProvider(fcmToken).future);
-
-        if (result['success'] == true) {
-          final role = userData['role_name']?.toString().toLowerCase();
-          print("✅ FCM token sent successfully for $role");
-        } else {
-          print("❌ FCM token update failed: ${result['message']}");
-        }
+      // Format phone for Firebase
+      String formattedPhone;
+      final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      
+      if (cleanPhone.startsWith('0') && cleanPhone.length == 10) {
+        formattedPhone = '+212${cleanPhone.substring(1)}';
+      } else if (cleanPhone.length == 9) {
+        formattedPhone = '+212$cleanPhone';
+      } else if (cleanPhone.startsWith('212') && cleanPhone.length == 12) {
+        formattedPhone = '+$cleanPhone';
       } else {
-        print("⚠️ FCM token is null after deleteToken");
+        formattedPhone = '+212$cleanPhone';
+      }
+
+      // ✅ STEP 2: Send OTP via Firebase
+      await FirebaseAuthService.sendOTP(phoneNumber: formattedPhone);
+
+      // ✅ STEP 3: Navigate to verify page with registration data
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VerifyPage(
+              flowType: 'driver_register',
+              phoneNumber: phone,
+              registrationData: {
+                'name': name,
+                'phone': phone,
+                'password': password,
+                'password_confirmation': confirmPassword,
+                'avatar': avatar,
+              },
+            ),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      print('❌ FirebaseAuthException in driver register: ${e.code} - ${e.message}');
+      
+      final errorMessage = FirebaseAuthService.getFirebaseErrorMessage(e);
+      
+      setState(() {
+        _errorMessage = errorMessage;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: const Color(0xFFC63232), // secondaryRed
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
     } catch (e) {
-      print("❌ Error sending FCM token: $e");
+      print('❌ General error in driver register: $e');
+      
+      final errorMessage = FirebaseAuthService.extractErrorMessage(e);
+      
+      setState(() {
+        _errorMessage = errorMessage;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: const Color(0xFFC63232), // secondaryRed
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color(0xFFC63232), // secondaryRed
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon, {bool isPassword = false, VoidCallback? onToggleVisibility}) {
     return InputDecoration(
       labelText: label,
+      labelStyle: const TextStyle(color: Color(0xFF666666)), // greyText
       filled: true,
-      fillColor: Colors.grey.shade50,
-      prefixIcon: Icon(icon, color: Colors.grey.shade500),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      fillColor: const Color(0xFFF8F8F8), // greyBg
+      prefixIcon: Icon(icon, color: const Color(0xFF666666)), // greyText
+      suffixIcon: isPassword ? IconButton(
+        icon: Icon(
+          isPassword ? (_obscurePassword ? Icons.visibility : Icons.visibility_off) : (_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
+          color: const Color(0xFF666666), // greyText
+        ),
+        onPressed: onToggleVisibility,
+      ) : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFF0F0F0), width: 1.5), // lightGrey
+      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.deepOrange),
+        borderSide: const BorderSide(color: Color(0xFFCFC000), width: 1.5), // primaryYellow
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFC63232), width: 1.5), // secondaryRed
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFC63232), width: 1.5), // secondaryRed
       ),
     );
   }
@@ -342,13 +341,13 @@ Future<void> _register() async {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFFC63232)),
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFFC63232)), // secondaryRed
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           "auth_page.delivery_register_title".tr(),
-          style: TextStyle(
-            color: Colors.grey.shade800,
+          style: const TextStyle(
+            color: Colors.black87,
             fontWeight: FontWeight.w700,
             fontSize: 20,
           ),
@@ -368,14 +367,55 @@ Future<void> _register() async {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
-                      Text("auth_page.join_as_delivery".tr(),
-                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.grey.shade900)),
+                      Text(
+                        "auth_page.join_as_delivery".tr(),
+                        style: const TextStyle(
+                          fontSize: 28, 
+                          fontWeight: FontWeight.w800, 
+                          color: Colors.black87
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text("auth_page.register_delivery_subtitle".tr(),
-                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                      Text(
+                        "auth_page.register_delivery_subtitle".tr(),
+                        style: const TextStyle(
+                          fontSize: 16, 
+                          color: Color(0xFF666666) // greyText
+                        ),
+                      ),
+                      
+                      // Error Message Display
+                      if (_errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC63232).withOpacity(0.1), // secondaryRed with opacity
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFC63232)), // secondaryRed
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Color(0xFFC63232)), // secondaryRed
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFC63232), // secondaryRed
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      
                       const SizedBox(height: 32),
 
-                      // ✅ UPDATED: Avatar Upload with better UI
+                      // ✅ Avatar Upload
                       Center(
                         child: Stack(
                           children: [
@@ -383,12 +423,31 @@ Future<void> _register() async {
                               onTap: _pickImage,
                               child: CircleAvatar(
                                 radius: 50,
-                                backgroundColor: Colors.grey.shade200,
+                                backgroundColor: _imageError != null
+                                    ? const Color(0xFFC63232).withOpacity(0.1) // secondaryRed with opacity for error
+                                    : const Color(0xFFF0F0F0), // lightGrey
                                 backgroundImage: _avatarImage != null 
                                     ? FileImage(_avatarImage!) 
                                     : null,
                                 child: _avatarImage == null
-                                    ? const Icon(Icons.camera_alt, size: 40, color: Colors.grey)
+                                    ? Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.camera_alt, 
+                                            size: 40, 
+                                            color: Color(0xFF666666) // greyText
+                                          ),
+                                          if (_imageError != null)
+                                            Text(
+                                              'مطلوب',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFFC63232), // secondaryRed
+                                              ),
+                                            ),
+                                        ],
+                                      )
                                     : null,
                               ),
                             ),
@@ -399,7 +458,7 @@ Future<void> _register() async {
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: const BoxDecoration(
-                                    color: Colors.deepOrange,
+                                    color: Color(0xFFCFC000), // primaryYellow
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.check, color: Colors.white, size: 16),
@@ -408,26 +467,52 @@ Future<void> _register() async {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 8),
                       Center(
                         child: Text(
                           "auth_page.upload_profile_photo".tr(),
-                          style: TextStyle(color: Colors.grey.shade600),
+                          style: TextStyle(
+                            color: _imageError != null 
+                                ? const Color(0xFFC63232) // secondaryRed for error
+                                : const Color(0xFF666666), // greyText
+                            fontWeight: _imageError != null ? FontWeight.bold : FontWeight.normal,
+                          ),
                         ),
                       ),
                       Center(
                         child: Text(
                           "auth_page.photo_hint".tr(),
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                          style: TextStyle(
+                            color: _imageError != null 
+                                ? const Color(0xFFC63232).withOpacity(0.8) // secondaryRed for error
+                                : const Color(0xFF666666), // greyText
+                            fontSize: 12,
+                          ),
                         ),
                       ),
+                      
+                      if (_imageError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Center(
+                            child: Text(
+                              _imageError!,
+                              style: const TextStyle(
+                                color: Color(0xFFC63232), // secondaryRed
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      
                       const SizedBox(height: 32),
 
                       // Full Name
                       TextFormField(
                         controller: _nameController,
                         decoration: _inputDecoration('auth_page.full_name'.tr(), Icons.person),
-                        validator: (val) => val!.isEmpty ? 'auth_page.name_required'.tr() : null,
+                        validator: (val) => val == null || val.isEmpty ? 'auth_page.name_required'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -436,24 +521,64 @@ Future<void> _register() async {
                         controller: _whatsappController,
                         keyboardType: TextInputType.phone,
                         decoration: _inputDecoration('auth_page.whatsapp_number'.tr(), Icons.phone),
-                        validator: (val) => val!.isEmpty ? 'auth_page.whatsapp_required'.tr() : null,
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'auth_page.whatsapp_required'.tr();
+                          
+                          final phone = val.trim();
+                          final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+                          
+                          if (cleanPhone.length != 10) {
+                            return 'رقم الهاتف يجب أن يكون 10 أرقام';
+                          }
+                          
+                          if (!cleanPhone.startsWith('05') && 
+                              !cleanPhone.startsWith('06') && 
+                              !cleanPhone.startsWith('07')) {
+                            return 'رقم الهاتف يجب أن يبدأ ب 05 أو 06 أو 07';
+                          }
+                          
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'يجب أن يكون رقم الهاتف 10 أرقام ويبدأ بـ 05 أو 06 أو 07',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF666666), // greyText
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
 
-                      // Password
+                      // Password - UPDATED: Just 8 characters minimum
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        decoration: _inputDecoration('auth_page.password'.tr(), Icons.lock).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.grey.shade500,
-                            ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        decoration: _inputDecoration(
+                          'auth_page.password'.tr(),
+                          Icons.lock,
+                          isPassword: true,
+                          onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'auth_page.password_required'.tr();
+                          if (val.length < 8) return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF666666), // greyText
                           ),
                         ),
-                        validator: (val) => val!.length < 8 ? 'auth_page.password_min_8'.tr() : null,
                       ),
                       const SizedBox(height: 20),
 
@@ -461,16 +586,17 @@ Future<void> _register() async {
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirmPassword,
-                        decoration: _inputDecoration('auth_page.confirm_password'.tr(), Icons.lock_outline).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.grey.shade500,
-                            ),
-                            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                          ),
+                        decoration: _inputDecoration(
+                          'auth_page.confirm_password'.tr(),
+                          Icons.lock_outline,
+                          isPassword: true,
+                          onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                         ),
-                        validator: (val) => val != _passwordController.text ? 'auth_page.passwords_not_match'.tr() : null,
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'تأكيد كلمة المرور مطلوب';
+                          if (val != _passwordController.text) return 'auth_page.passwords_not_match'.tr();
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 40),
 
@@ -480,16 +606,33 @@ Future<void> _register() async {
                         height: 56,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFFC63232),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            backgroundColor: const Color(0xFFCFC000), // primaryYellow
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 2,
+                            shadowColor: const Color(0xFFCFC000).withOpacity(0.3),
                           ),
                           onPressed: _isLoading ? null : _register,
                           child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : Text("auth_page.delivery_register_title".tr(), style: const TextStyle(fontSize: 18,color: Colors.white)),
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : Text(
+                                  "auth_page.delivery_register_title".tr(), 
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
-                      const SizedBox(height: 24),
                     ],
                   ),
                 ),

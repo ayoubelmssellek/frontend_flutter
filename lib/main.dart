@@ -15,9 +15,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_app/widgets/main_file_widgets/notification_service.dart';
 import 'package:food_app/widgets/main_file_widgets/fcm_manager.dart';
-import 'package:food_app/services/network_service.dart'; // Add this import
-
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,14 +54,6 @@ void main() async {
   );
 }
 
-// Create NetworkService Provider
-final networkServiceProvider = Provider<NetworkService>((ref) {
-  return NetworkService();
-});
-
-// Create Network Status Provider
-final networkStatusProvider = StateProvider<bool>((ref) => true);
-
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
@@ -78,14 +67,12 @@ class _MyAppState extends ConsumerState<MyApp> {
   bool _isInitializing = true;
   bool _notificationsEnabled = false;
   String _permissionStatus = 'Checking...';
-  bool _hasShownNetworkDialog = false; // Track if dialog is already shown
 
   @override
   void initState() {
     super.initState();
     print("📱 MyApp initState called");
     _initializeApp();
-    _startNetworkListener();
   }
 
   Future<void> _initializeApp() async {
@@ -94,34 +81,20 @@ class _MyAppState extends ConsumerState<MyApp> {
       
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // 1. Get NetworkService instance
-      final networkService = ref.read(networkServiceProvider);
-      
-      // 2. Check initial network connection using NetworkService
-      final isConnected = await networkService.isConnected();
-      ref.read(networkStatusProvider.notifier).state = isConnected;
-      
-      if (!isConnected && !_hasShownNetworkDialog) {
-        _hasShownNetworkDialog = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          networkService.showNoConnectionDialog(_navigatorKey.currentContext!);
-        });
-      }
-
-      // 3. Initialize Notification Service
+      // 1. Initialize Notification Service
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.initialize();
       print("✅ Notification Service ready");
 
-      // 4. Initialize FCM Manager
+      // 2. Initialize FCM Manager
       final fcmManager = ref.read(fcmManagerProvider);
       await fcmManager.initialize();
       print("✅ FCM Manager ready");
 
-      // 5. Check notification permission status
+      // 3. Check notification permission status
       await _checkNotificationPermissionStatus(fcmManager);
 
-      // 6. Initialize App Service
+      // 4. Initialize App Service
       final appInitService = AppInitializationService(ref);
       final result = await appInitService.initializeApp(navKey: _navigatorKey);
       
@@ -153,25 +126,6 @@ class _MyAppState extends ConsumerState<MyApp> {
       });
     }
   }
-void _startNetworkListener() {
-  final networkService = ref.read(networkServiceProvider);
-  
-  // Use the stream that returns bool (connected or not)
-  networkService.connectionStream.listen((bool isConnected) {
-    // Update provider
-    ref.read(networkStatusProvider.notifier).state = isConnected;
-    
-    // Show/hide dialog using NetworkService
-    if (!isConnected && !_hasShownNetworkDialog) {
-      _hasShownNetworkDialog = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        networkService.showNoConnectionDialog(_navigatorKey.currentContext!);
-      });
-    } else if (isConnected) {
-      _hasShownNetworkDialog = false;
-    }
-  });
-}
 
   Future<void> _checkNotificationPermissionStatus(FCMManager fcmManager) async {
     try {
