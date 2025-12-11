@@ -1,6 +1,7 @@
 // pages/delivery_admin_pages/widgets/update_rating_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:food_app/providers/delivery_admin_providers/admin_providers.dart';
 
 class UpdateRatingBottomSheet extends ConsumerStatefulWidget {
@@ -41,8 +42,8 @@ class _UpdateRatingBottomSheetState extends ConsumerState<UpdateRatingBottomShee
     final newRating = double.tryParse(_ratingController.text);
     if (newRating == null || newRating < 0 || newRating > 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid rating between 0 and 5'),
+        SnackBar(
+          content: Text('common.invalid_rating'.tr()),
           backgroundColor: Colors.red,
         ),
       );
@@ -167,7 +168,7 @@ class _UpdateRatingBottomSheetState extends ConsumerState<UpdateRatingBottomShee
           TextField(
             controller: _ratingController,
             decoration: InputDecoration(
-              labelText: 'New Rating (0-5)',
+              labelText: 'common.new_rating'.tr(),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -177,7 +178,7 @@ class _UpdateRatingBottomSheetState extends ConsumerState<UpdateRatingBottomShee
                 borderSide: BorderSide(color: Colors.orange.shade400),
               ),
               prefixIcon: Icon(Icons.edit, color: Colors.orange),
-              hintText: 'Enter rating between 0 and 5',
+              hintText: 'common.enter_rating'.tr(),
             ),
             keyboardType: TextInputType.number,
           ),

@@ -137,7 +137,7 @@ class _DriverDetailsPageState extends ConsumerState<DriverDetailsPage> {
       if (success) {
         ScaffoldMessenger.of(ref.context).showSnackBar(
           SnackBar(
-            content: Text('✅ Status updated to $newStatus'),
+            content: Text('home_page.status_updated'.tr(namedArgs: {'status': newStatus})),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -150,8 +150,8 @@ class _DriverDetailsPageState extends ConsumerState<DriverDetailsPage> {
         });
       } else {
         ScaffoldMessenger.of(ref.context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to update status'),
+          SnackBar(
+            content: Text('home_page.failed_update_status'.tr()),
             backgroundColor: Colors.red,
           ),
         );
@@ -159,7 +159,7 @@ class _DriverDetailsPageState extends ConsumerState<DriverDetailsPage> {
     } catch (e) {
       ScaffoldMessenger.of(ref.context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('home_page.error'.tr(namedArgs: {'error': e.toString()})),
           backgroundColor: Colors.red,
         ),
       );
@@ -464,7 +464,7 @@ class _DriverDetailsPageState extends ConsumerState<DriverDetailsPage> {
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () => ref.invalidate(deliveryDriverStatsByIdProvider(_deliveryMan.id)),
-              child: const Text('Try Again'),
+              child: Text('common.try_again'.tr()),
             ),
           ],
         ),

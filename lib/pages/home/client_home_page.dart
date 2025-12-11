@@ -637,7 +637,7 @@ Future<void> _handleStoreSuggestion(String storeName) async {
       if (_mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('No internet connection'),
+            content: Text('common.no_internet_connection'.tr()),
             backgroundColor: secondaryRed,
           ),
         );
@@ -759,7 +759,7 @@ Future<void> _handleStoreSuggestion(String storeName) async {
     if (!_hasInternet && _mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('No internet connection'),
+          content: Text('common.no_internet_connection'.tr()),
           backgroundColor: secondaryRed,
         ),
       );
@@ -802,9 +802,9 @@ Future<void> _handleStoreSuggestion(String storeName) async {
               const SizedBox(height: 24),
               
               // Simple Title
-              const Text(
-                'No Internet Connection',
-                style: TextStyle(
+              Text(
+                'common.no_internet_connection'.tr(),
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,

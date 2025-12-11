@@ -17,7 +17,15 @@
     "retry": "Retry",
     "yes": "Yes",
     "no": "No",
-    "suggest": "Suggest"
+    "suggest": "Suggest",
+    "no_internet_connection": "No internet connection",
+    "try_again": "Try Again",
+    "disable": "Disable",
+    "open_settings": "Open Settings",
+    "notifications_enabled": "Notifications enabled successfully!",
+    "new_rating": "New Rating (0-5)",
+    "enter_rating": "Enter rating between 0 and 5",
+    "invalid_rating": "Please enter a valid rating between 0 and 5"
 
   },
     "store_suggestion": {
@@ -109,6 +117,9 @@
     "orders_error": "Failed to load orders",
     "no_orders": "No orders yet",
     "no_orders_description": "Your orders will appear here once you make a purchase",
+    "status_updated": "✅ Status updated to {status}",
+    "failed_update_status": "Failed to update status",
+    "error": "Error: {error}",
     "delivery_home_page": {
           "title":"Delivery Home",
           "welcome_message":"Welcome, Delivery Man!"

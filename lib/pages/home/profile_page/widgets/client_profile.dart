@@ -500,7 +500,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
                                                 borderRadius: BorderRadius.circular(12),
                                               ),
                                             ),
-                                            child: Text('Disable'),
+                                            child: Text('common.disable'.tr()),
                                           ),
                                         ],
                                         shape: RoundedRectangleBorder(
@@ -557,14 +557,14 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
                                                   }
                                                 },
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: secondaryRed,
-                                                  foregroundColor: white,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
+                                                backgroundColor: secondaryRed,
+                                                foregroundColor: white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
                                                 ),
-                                                child: Text('Open Settings'),
                                               ),
+                                              child: Text('common.open_settings'.tr()),
+                                            ),
                                             ],
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(16),
@@ -578,7 +578,7 @@ class _ClientProfileState extends ConsumerState<ClientProfile> {
                                         Navigator.pop(context);
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: Text('Notifications enabled successfully!'),
+                                            content: Text('common.notifications_enabled'.tr()),
                                             backgroundColor: Color(0xFF4CAF50),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(12),

@@ -17,7 +17,15 @@
     "retry": "Réessayer",
     "yes": "Oui",
     "no": "Non",
-    "suggest": "Suggérer"
+    "suggest": "Suggérer",
+    "no_internet_connection": "Pas de connexion Internet",
+    "try_again": "Réessayer",
+    "disable": "Désactiver",
+    "open_settings": "Ouvrir les paramètres",
+    "notifications_enabled": "Notifications activées avec succès!",
+    "new_rating": "Nouvelle évaluation (0-5)",
+    "enter_rating": "Entrez une note entre 0 et 5",
+    "invalid_rating": "Veuillez entrer une note valide entre 0 et 5"
 
   },
   "auth_page": {
@@ -108,6 +116,9 @@
     "orders_error": "Échec du chargement des commandes",
     "no_orders": "Aucune commande pour le moment",
     "no_orders_description": "Vos commandes apparaîtront ici une fois votre achat effectué",
+    "status_updated": "✅ Statut mis à jour en {status}",
+    "failed_update_status": "Échec de la mise à jour du statut",
+    "error": "Erreur: {error}",
     "delivery_home_page": {
       "title": "Accueil Livreurs",
       "welcome_message": "Bienvenue, Livreur !"

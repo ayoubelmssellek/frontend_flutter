@@ -18,7 +18,15 @@
     "yes": "نعم",
     "no": "لا",
     "token_expired": "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.",
-      "suggest": "اقترح"
+      "suggest": "اقترح",
+    "no_internet_connection": "لا توجد اتصالات إنترنت",
+    "try_again": "حاول مرة أخرى",
+    "disable": "تعطيل",
+    "open_settings": "فتح الإعدادات",
+    "notifications_enabled": "تم تفعيل الإخطارات بنجاح!",
+    "new_rating": "تقييم جديد (0-5)",
+    "enter_rating": "أدخل تقييماً بين 0 و 5",
+    "invalid_rating": "يرجى إدخال تقييم صحيح بين 0 و 5"
 
 
   },
@@ -112,6 +120,9 @@
     "orders_error": "فشل في تحميل الطلبات",
     "no_orders": "لا توجد طلبات بعد",
     "no_orders_description": "ستظهر طلباتك هنا بمجرد إتمام عملية الشراء",
+    "status_updated": "✅ تم تحديث الحالة إلى {status}",
+    "failed_update_status": "فشل تحديث الحالة",
+    "error": "خطأ: {error}",
     "delivery_home_page": {
       "title": "واجهة السائق",
       "welcome_message": "مرحباً بك، سائق التوصيل!"
